@@ -19,6 +19,9 @@ class Settings(BaseSettings):
         default="http://localhost:5173,http://127.0.0.1:5173",
         alias="BACKEND_CORS_ORIGINS",
     )
+    admin_email: str = Field(default="admin@via.local", alias="ADMIN_EMAIL")
+    admin_password: str = Field(default="Via12345!", alias="ADMIN_PASSWORD")
+    admin_full_name: str = Field(default="VIA Admin", alias="ADMIN_FULL_NAME")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
