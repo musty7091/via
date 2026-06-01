@@ -1,10 +1,10 @@
-﻿from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
+from app.models.base import TimestampMixin
 
 
 class UserRole(StrEnum):
@@ -15,7 +15,7 @@ class UserRole(StrEnum):
     VIEWER = "viewer"
 
 
-class User(Base):
+class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -24,13 +24,3 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default=UserRole.VIEWER.value)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        onupdate=func.now(),
-        nullable=True,
-    )

@@ -1,6 +1,8 @@
-﻿# VIA EVENTS Backend
+# VIA EVENTS Backend
 
 Backend FastAPI ile geliştirilecektir.
+
+Bu aşamada migration kullanılmaz. Proje henüz erken aşamada olduğu için local SQLite veritabanı tek seferde geniş tablo setiyle oluşturulur.
 
 ## Local Çalıştırma
 
@@ -14,6 +16,12 @@ Sanal ortamı aktif et:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
+```
+
+Veritabanını baştan oluştur:
+
+```powershell
+python -m app.db.init_db
 ```
 
 API'yi çalıştır:
@@ -65,12 +73,34 @@ Canlı ortam hedefi PostgreSQL ve Google Cloud Run'dır.
 
 Veritabanı bağlantısı `.env` dosyasındaki `DATABASE_URL` değeriyle yönetilir.
 
-## Migration
+## Oluşturulan Ana Tablolar
 
-Migration çalıştırmak için:
-
-```powershell
-cd C:\via\backend
-.\.venv\Scripts\Activate.ps1
-alembic upgrade head
-```
+- users
+- partners
+- partner_account_movements
+- customers
+- customer_contacts
+- venues
+- artists
+- artist_rider_template_items
+- service_items
+- events
+- event_items
+- event_profit_snapshots
+- offers
+- offer_items
+- payment_plans
+- collections
+- cash_accounts
+- cash_transfers
+- expenses
+- expense_allocations
+- operation_tasks
+- event_rider_checks
+- operation_notes
+- monthly_periods
+- monthly_partner_summaries
+- currency_rates
+- documents
+- audit_logs
+- system_settings

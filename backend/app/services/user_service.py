@@ -1,4 +1,4 @@
-﻿from sqlalchemy import select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash, verify_password
