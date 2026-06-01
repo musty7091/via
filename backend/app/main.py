@@ -1,16 +1,31 @@
 ﻿from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.api_router import api_router
+from app.core.config import settings
+
 
 app = FastAPI(
-    title="VIA EVENTS API",
-    version="0.0.1",
-    description="VIA EVENTS backend API"
+    title=settings.app_name,
+    version="0.1.0",
+    description="VIA EVENTS backend API",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/api/health")
-def health_check():
+app.include_router(api_router, prefix="/api/v1")
+
+
+@app.get("/")
+def root():
     return {
-        "status": "ok",
-        "service": "via-events-api",
-        "version": "0.0.1"
+        "message": "VIA EVENTS API",
+        "docs": "/docs",
+        "health": "/api/v1/health",
     }
