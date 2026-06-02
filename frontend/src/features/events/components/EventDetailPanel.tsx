@@ -10,6 +10,7 @@ import type {
   VenueOption,
 } from "../types/eventTypes";
 import { compactText, formatDate, formatMoney } from "./formatters";
+import { EventPaymentsPanel } from "./EventPaymentsPanel";
 
 type EventDetailPanelProps = {
   detail: EventDetail;
@@ -75,6 +76,8 @@ export function EventDetailPanel({
           takibinin merkezi olacak.
         </p>
       </section>
+
+      <EventPaymentsPanel event={event} />
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-black text-slate-950">
