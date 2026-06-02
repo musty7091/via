@@ -64,7 +64,12 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
 }
 
 async function requestJson<T>(url: URL | string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url.toString(), {
+  const requestUrl =
+    typeof url === "string" && url.startsWith("/")
+      ? `${API_BASE_URL}${url}`
+      : url.toString();
+
+  const response = await fetch(requestUrl, {
     ...options,
     headers: {
       ...getAuthHeaders(),
