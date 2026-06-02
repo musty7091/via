@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.db.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services.user_service import get_user_by_id
 
 
@@ -54,3 +54,15 @@ def get_current_user(
         )
 
     return user
+
+
+def get_current_super_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bu işlem için super_admin yetkisi gerekir.",
+        )
+
+    return current_user
