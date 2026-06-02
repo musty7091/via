@@ -154,6 +154,10 @@ def _to_item_read(db: Session, item) -> ServicePackageItemRead:
     total_cost = float(item.total_cost_amount)
     total_sale = float(item.total_sale_amount)
 
+    gross_profit = 0
+    if item.unit_cost_currency == item.unit_sale_currency:
+        gross_profit = round(total_sale - total_cost, 4)
+
     return ServicePackageItemRead(
         id=item.id,
         package_id=item.package_id,
@@ -174,7 +178,7 @@ def _to_item_read(db: Session, item) -> ServicePackageItemRead:
         unit_sale_currency=item.unit_sale_currency,
         total_cost_amount=total_cost,
         total_sale_amount=total_sale,
-        gross_profit_amount=round(total_sale - total_cost, 4),
+        gross_profit_amount=gross_profit,
         is_optional=item.is_optional,
         is_visible_on_offer=item.is_visible_on_offer,
         is_active=item.is_active,
@@ -188,8 +192,13 @@ def _build_detail(db: Session, package: ServicePackage) -> ServicePackageDetail:
     items = package_repository.list_package_items(db=db, package_id=package.id)
     item_reads = [_to_item_read(db=db, item=item) for item in items if item.is_active]
 
-    total_cost = round(sum(item.total_cost_amount for item in item_reads), 4)
-    total_sale = round(sum(item.total_sale_amount for item in item_reads), 4)
+    # Legacy tek para birimi özeti sadece aynı para birimli kalemler için güvenlidir.
+    # Frontend v1.1 para birimi bazlı özeti kendi içinde ayrıca hesaplar.
+    same_currency_items = [
+        item for item in item_reads if item.unit_cost_currency == item.unit_sale_currency == "TRY"
+    ]
+    total_cost = round(sum(item.total_cost_amount for item in same_currency_items), 4)
+    total_sale = round(sum(item.total_sale_amount for item in same_currency_items), 4)
 
     return ServicePackageDetail(
         package=ServicePackageRead.model_validate(package),
@@ -231,3 +240,22 @@ def create_package_item(db: Session, package_id: int, payload: ServicePackageIte
 
     created = package_repository.create_package_item(db=db, data=data)
     return _to_item_read(db=db, item=created)
+
+
+def deactivate_package_item(db: Session, package_id: int, item_id: int):
+    get_package_or_404(db=db, package_id=package_id)
+
+    item = package_repository.get_package_item(
+        db=db,
+        package_id=package_id,
+        item_id=item_id,
+    )
+
+    if item is None or not item.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Program akışı kalemi bulunamadı.",
+        )
+
+    deactivated = package_repository.deactivate_package_item(db=db, item=item)
+    return _to_item_read(db=db, item=deactivated)

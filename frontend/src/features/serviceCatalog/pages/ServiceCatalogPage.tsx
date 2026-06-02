@@ -6,6 +6,7 @@ import {
   createPackageItem,
   createServicePackage,
   createTechnicalService,
+  deletePackageItem,
   fetchArtistRiderItems,
   fetchArtists,
   fetchServicePackageDetail,
@@ -65,11 +66,11 @@ const modeConfig = {
     createTitle: "Yeni Teknik Hizmet",
   },
   packages: {
-    title: "Paketler / Program Akışı",
+    title: "Program Paketleri",
     description:
-      "DJ + öncü grup + ana grup + dansçı gibi müşteriye sunulacak paketler.",
+      "DJ + öncü grup + ana grup + dansçı gibi müşteriye sunulacak program paketleri.",
     modeLabel: "paket",
-    createTitle: "Yeni Paket",
+    createTitle: "Yeni Program Paketi",
   },
 };
 
@@ -98,6 +99,7 @@ export function ServiceCatalogPage({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [showPackageItemModal, setShowPackageItemModal] = useState(false);
+  const [removingPackageItemId, setRemovingPackageItemId] = useState<number | null>(null);
 
   const currentItems = useMemo(() => {
     if (mode === "artists") {
@@ -294,6 +296,35 @@ export function ServiceCatalogPage({
     setPackageDetail(detail);
   }
 
+  async function handleRemovePackageItem(itemId: number) {
+    if (!selectedPackageId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Bu program akışı kalemini kaldırmak istiyor musun? Kayıt tamamen silinmez, pasif hale alınır."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRemovingPackageItemId(itemId);
+    setErrorMessage("");
+
+    try {
+      await deletePackageItem(selectedPackageId, itemId);
+      const detail = await fetchServicePackageDetail(selectedPackageId);
+      setPackageDetail(detail);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Akış kalemi kaldırılamadı."
+      );
+    } finally {
+      setRemovingPackageItemId(null);
+    }
+  }
+
   useEffect(() => {
     void loadCurrentList({
       nextMode: "artists",
@@ -409,6 +440,8 @@ export function ServiceCatalogPage({
               <PackageDetail
                 detail={packageDetail}
                 onOpenItemForm={() => setShowPackageItemModal(true)}
+                onRemoveItem={handleRemovePackageItem}
+                removingItemId={removingPackageItemId}
               />
             ) : (
               <CatalogEmptyState

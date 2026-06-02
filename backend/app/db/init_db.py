@@ -63,7 +63,7 @@ def seed_admin_user(db: Session) -> None:
     existing_user = get_user_by_email(db=db, email=settings.admin_email)
 
     if existing_user is not None:
-        print(f"Admin kullanÄ±cÄ±sÄ± zaten var: {settings.admin_email}")
+        print(f"Admin kullanıcısı zaten var: {settings.admin_email}")
         return
 
     create_user(
@@ -75,14 +75,14 @@ def seed_admin_user(db: Session) -> None:
         is_active=True,
     )
 
-    print(f"Admin kullanÄ±cÄ±sÄ± oluÅŸturuldu: {settings.admin_email}")
+    print(f"Admin kullanıcısı oluşturuldu: {settings.admin_email}")
 
 
 def seed_default_partners(db: Session) -> None:
     existing_count = db.query(Partner).count()
 
     if existing_count > 0:
-        print("Ortak kayÄ±tlarÄ± zaten var.")
+        print("Ortak kayıtları zaten var.")
         return
 
     for partner_name in DEFAULT_PARTNERS:
@@ -95,14 +95,14 @@ def seed_default_partners(db: Session) -> None:
         )
 
     db.commit()
-    print("VarsayÄ±lan 3 ortak kaydÄ± oluÅŸturuldu.")
+    print("Varsayılan 3 ortak kaydı oluşturuldu.")
 
 
 def seed_default_cash_accounts(db: Session) -> None:
     existing_count = db.query(CashAccount).count()
 
     if existing_count > 0:
-        print("Kasa/banka hesaplarÄ± zaten var.")
+        print("Kasa/banka hesapları zaten var.")
         return
 
     db.add_all(
@@ -115,7 +115,7 @@ def seed_default_cash_accounts(db: Session) -> None:
             ),
             CashAccount(
                 account_type="bank",
-                name="Ana Banka HesabÄ±",
+                name="Ana Banka Hesabı",
                 currency="TRY",
                 is_active=True,
             ),
@@ -123,14 +123,14 @@ def seed_default_cash_accounts(db: Session) -> None:
     )
 
     db.commit()
-    print("VarsayÄ±lan ana kasa ve banka hesabÄ± oluÅŸturuldu.")
+    print("Varsayılan ana kasa ve banka hesabı oluşturuldu.")
 
 
 def seed_system_settings(db: Session) -> None:
     defaults = {
         "base_currency": ("TRY", "Sistemin ana para birimi"),
-        "vat_rate": ("16", "FaturalÄ± iÅŸlemlerde kullanÄ±lan KDV oranÄ±"),
-        "partner_count": ("3", "Ortak sayÄ±sÄ±"),
+        "vat_rate": ("16", "Faturalı işlemlerde kullanılan KDV oranı"),
+        "partner_count": ("3", "Ortak sayısı"),
     }
 
     for key, (value, description) in defaults.items():
@@ -147,7 +147,7 @@ def seed_system_settings(db: Session) -> None:
             )
 
     db.commit()
-    print("Sistem ayarlarÄ± kontrol edildi.")
+    print("Sistem ayarları kontrol edildi.")
 
 
 def print_table_summary() -> None:
@@ -155,14 +155,14 @@ def print_table_summary() -> None:
     table_names = inspector.get_table_names()
 
     print("")
-    print("OluÅŸturulan tablo sayÄ±sÄ±:", len(table_names))
+    print("Oluşturulan tablo sayısı:", len(table_names))
 
     for table_name in table_names:
         print(f"- {table_name}")
 
 
 def main() -> None:
-    print("VIA EVENTS veritabanÄ± hazÄ±rlanÄ±yor...")
+    print("VIA EVENTS veritabanı hazırlanıyor...")
     create_all_tables(reset=True)
 
     db = SessionLocal()
@@ -177,7 +177,7 @@ def main() -> None:
 
     print_table_summary()
     print("")
-    print("VeritabanÄ± hazÄ±r.")
+    print("Veritabanı hazır.")
 
 
 if __name__ == "__main__":

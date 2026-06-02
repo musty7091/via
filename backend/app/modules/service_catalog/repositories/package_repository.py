@@ -54,6 +54,21 @@ def update_package(db: Session, package: ServicePackage, data: dict) -> ServiceP
     return package
 
 
+def get_package_item(
+    db: Session,
+    package_id: int,
+    item_id: int,
+) -> ServicePackageItem | None:
+    return (
+        db.query(ServicePackageItem)
+        .filter(
+            ServicePackageItem.package_id == package_id,
+            ServicePackageItem.id == item_id,
+        )
+        .first()
+    )
+
+
 def list_package_items(db: Session, package_id: int) -> list[ServicePackageItem]:
     return (
         db.query(ServicePackageItem)
@@ -66,6 +81,16 @@ def list_package_items(db: Session, package_id: int) -> list[ServicePackageItem]
 def create_package_item(db: Session, data: dict) -> ServicePackageItem:
     item = ServicePackageItem(**data)
     db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def deactivate_package_item(
+    db: Session,
+    item: ServicePackageItem,
+) -> ServicePackageItem:
+    item.is_active = False
     db.commit()
     db.refresh(item)
     return item

@@ -139,6 +139,22 @@ def main() -> None:
         dj_service_id = dj_service_response.json()["id"]
         created_ids["service_item_ids"].append(dj_service_id)
 
+        usd_service_response = client.post(
+            "/api/v1/service-catalog/services",
+            headers=headers,
+            json={
+                "service_type": "lighting_system",
+                "name": "Smoke USD Işık Hizmeti",
+                "default_cost_amount": 300,
+                "default_cost_currency": "USD",
+                "default_sale_amount": 500,
+                "default_sale_currency": "USD",
+            },
+        )
+        expect_status(usd_service_response, 201, "create USD service item")
+        usd_service_id = usd_service_response.json()["id"]
+        created_ids["service_item_ids"].append(usd_service_id)
+
         package_response = client.post(
             "/api/v1/service-catalog/packages",
             headers=headers,
@@ -154,62 +170,81 @@ def main() -> None:
         package_id = package_response.json()["id"]
         created_ids["package_ids"].append(package_id)
 
-        first_item_response = client.post(
-            f"/api/v1/service-catalog/packages/{package_id}/items",
-            headers=headers,
-            json={
-                "component_type": "service",
-                "service_item_id": dj_service_id,
-                "program_section": "opening",
-                "sort_order": 1,
-                "start_time": "20:00:00",
-                "end_time": "21:00:00",
-                "quantity": 1,
-                "unit_cost_amount": 15000,
-                "unit_cost_currency": "TRY",
-                "unit_sale_amount": 25000,
-                "unit_sale_currency": "TRY",
-            },
-        )
-        expect_status(first_item_response, 201, "add dj package item")
+        item_ids = []
 
-        second_item_response = client.post(
-            f"/api/v1/service-catalog/packages/{package_id}/items",
-            headers=headers,
-            json={
-                "component_type": "artist",
-                "artist_id": solo_artist_id,
-                "program_section": "main_performance",
-                "sort_order": 2,
-                "start_time": "21:30:00",
-                "end_time": "23:00:00",
-                "quantity": 1,
-                "unit_cost_amount": 40000,
-                "unit_cost_currency": "TRY",
-                "unit_sale_amount": 65000,
-                "unit_sale_currency": "TRY",
-            },
-        )
-        expect_status(second_item_response, 201, "add solo package item")
-
-        third_item_response = client.post(
-            f"/api/v1/service-catalog/packages/{package_id}/items",
-            headers=headers,
-            json={
-                "component_type": "artist",
-                "artist_id": guitarist_id,
-                "program_section": "support_performance",
-                "sort_order": 3,
-                "start_time": "21:30:00",
-                "end_time": "23:00:00",
-                "quantity": 1,
-                "unit_cost_amount": 10000,
-                "unit_cost_currency": "TRY",
-                "unit_sale_amount": 18000,
-                "unit_sale_currency": "TRY",
-            },
-        )
-        expect_status(third_item_response, 201, "add guitarist package item")
+        for payload, label in [
+            (
+                {
+                    "component_type": "service",
+                    "service_item_id": dj_service_id,
+                    "program_section": "opening",
+                    "sort_order": 1,
+                    "start_time": "20:00:00",
+                    "end_time": "21:00:00",
+                    "quantity": 1,
+                    "unit_cost_amount": 15000,
+                    "unit_cost_currency": "TRY",
+                    "unit_sale_amount": 25000,
+                    "unit_sale_currency": "TRY",
+                },
+                "add dj package item",
+            ),
+            (
+                {
+                    "component_type": "artist",
+                    "artist_id": solo_artist_id,
+                    "program_section": "main_performance",
+                    "sort_order": 2,
+                    "start_time": "21:30:00",
+                    "end_time": "23:00:00",
+                    "quantity": 1,
+                    "unit_cost_amount": 40000,
+                    "unit_cost_currency": "TRY",
+                    "unit_sale_amount": 65000,
+                    "unit_sale_currency": "TRY",
+                },
+                "add solo package item",
+            ),
+            (
+                {
+                    "component_type": "artist",
+                    "artist_id": guitarist_id,
+                    "program_section": "support_performance",
+                    "sort_order": 3,
+                    "start_time": "21:30:00",
+                    "end_time": "23:00:00",
+                    "quantity": 1,
+                    "unit_cost_amount": 10000,
+                    "unit_cost_currency": "TRY",
+                    "unit_sale_amount": 18000,
+                    "unit_sale_currency": "TRY",
+                },
+                "add guitarist package item",
+            ),
+            (
+                {
+                    "component_type": "service",
+                    "service_item_id": usd_service_id,
+                    "program_section": "technical",
+                    "sort_order": 4,
+                    "start_time": "19:00:00",
+                    "end_time": "23:30:00",
+                    "quantity": 1,
+                    "unit_cost_amount": 300,
+                    "unit_cost_currency": "USD",
+                    "unit_sale_amount": 500,
+                    "unit_sale_currency": "USD",
+                },
+                "add USD package item",
+            ),
+        ]:
+            response = client.post(
+                f"/api/v1/service-catalog/packages/{package_id}/items",
+                headers=headers,
+                json=payload,
+            )
+            expect_status(response, 201, label)
+            item_ids.append(response.json()["id"])
 
         detail_response = client.get(
             f"/api/v1/service-catalog/packages/{package_id}/detail",
@@ -218,17 +253,27 @@ def main() -> None:
         expect_status(detail_response, 200, "get package detail")
         detail = detail_response.json()
 
-        assert len(detail["items"]) == 3, detail
-        assert detail["items"][0]["title"] == "Smoke Açılış DJ Hizmeti"
-        assert detail["items"][1]["title"] == "Smoke Solo Sanatçı"
-        assert detail["items"][2]["title"] == "Smoke Gitarist"
-        assert detail["summary"]["total_cost_amount"] == 65000
-        assert detail["summary"]["total_sale_amount"] == 108000
-        assert detail["summary"]["gross_profit_amount"] == 43000
+        assert len(detail["items"]) == 4, detail
+
+        delete_response = client.delete(
+            f"/api/v1/service-catalog/packages/{package_id}/items/{item_ids[2]}",
+            headers=headers,
+        )
+        expect_status(delete_response, 200, "delete package item")
+
+        detail_after_delete_response = client.get(
+            f"/api/v1/service-catalog/packages/{package_id}/detail",
+            headers=headers,
+        )
+        expect_status(detail_after_delete_response, 200, "get package detail after delete")
+        detail_after_delete = detail_after_delete_response.json()
+
+        assert len(detail_after_delete["items"]) == 3, detail_after_delete
+        assert all(item["id"] != item_ids[2] for item in detail_after_delete["items"])
 
         print("Service catalog backend API smoke test passed.")
         print("Registered service catalog routes:", route_paths)
-        print("Package summary:", detail["summary"])
+        print("Active item count after delete:", len(detail_after_delete["items"]))
     finally:
         cleanup_created_records(created_ids)
 

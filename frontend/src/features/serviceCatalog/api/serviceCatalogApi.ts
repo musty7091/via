@@ -196,3 +196,15 @@ export async function createPackageItem(
     body: JSON.stringify(payload),
   });
 }
+
+export async function deletePackageItem(
+  packageId: number,
+  itemId: number
+): Promise<PackageItem> {
+  return requestJson<PackageItem>(
+    `/service-catalog/packages/${packageId}/items/${itemId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}

@@ -82,3 +82,17 @@ def create_package_item(
     _current_user: User = Depends(get_current_user),
 ):
     return package_service.create_package_item(db=db, package_id=package_id, payload=payload)
+
+
+@router.delete("/{package_id}/items/{item_id}", response_model=ServicePackageItemRead)
+def deactivate_package_item(
+    package_id: int,
+    item_id: int,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    return package_service.deactivate_package_item(
+        db=db,
+        package_id=package_id,
+        item_id=item_id,
+    )

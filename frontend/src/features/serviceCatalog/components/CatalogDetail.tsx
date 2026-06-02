@@ -7,6 +7,7 @@ import {
 } from "../constants/serviceCatalogConstants";
 import type {
   ArtistService,
+  PackageItem,
   RiderItem,
   ServicePackageDetail,
   TechnicalService,
@@ -111,9 +112,18 @@ export function TechnicalServiceDetail({ service }: TechnicalServiceDetailProps)
 type PackageDetailProps = {
   detail: ServicePackageDetail;
   onOpenItemForm: () => void;
+  onRemoveItem: (itemId: number) => void;
+  removingItemId: number | null;
 };
 
-export function PackageDetail({ detail, onOpenItemForm }: PackageDetailProps) {
+export function PackageDetail({
+  detail,
+  onOpenItemForm,
+  onRemoveItem,
+  removingItemId,
+}: PackageDetailProps) {
+  const currencySummaries = buildCurrencySummaries(detail.items);
+
   return (
     <section className="space-y-4">
       <HeaderCard
@@ -123,20 +133,56 @@ export function PackageDetail({ detail, onOpenItemForm }: PackageDetailProps) {
         description={detail.package.description}
       />
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <MetricCard
-          title="Toplam Maliyet"
-          value={formatMoney(detail.summary.total_cost_amount)}
-        />
-        <MetricCard
-          title="Teklif Tutarı"
-          value={formatMoney(detail.summary.total_sale_amount)}
-        />
-        <MetricCard
-          title="Brüt Kâr"
-          value={formatMoney(detail.summary.gross_profit_amount)}
-        />
-      </div>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-black text-slate-950">
+              Para Birimi Bazlı Özet
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Farklı para birimleri birbirine karıştırılmaz. TL, USD, EUR ve GBP
+              ayrı ayrı takip edilir.
+            </p>
+          </div>
+        </div>
+
+        {currencySummaries.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+            Özet için henüz program kalemi yok.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            {currencySummaries.map((summary) => (
+              <article
+                key={summary.currency}
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
+                  {summary.currency} Özeti
+                </p>
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <MiniMetric
+                    title="Maliyet"
+                    value={formatMoney(summary.totalCost, summary.currency)}
+                  />
+                  <MiniMetric
+                    title="Teklif"
+                    value={formatMoney(summary.totalSale, summary.currency)}
+                  />
+                  <MiniMetric
+                    title="Brüt Kâr"
+                    value={
+                      summary.hasMixedItemCurrency
+                        ? "Kur gerekli"
+                        : formatMoney(summary.grossProfit, summary.currency)
+                    }
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -166,7 +212,7 @@ export function PackageDetail({ detail, onOpenItemForm }: PackageDetailProps) {
             {detail.items.map((item) => (
               <article
                 key={item.id}
-                className="grid gap-3 border-b border-slate-100 p-4 last:border-b-0 lg:grid-cols-[90px_1fr_130px_130px_130px]"
+                className="grid gap-3 border-b border-slate-100 p-4 last:border-b-0 xl:grid-cols-[90px_1fr_130px_130px_130px_90px]"
               >
                 <div className="text-sm font-black text-teal-700">
                   {formatTime(item.start_time)}
@@ -184,22 +230,41 @@ export function PackageDetail({ detail, onOpenItemForm }: PackageDetailProps) {
                   </p>
                 </div>
 
-                <div className="text-sm font-bold text-slate-700">
-                  Maliyet
-                  <br />
-                  {formatMoney(item.total_cost_amount, item.unit_cost_currency)}
-                </div>
+                <AmountBlock
+                  title="Maliyet"
+                  amount={item.total_cost_amount}
+                  currency={item.unit_cost_currency}
+                />
 
-                <div className="text-sm font-bold text-slate-700">
-                  Teklif
-                  <br />
-                  {formatMoney(item.total_sale_amount, item.unit_sale_currency)}
-                </div>
+                <AmountBlock
+                  title="Teklif"
+                  amount={item.total_sale_amount}
+                  currency={item.unit_sale_currency}
+                />
 
-                <div className="text-sm font-black text-teal-700">
-                  Kâr
-                  <br />
-                  {formatMoney(item.gross_profit_amount, item.unit_sale_currency)}
+                <AmountBlock
+                  title="Kâr"
+                  amount={
+                    item.unit_cost_currency === item.unit_sale_currency
+                      ? item.gross_profit_amount
+                      : 0
+                  }
+                  currency={item.unit_sale_currency}
+                  warning={
+                    item.unit_cost_currency !== item.unit_sale_currency
+                      ? "Kur gerekli"
+                      : undefined
+                  }
+                />
+
+                <div className="flex items-start xl:justify-end">
+                  <button
+                    onClick={() => onRemoveItem(item.id)}
+                    disabled={removingItemId === item.id}
+                    className="rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                  >
+                    {removingItemId === item.id ? "..." : "Kaldır"}
+                  </button>
                 </div>
               </article>
             ))}
@@ -275,4 +340,100 @@ function MetricCard({ title, value }: { title: string; value: string }) {
       <p className="mt-3 text-2xl font-black text-slate-950">{value}</p>
     </article>
   );
+}
+
+function MiniMetric({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-3">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
+        {title}
+      </p>
+      <p className="mt-2 text-lg font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function AmountBlock({
+  title,
+  amount,
+  currency,
+  warning,
+}: {
+  title: string;
+  amount: number;
+  currency: string;
+  warning?: string;
+}) {
+  return (
+    <div className="text-sm font-bold text-slate-700">
+      {title}
+      <br />
+      {warning ? (
+        <span className="text-amber-700">{warning}</span>
+      ) : (
+        formatMoney(amount, currency)
+      )}
+    </div>
+  );
+}
+
+function buildCurrencySummaries(items: PackageItem[]) {
+  const map = new Map<
+    string,
+    {
+      currency: string;
+      totalCost: number;
+      totalSale: number;
+      grossProfit: number;
+      hasMixedItemCurrency: boolean;
+    }
+  >();
+
+  items.forEach((item) => {
+    if (item.unit_cost_currency !== item.unit_sale_currency) {
+      const key = `${item.unit_cost_currency}/${item.unit_sale_currency}`;
+      const current =
+        map.get(key) ??
+        {
+          currency: key,
+          totalCost: 0,
+          totalSale: 0,
+          grossProfit: 0,
+          hasMixedItemCurrency: true,
+        };
+
+      current.totalCost += item.total_cost_amount;
+      current.totalSale += item.total_sale_amount;
+      current.hasMixedItemCurrency = true;
+      map.set(key, current);
+      return;
+    }
+
+    const key = item.unit_sale_currency;
+    const current =
+      map.get(key) ??
+      {
+        currency: key,
+        totalCost: 0,
+        totalSale: 0,
+        grossProfit: 0,
+        hasMixedItemCurrency: false,
+      };
+
+    current.totalCost += item.total_cost_amount;
+    current.totalSale += item.total_sale_amount;
+    current.grossProfit += item.gross_profit_amount;
+    map.set(key, current);
+  });
+
+  return Array.from(map.values()).map((summary) => ({
+    ...summary,
+    totalCost: roundMoney(summary.totalCost),
+    totalSale: roundMoney(summary.totalSale),
+    grossProfit: roundMoney(summary.grossProfit),
+  }));
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
