@@ -9,6 +9,7 @@ from app.models.operation import EventRiderCheck, OperationNote, OperationTask
 from app.models.partner import Partner, PartnerAccountMovement
 from app.models.payment import CashAccount, CashTransfer, Collection, PaymentPlan
 from app.models.period import MonthlyPartnerSummary, MonthlyPeriod
+from app.models.service_package import ServicePackage, ServicePackageItem
 from app.models.system import AuditLog, CurrencyRate, Document, SystemSetting
 from app.models.user import User, UserRole
 from app.models.venue import Venue
@@ -41,6 +42,8 @@ __all__ = [
     "PartnerAccountMovement",
     "PaymentPlan",
     "ServiceItem",
+    "ServicePackage",
+    "ServicePackageItem",
     "SystemSetting",
     "User",
     "UserRole",
