@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
+import { OffersPage } from "./features/offers/pages/OffersPage";
 import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
 import { BackOfficePreview } from "./pages/BackOfficePreview";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -9,7 +10,13 @@ import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
 import type { AuthUser } from "./types/auth";
 
-type AppScreen = "landing" | "login" | "dashboard" | "customers" | "serviceCatalog";
+type AppScreen =
+  | "landing"
+  | "login"
+  | "dashboard"
+  | "customers"
+  | "serviceCatalog"
+  | "offers";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
@@ -46,6 +53,7 @@ function App() {
         onLogout={handleLogout}
         onOpenCustomers={() => setScreen("customers")}
         onOpenServiceCatalog={() => setScreen("serviceCatalog")}
+        onOpenOffers={() => setScreen("offers")}
       />
     );
   }
@@ -58,6 +66,10 @@ function App() {
     return (
       <ServiceCatalogPage onBackToDashboard={() => setScreen("dashboard")} />
     );
+  }
+
+  if (screen === "offers" && currentUser) {
+    return <OffersPage onBackToDashboard={() => setScreen("dashboard")} />;
   }
 
   return (
@@ -77,7 +89,7 @@ function App() {
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200 shadow-lg shadow-black/20 backdrop-blur">
-              v0.4
+              v0.6
             </div>
           </header>
 
@@ -93,7 +105,7 @@ function App() {
                 </h2>
 
                 <p className="mt-5 text-base leading-7 text-slate-300 sm:text-lg">
-                  VIA EVENTS; sanatçı, müşteri, tahsilat, gider, rider,
+                  VIA EVENTS; sanatçı, müşteri, teklif, tahsilat, rider,
                   operasyon ve ay sonu ortak mahsuplaşmasını tek sistemde
                   toplamak için hazırlanıyor.
                 </p>
@@ -122,11 +134,11 @@ function App() {
                 <div className="grid gap-3">
                   <div className="rounded-2xl bg-white p-4 text-slate-950">
                     <p className="text-sm font-medium text-slate-500">
-                      Aylık Net Kâr
+                      Teklif / Anlaşma
                     </p>
-                    <p className="mt-1 text-3xl font-black">₺0,00</p>
+                    <p className="mt-1 text-3xl font-black">Hazır</p>
                     <p className="mt-2 text-sm text-slate-500">
-                      İlk veri modülleri eklendiğinde hesaplanacak.
+                      Müşteri print çıktısı maliyet göstermeden hazırlanacak.
                     </p>
                   </div>
 
@@ -140,10 +152,8 @@ function App() {
                       <p className="mt-2 text-2xl font-black">Katalog</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs text-slate-400">
-                        Bekleyen Tahsilat
-                      </p>
-                      <p className="mt-2 text-2xl font-black">0</p>
+                      <p className="text-xs text-slate-400">Teklif</p>
+                      <p className="mt-2 text-2xl font-black">Print</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs text-slate-400">Ortak Hesabı</p>
@@ -153,11 +163,11 @@ function App() {
 
                   <div className="rounded-2xl border border-teal-300/20 bg-teal-300/10 p-4">
                     <p className="text-sm font-semibold text-teal-100">
-                      Katalog omurgası
+                      Müşteri çıktısı güvenli
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
-                      Sanatçı hizmetleri, teknik hizmetler ve program paketleri
-                      artık sistem omurgasına bağlanıyor.
+                      Print görünümünde iç maliyet ve kârlılık bilgileri yer
+                      almaz.
                     </p>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ type DashboardPageProps = {
   onLogout: () => void;
   onOpenCustomers: () => void;
   onOpenServiceCatalog: () => void;
+  onOpenOffers: () => void;
 };
 
 const dashboardCards = [
@@ -21,10 +22,10 @@ const dashboardCards = [
     action: "serviceCatalog",
   },
   {
-    title: "Etkinlikler",
-    value: "0",
-    description: "Planlanan ve tamamlanan işler burada takip edilecek.",
-    action: "events",
+    title: "Teklif ve Anlaşma",
+    value: "Print",
+    description: "Müşteriye sunulacak teklif, anlaşma ve yazdırılabilir çıktı.",
+    action: "offers",
   },
   {
     title: "Operasyon",
@@ -39,6 +40,7 @@ export function DashboardPage({
   onLogout,
   onOpenCustomers,
   onOpenServiceCatalog,
+  onOpenOffers,
 }: DashboardPageProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -80,7 +82,8 @@ export function DashboardPage({
           {dashboardCards.map((card) => {
             const isCustomerCard = card.action === "customers";
             const isServiceCatalogCard = card.action === "serviceCatalog";
-            const isActiveCard = isCustomerCard || isServiceCatalogCard;
+            const isOffersCard = card.action === "offers";
+            const isActiveCard = isCustomerCard || isServiceCatalogCard || isOffersCard;
 
             return (
               <button
@@ -90,7 +93,9 @@ export function DashboardPage({
                     ? onOpenCustomers
                     : isServiceCatalogCard
                       ? onOpenServiceCatalog
-                      : undefined
+                      : isOffersCard
+                        ? onOpenOffers
+                        : undefined
                 }
                 className={`rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition ${
                   isActiveCard
@@ -119,11 +124,11 @@ export function DashboardPage({
 
         <div className="mt-6 rounded-[1.5rem] border border-teal-200 bg-teal-50 p-5">
           <p className="text-sm font-bold text-teal-800">
-            Hizmet Kataloğu omurgası hazır.
+            Teklif ve Anlaşma modülü başladı.
           </p>
           <p className="mt-2 text-sm leading-6 text-teal-900">
-            Sanatçı hizmetleri, teknik hizmetler ve program paketleri artık
-            arayüzden yönetilmeye başlanabilir.
+            Print çıktısı müşteri güvenli olacak; maliyet ve iç notlar sadece
+            Back Office içinde kalacak.
           </p>
         </div>
       </section>
