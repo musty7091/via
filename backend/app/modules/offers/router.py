@@ -98,6 +98,15 @@ def import_package_to_offer(
     return offer_service.import_package_to_offer(db=db, offer_id=offer_id, payload=payload)
 
 
+@router.post("/{offer_id}/cancel", response_model=OfferRead)
+def cancel_offer(
+    offer_id: int,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    return offer_service.cancel_offer(db=db, offer_id=offer_id)
+
+
 @router.post("/{offer_id}/convert-to-agreement", response_model=OfferRead)
 def convert_to_agreement(
     offer_id: int,

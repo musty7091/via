@@ -33,6 +33,8 @@ def list_offers(
 
     if status:
         query = query.filter(Offer.status == status)
+    else:
+        query = query.filter(Offer.status != "cancelled")
 
     return query.order_by(Offer.id.desc()).offset(skip).limit(limit).all()
 

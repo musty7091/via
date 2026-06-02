@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  cancelOffer,
   convertOfferToAgreement,
   createOffer,
   createOfferItem,
@@ -51,6 +52,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   const [offerDetail, setOfferDetail] = useState<OfferDetail | null>(null);
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -62,14 +64,17 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   const [showItemModal, setShowItemModal] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<number | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   async function loadOffers(options?: {
     nextPageIndex?: number;
     nextSearch?: string;
+    nextStatusFilter?: string;
     nextSelectedOfferId?: number;
   }) {
     const targetPageIndex = options?.nextPageIndex ?? pageIndex;
     const targetSearch = options?.nextSearch ?? search;
+    const targetStatusFilter = options?.nextStatusFilter ?? statusFilter;
 
     setIsLoadingList(true);
     setErrorMessage("");
@@ -77,6 +82,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
     try {
       const data = await fetchOffers({
         search: targetSearch,
+        status: targetStatusFilter || null,
         skip: targetPageIndex * PAGE_SIZE,
         limit: PAGE_SIZE,
       });
@@ -207,6 +213,40 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
     }
   }
 
+  async function handleCancelOffer() {
+    if (!selectedOfferId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Bu teklif iptal edilecek. Kayıt tamamen silinmeyecek, sadece iptal durumuna alınacak. Devam etmek istiyor musun?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsCancelling(true);
+    setErrorMessage("");
+
+    try {
+      await cancelOffer(selectedOfferId);
+      setSelectedOfferId(null);
+      setOfferDetail(null);
+      await loadOffers({
+        nextPageIndex: 0,
+        nextSearch: search,
+        nextStatusFilter: statusFilter,
+      });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Teklif iptal edilemedi."
+      );
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   async function handleConvertToAgreement() {
     if (!selectedOfferId) {
       return;
@@ -255,6 +295,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
     void loadOffers({
       nextPageIndex: 0,
       nextSearch: "",
+      nextStatusFilter: "",
     });
     void fetchCustomers({ isActive: true, limit: 200 }).then(setCustomers);
     void fetchPackages({ isActive: true, limit: 200 }).then(setPackages);
@@ -294,24 +335,36 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
         <OfferToolbar
           search={search}
+          statusFilter={statusFilter}
           pageIndex={pageIndex}
           hasNextPage={hasNextPage}
           isLoading={isLoadingList}
           onSearchChange={setSearch}
+          onStatusFilterChange={(value) => {
+            setStatusFilter(value);
+            void loadOffers({
+              nextPageIndex: 0,
+              nextSearch: search,
+              nextStatusFilter: value,
+            });
+          }}
           onSearchSubmit={() =>
             void loadOffers({
               nextPageIndex: 0,
               nextSearch: search,
+              nextStatusFilter: statusFilter,
             })
           }
           onPreviousPage={() =>
             void loadOffers({
               nextPageIndex: Math.max(pageIndex - 1, 0),
+              nextStatusFilter: statusFilter,
             })
           }
           onNextPage={() =>
             void loadOffers({
               nextPageIndex: pageIndex + 1,
+              nextStatusFilter: statusFilter,
             })
           }
           onOpenCreate={() => setShowCreateModal(true)}
@@ -351,8 +404,10 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
                 onRemoveItem={handleRemoveItem}
                 onPrint={handlePrint}
                 onConvertToAgreement={handleConvertToAgreement}
+                onCancelOffer={handleCancelOffer}
                 removingItemId={removingItemId}
                 isConverting={isConverting}
+                isCancelling={isCancelling}
               />
             ) : (
               <OfferEmptyState onOpenCreate={() => setShowCreateModal(true)} />

@@ -14,8 +14,10 @@ type OfferDetailPanelProps = {
   onRemoveItem: (itemId: number) => void;
   onPrint: () => void;
   onConvertToAgreement: () => void;
+  onCancelOffer: () => void;
   removingItemId: number | null;
   isConverting: boolean;
+  isCancelling: boolean;
 };
 
 export function OfferDetailPanel({
@@ -25,8 +27,10 @@ export function OfferDetailPanel({
   onRemoveItem,
   onPrint,
   onConvertToAgreement,
+  onCancelOffer,
   removingItemId,
   isConverting,
+  isCancelling,
 }: OfferDetailPanelProps) {
   const offer = detail.offer;
   const remainingPaymentAmount =
@@ -82,6 +86,17 @@ export function OfferDetailPanel({
             className="rounded-full bg-white/10 px-5 py-3 text-sm font-black text-white"
           >
             Manuel Kalem Ekle
+          </button>
+          <button
+            onClick={onCancelOffer}
+            disabled={offer.status === "agreement" || offer.status === "cancelled" || isCancelling}
+            className="rounded-full bg-red-500/90 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {offer.status === "cancelled"
+              ? "İptal Edildi"
+              : isCancelling
+                ? "İptal Ediliyor..."
+                : "Teklifi İptal Et"}
           </button>
         </div>
       </section>

@@ -169,6 +169,12 @@ export async function convertOfferToAgreement(
   });
 }
 
+export async function cancelOffer(offerId: number): Promise<OfferListItem> {
+  return requestJson<OfferListItem>(`/offers/${offerId}/cancel`, {
+    method: "POST",
+  });
+}
+
 export async function fetchOfferPrintView(
   offerId: number
 ): Promise<OfferPrintView> {

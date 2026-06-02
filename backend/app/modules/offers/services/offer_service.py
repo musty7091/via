@@ -488,6 +488,25 @@ def convert_to_agreement(db: Session, offer_id: int, payload: ConvertAgreementRe
     return offer
 
 
+
+def cancel_offer(db: Session, offer_id: int):
+    offer = get_offer_or_404(db=db, offer_id=offer_id)
+
+    if offer.status == "agreement":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlaşmaya çevrilmiş teklif bu ekrandan iptal edilemez. Önce etkinlik / anlaşma iptal süreci kullanılmalıdır.",
+        )
+
+    if offer.status == "cancelled":
+        return offer
+
+    offer.status = "cancelled"
+    db.commit()
+    db.refresh(offer)
+    return offer
+
+
 def get_print_view(db: Session, offer_id: int) -> OfferPrintView:
     offer = get_offer_or_404(db=db, offer_id=offer_id)
     customer = db.get(Customer, offer.customer_id)

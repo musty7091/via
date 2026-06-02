@@ -1,21 +1,35 @@
 type OfferToolbarProps = {
   search: string;
+  statusFilter: string;
   pageIndex: number;
   hasNextPage: boolean;
   isLoading: boolean;
   onSearchChange: (value: string) => void;
+  onStatusFilterChange: (value: string) => void;
   onSearchSubmit: () => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
   onOpenCreate: () => void;
 };
 
+const statusFilterOptions = [
+  { value: "", label: "Aktif teklifler" },
+  { value: "draft", label: "Taslak" },
+  { value: "sent", label: "Gönderildi" },
+  { value: "accepted", label: "Kabul edildi" },
+  { value: "agreement", label: "Anlaşma" },
+  { value: "rejected", label: "Reddedildi" },
+  { value: "cancelled", label: "İptal" },
+];
+
 export function OfferToolbar({
   search,
+  statusFilter,
   pageIndex,
   hasNextPage,
   isLoading,
   onSearchChange,
+  onStatusFilterChange,
   onSearchSubmit,
   onPreviousPage,
   onNextPage,
@@ -38,7 +52,7 @@ export function OfferToolbar({
         </div>
 
         <div className="flex w-full flex-col gap-2 xl:w-[620px]">
-          <div className="flex gap-2">
+          <div className="grid gap-2 md:grid-cols-[1fr_180px_auto_auto]">
             <input
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
@@ -50,6 +64,18 @@ export function OfferToolbar({
               placeholder="Teklif no veya başlık ara..."
               className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
             />
+
+            <select
+              value={statusFilter}
+              onChange={(event) => onStatusFilterChange(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none ring-teal-500 transition focus:ring-4"
+            >
+              {statusFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
             <button
               onClick={onSearchSubmit}
