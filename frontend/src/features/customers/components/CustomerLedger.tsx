@@ -20,7 +20,6 @@ export function CustomerLedger({
   ledger,
   onCreateMovement,
 }: CustomerLedgerProps) {
-  const [showForm, setShowForm] = useState(false);
   const [movementDate, setMovementDate] = useState("2026-06-01");
   const [movementType, setMovementType] = useState("event_charge");
   const [direction, setDirection] = useState<"debit" | "credit">("debit");
@@ -60,148 +59,34 @@ export function CustomerLedger({
 
       setAmount("");
       setDetailNote("");
-      setShowForm(false);
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-black text-slate-950">
-            MÃ¼ÅŸteri Hesap Hareketleri
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            BorÃ§, tahsilat, kÃ¼mÃ¼latif bakiye ve tahsilatÄ± yapan ortak.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowForm((value) => !value)}
-          className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white"
-        >
-          {showForm ? "Formu Kapat" : "Hareket Ekle"}
-        </button>
+    <section className="rounded-3xl border border-slate-200 bg-white p-4">
+      <div>
+        <h3 className="text-lg font-black text-slate-950">
+          Müşteri Hesap Hareketleri
+        </h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Borç, tahsilat ve kümülatif bakiye takibi.
+        </p>
       </div>
-
-      {showForm ? (
-        <form onSubmit={handleSubmit} className="mt-4 rounded-3xl bg-slate-50 p-4">
-          <div className="grid gap-3">
-            <div className="grid gap-3 md:grid-cols-3">
-              <input
-                type="date"
-                value={movementDate}
-                onChange={(event) => setMovementDate(event.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              />
-
-              <select
-                value={movementType}
-                onChange={(event) => setMovementType(event.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              >
-                {ledgerMovementTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={direction}
-                onChange={(event) =>
-                  setDirection(event.target.value as "debit" | "credit")
-                }
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              >
-                <option value="debit">BorÃ§</option>
-                <option value="credit">Alacak / Tahsilat</option>
-              </select>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Ä°ÅŸlem baÅŸlÄ±ÄŸÄ±"
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              />
-
-              <input
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Etkinlik / aÃ§Ä±klama"
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              />
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              <input
-                type="number"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                placeholder="Tutar"
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              />
-
-              <select
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              >
-                <option value="">Ã–deme yÃ¶ntemi yok</option>
-                {paymentMethodOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={collectedByPartnerId}
-                onChange={(event) => setCollectedByPartnerId(event.target.value)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              >
-                <option value="">TahsilatÄ± yapan ortak yok</option>
-                <option value="1">Ortak 1</option>
-                <option value="2">Ortak 2</option>
-                <option value="3">Ortak 3</option>
-              </select>
-            </div>
-
-            <textarea
-              value={detailNote}
-              onChange={(event) => setDetailNote(event.target.value)}
-              placeholder="SatÄ±r altÄ± detay notu"
-              rows={2}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-            />
-
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
-            >
-              {isSaving ? "Ekleniyor..." : "Hareket Kaydet"}
-            </button>
-          </div>
-        </form>
-      ) : null}
 
       <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200">
         <div className="hidden grid-cols-[110px_1fr_120px_120px_120px] bg-slate-100 px-4 py-3 text-xs font-black uppercase tracking-[0.15em] text-slate-500 lg:grid">
           <span>Tarih</span>
-          <span>Ä°ÅŸlem</span>
-          <span>BorÃ§</span>
+          <span>İşlem</span>
+          <span>Borç</span>
           <span>Alacak</span>
           <span>Bakiye</span>
         </div>
 
         {ledger.length === 0 ? (
-          <p className="p-6 text-center text-sm text-slate-500">
-            HenÃ¼z hesap hareketi yok.
+          <p className="p-5 text-sm text-slate-500">
+            Henüz hesap hareketi yok.
           </p>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -221,7 +106,7 @@ export function CustomerLedger({
                         ledgerMovementTypeOptions,
                         movement.movement_type
                       )}
-                      {movement.description ? ` â€¢ ${movement.description}` : ""}
+                      {movement.description ? ` • ${movement.description}` : ""}
                     </p>
                   </div>
 
@@ -244,12 +129,12 @@ export function CustomerLedger({
 
                 <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
                   <span className="font-bold text-slate-700">Detay: </span>
-                  {movement.detail_note || "AÃ§Ä±klama yok."}
+                  {movement.detail_note || "Açıklama yok."}
                   {movement.collected_by_partner_name
-                    ? ` | TahsilatÄ± yapan: ${movement.collected_by_partner_name}`
+                    ? ` | Tahsilatı yapan: ${movement.collected_by_partner_name}`
                     : ""}
                   {movement.payment_method
-                    ? ` | Ã–deme yÃ¶ntemi: ${getOptionLabel(
+                    ? ` | Ödeme yöntemi: ${getOptionLabel(
                         paymentMethodOptions,
                         movement.payment_method
                       )}`
@@ -263,6 +148,112 @@ export function CustomerLedger({
           </div>
         )}
       </div>
+
+      <form onSubmit={handleSubmit} className="mt-4 rounded-2xl bg-slate-50 p-4">
+        <p className="text-sm font-black text-slate-800">
+          Manuel hesap hareketi ekle
+        </p>
+
+        <div className="mt-3 grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <input
+              type="date"
+              value={movementDate}
+              onChange={(event) => setMovementDate(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            />
+
+            <select
+              value={movementType}
+              onChange={(event) => setMovementType(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            >
+              {ledgerMovementTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={direction}
+              onChange={(event) =>
+                setDirection(event.target.value as "debit" | "credit")
+              }
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            >
+              <option value="debit">Borç</option>
+              <option value="credit">Alacak / Tahsilat</option>
+            </select>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="İşlem başlığı"
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            />
+
+            <input
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Etkinlik / açıklama"
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <input
+              type="number"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="Tutar"
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            />
+
+            <select
+              value={paymentMethod}
+              onChange={(event) => setPaymentMethod(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            >
+              <option value="">Ödeme yöntemi seçilmedi</option>
+              {paymentMethodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={collectedByPartnerId}
+              onChange={(event) => setCollectedByPartnerId(event.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            >
+              <option value="">Tahsilatı yapan ortak yok</option>
+              <option value="1">Ortak 1</option>
+              <option value="2">Ortak 2</option>
+              <option value="3">Ortak 3</option>
+            </select>
+          </div>
+
+          <textarea
+            value={detailNote}
+            onChange={(event) => setDetailNote(event.target.value)}
+            placeholder="Satır altı detay notu"
+            rows={2}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+          />
+
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+          >
+            {isSaving ? "Ekleniyor..." : "Hareket Ekle"}
+          </button>
+        </div>
+      </form>
     </section>
   );
 }

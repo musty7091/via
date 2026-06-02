@@ -36,18 +36,17 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
   const [bundle, setBundle] = useState<CustomerDetailBundle | null>(null);
   const [search, setSearch] = useState("");
   const [showPassive, setShowPassive] = useState(false);
-  const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function loadCustomers(nextSelectedId?: number, forceSearch?: string) {
+  async function loadCustomers(nextSelectedId?: number) {
     setIsLoadingList(true);
     setErrorMessage("");
 
     try {
       const data = await fetchCustomers({
-        search: forceSearch ?? search,
+        search,
         isActive: showPassive ? null : true,
       });
 
@@ -57,15 +56,10 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         setSelectedCustomerId(nextSelectedId);
       } else if (!selectedCustomerId && data.length > 0) {
         setSelectedCustomerId(data[0].id);
-      } else if (
-        selectedCustomerId &&
-        !data.some((customer) => customer.id === selectedCustomerId)
-      ) {
-        setSelectedCustomerId(data[0]?.id ?? null);
       }
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "MÃ¼ÅŸteri listesi alÄ±namadÄ±."
+        error instanceof Error ? error.message : "Müşteri listesi alınamadı."
       );
     } finally {
       setIsLoadingList(false);
@@ -94,7 +88,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
       });
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "MÃ¼ÅŸteri detayÄ± alÄ±namadÄ±."
+        error instanceof Error ? error.message : "Müşteri detayı alınamadı."
       );
     } finally {
       setIsLoadingDetail(false);
@@ -103,9 +97,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
 
   async function handleCreateCustomer(payload: CustomerCreatePayload) {
     const createdCustomer = await createCustomer(payload);
-    setSearch("");
-    setShowCreatePanel(false);
-    await loadCustomers(createdCustomer.id, "");
+    await loadCustomers(createdCustomer.id);
   }
 
   async function handleCreateContact(payload: CustomerContactCreatePayload) {
@@ -159,37 +151,29 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
               VIA EVENTS
             </p>
             <h1 className="mt-1 text-xl font-black sm:text-2xl">
-              MÃ¼ÅŸteriler
+              Müşteriler
             </h1>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowCreatePanel(true)}
-              className="rounded-full bg-teal-300 px-4 py-2 text-sm font-black text-slate-950"
-            >
-              Yeni MÃ¼ÅŸteri
-            </button>
-            <button
-              onClick={onBackToDashboard}
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-            >
-              Dashboard
-            </button>
-          </div>
+          <button
+            onClick={onBackToDashboard}
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
+          >
+            Dashboard
+          </button>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 xl:grid-cols-[390px_1fr]">
+      <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 xl:grid-cols-[420px_1fr]">
         <aside className="space-y-4">
           <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-black text-slate-950">
-                  MÃ¼ÅŸteri Listesi
+                  Müşteri Listesi
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  {customers.length} kayÄ±t
+                  {customers.length} kayıt
                 </p>
               </div>
 
@@ -202,26 +186,17 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
             </div>
 
             <div className="mt-4 grid gap-3">
-              <div className="flex gap-2">
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      void loadCustomers();
-                    }
-                  }}
-                  placeholder="MÃ¼ÅŸteri ara..."
-                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-                />
-
-                <button
-                  onClick={() => void loadCustomers()}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white"
-                >
-                  Ara
-                </button>
-              </div>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    void loadCustomers();
+                  }
+                }}
+                placeholder="Müşteri ara..."
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+              />
 
               <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                 <input
@@ -229,7 +204,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
                   checked={showPassive}
                   onChange={(event) => setShowPassive(event.target.checked)}
                 />
-                Pasif mÃ¼ÅŸterileri de gÃ¶ster
+                Pasif müşterileri de göster
               </label>
             </div>
           </div>
@@ -242,7 +217,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
 
           {isLoadingList ? (
             <div className="rounded-3xl bg-white p-5 text-sm text-slate-500">
-              MÃ¼ÅŸteri listesi yÃ¼kleniyor...
+              Müşteri listesi yükleniyor...
             </div>
           ) : (
             <CustomerList
@@ -251,6 +226,8 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
               onSelectCustomer={setSelectedCustomerId}
             />
           )}
+
+          <CustomerForm onCreateCustomer={handleCreateCustomer} />
         </aside>
 
         <CustomerDetailPanel
@@ -261,34 +238,6 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
           onCreateMovement={handleCreateMovement}
         />
       </section>
-
-      {showCreatePanel ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="ml-auto flex h-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 p-5">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
-                  KayÄ±t Paneli
-                </p>
-                <h2 className="mt-1 text-xl font-black text-slate-950">
-                  Yeni MÃ¼ÅŸteri
-                </h2>
-              </div>
-
-              <button
-                onClick={() => setShowCreatePanel(false)}
-                className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
-              >
-                Kapat
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5">
-              <CustomerForm onCreateCustomer={handleCreateCustomer} />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </main>
   );
 }
