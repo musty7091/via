@@ -1,7 +1,46 @@
-﻿import { BackOfficePreview } from "./pages/BackOfficePreview";
+import { useState } from "react";
+
+import { BackOfficePreview } from "./pages/BackOfficePreview";
+import { DashboardPage } from "./pages/DashboardPage";
 import { EventsLandingPreview } from "./pages/EventsLandingPreview";
+import { LoginPage } from "./pages/LoginPage";
+import { clearAuthSession, getStoredUser } from "./services/authStorage";
+import type { AuthUser } from "./types/auth";
+
+type AppScreen = "landing" | "login" | "dashboard";
 
 function App() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
+    getStoredUser()
+  );
+  const [screen, setScreen] = useState<AppScreen>(() =>
+    getStoredUser() ? "dashboard" : "landing"
+  );
+
+  function handleLoginSuccess(user: AuthUser) {
+    setCurrentUser(user);
+    setScreen("dashboard");
+  }
+
+  function handleLogout() {
+    clearAuthSession();
+    setCurrentUser(null);
+    setScreen("landing");
+  }
+
+  if (screen === "login") {
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        onBack={() => setScreen("landing")}
+      />
+    );
+  }
+
+  if (screen === "dashboard" && currentUser) {
+    return <DashboardPage user={currentUser} onLogout={handleLogout} />;
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="relative overflow-hidden">
@@ -19,7 +58,7 @@ function App() {
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200 shadow-lg shadow-black/20 backdrop-blur">
-              v0.1
+              v0.2
             </div>
           </header>
 
@@ -42,7 +81,7 @@ function App() {
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   <EventsLandingPreview />
-                  <BackOfficePreview />
+                  <BackOfficePreview onOpenLogin={() => setScreen("login")} />
                 </div>
               </div>
             </section>
@@ -78,7 +117,9 @@ function App() {
                       <p className="mt-2 text-2xl font-black">0</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs text-slate-400">Bekleyen Tahsilat</p>
+                      <p className="text-xs text-slate-400">
+                        Bekleyen Tahsilat
+                      </p>
                       <p className="mt-2 text-2xl font-black">0</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
@@ -96,7 +137,8 @@ function App() {
                       Sıradaki çekirdek hedef
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
-                      Login, rol sistemi, müşteri ve sanatçı/hizmet modülleri.
+                      Müşteri, sanatçı/hizmet ve etkinlik kartlarının ilk CRUD
+                      altyapısı.
                     </p>
                   </div>
                 </div>
