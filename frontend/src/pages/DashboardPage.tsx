@@ -8,6 +8,7 @@ type DashboardPageProps = {
   onOpenOffers: () => void;
   onOpenEvents: () => void;
   onOpenPartners: () => void;
+  onOpenUsers: () => void;
 };
 
 const dashboardCards = [
@@ -41,6 +42,13 @@ const dashboardCards = [
     description: "Ortak isimleri, pay oranları ve aktiflik durumu.",
     action: "partners",
   },
+  {
+    title: "Kullanıcılar",
+    value: "Yetki",
+    description: "Sistem kullanıcıları, roller ve şifre sıfırlama.",
+    action: "users",
+    adminOnly: true,
+  },
 ];
 
 export function DashboardPage({
@@ -51,7 +59,12 @@ export function DashboardPage({
   onOpenOffers,
   onOpenEvents,
   onOpenPartners,
+  onOpenUsers,
 }: DashboardPageProps) {
+  const visibleDashboardCards = dashboardCards.filter(
+    (card) => !card.adminOnly || user.role === "super_admin"
+  );
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
@@ -88,8 +101,8 @@ export function DashboardPage({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {dashboardCards.map((card) => (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          {visibleDashboardCards.map((card) => (
             <button
               key={card.title}
               onClick={
@@ -101,7 +114,9 @@ export function DashboardPage({
                       ? onOpenOffers
                       : card.action === "partners"
                         ? onOpenPartners
-                        : onOpenEvents
+                        : card.action === "users"
+                          ? onOpenUsers
+                          : onOpenEvents
               }
               className="rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition hover:-translate-y-1 hover:shadow-xl"
             >
