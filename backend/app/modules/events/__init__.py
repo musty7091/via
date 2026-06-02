@@ -1,0 +1,3 @@
+from app.modules.events.router import router
+
+__all__ = ["router"]

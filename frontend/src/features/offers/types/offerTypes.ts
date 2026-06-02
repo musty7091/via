@@ -41,6 +41,7 @@ export type InvoiceType = "without_invoice" | "with_invoice";
 
 export type OfferListItem = {
   id: number;
+  event_id: number | null;
   customer_id: number;
   venue_id: number | null;
   package_id: number | null;

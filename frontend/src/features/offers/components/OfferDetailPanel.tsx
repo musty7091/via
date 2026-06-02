@@ -73,6 +73,22 @@ export function OfferDetailPanel({
         </div>
       </section>
 
+      {offer.event_id ? (
+        <section className="rounded-3xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
+          <p className="text-sm font-black text-teal-900">
+            Etkinlik dosyası oluşturuldu.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-teal-900">
+            Bu anlaşma artık gerçek bir etkinlik dosyasına bağlı. Operasyon,
+            ödeme, gider ve kârlılık takibi bundan sonra etkinlik üzerinden
+            yürütülecek.
+          </p>
+          <p className="mt-3 rounded-full bg-white px-4 py-2 text-sm font-black text-teal-800 inline-flex">
+            Etkinlik ID: {offer.event_id}
+          </p>
+        </section>
+      ) : null}
+
       <section className="grid gap-3 md:grid-cols-3">
         <Metric title="Fatura Tipi" value={getOptionLabel(invoiceTypeOptions, offer.invoice_type)} />
         <Metric title="Ön Ödeme" value={formatMoney(offer.advance_payment_amount, offer.advance_payment_currency)} />

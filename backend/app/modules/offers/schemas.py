@@ -57,6 +57,7 @@ class OfferItemCreate(BaseModel):
 
 class OfferRead(BaseModel):
     id: int
+    event_id: int | None = None
     customer_id: int
     venue_id: int | None = None
     package_id: int | None = None

@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.customer import Customer
+from app.models.event import Event, EventItem
 from app.models.offer import Offer, OfferItem
 from app.models.service_package import ServicePackage, ServicePackageItem
 from app.models.venue import Venue
@@ -361,9 +362,79 @@ def deactivate_offer_item(db: Session, offer_id: int, item_id: int):
     return _to_internal_item_read(deactivated)
 
 
+def _event_code_from_offer(offer: Offer) -> str:
+    if offer.offer_no:
+        return f"EVT-{offer.offer_no}"
+
+    return f"EVT-OFFER-{offer.id:05d}"
+
+
+def _create_event_from_offer_if_needed(db: Session, offer: Offer) -> Event:
+    if offer.event_id:
+        existing_event = db.get(Event, offer.event_id)
+
+        if existing_event:
+            return existing_event
+
+    event = Event(
+        event_code=_event_code_from_offer(offer=offer),
+        title=offer.title,
+        customer_id=offer.customer_id,
+        venue_id=offer.venue_id,
+        responsible_partner_id=None,
+        operation_user_id=None,
+        event_date=offer.event_date or date.today(),
+        start_datetime=None,
+        end_datetime=None,
+        status="planned",
+        invoice_type=offer.invoice_type,
+        vat_rate=offer.vat_rate,
+        agreement_amount=offer.amount,
+        agreement_currency=offer.currency,
+        exchange_rate=offer.exchange_rate,
+        base_agreement_amount=offer.base_amount,
+        vat_amount=offer.vat_amount,
+        total_customer_amount=offer.total_amount,
+        notes=offer.customer_visible_notes,
+        is_period_closed=False,
+    )
+    db.add(event)
+    db.flush()
+
+    offer_items = offer_repository.list_offer_items(db=db, offer_id=offer.id)
+
+    for offer_item in offer_items:
+        event_item = EventItem(
+            event_id=event.id,
+            item_type=offer_item.source_type,
+            artist_id=offer_item.artist_id,
+            service_item_id=offer_item.service_item_id,
+            description=f"{offer_item.title}\n{offer_item.description}",
+            sale_amount=offer_item.base_amount,
+            sale_currency=offer_item.currency,
+            cost_amount=offer_item.internal_total_cost,
+            cost_currency=offer_item.internal_cost_currency,
+            exchange_rate=1,
+            base_sale_amount=offer_item.base_amount,
+            base_cost_amount=offer_item.internal_total_cost,
+            sort_order=offer_item.sort_order,
+        )
+        db.add(event_item)
+
+    offer.event_id = event.id
+    db.commit()
+    db.refresh(event)
+    db.refresh(offer)
+    return event
+
+
 def convert_to_agreement(db: Session, offer_id: int, payload: ConvertAgreementRequest):
     offer = get_offer_or_404(db=db, offer_id=offer_id)
+
+    event = _create_event_from_offer_if_needed(db=db, offer=offer)
+
     offer.status = "agreement"
+    offer.event_id = event.id
     offer.agreement_notes = payload.agreement_notes
     db.commit()
     db.refresh(offer)
