@@ -160,6 +160,13 @@ def create_offer(db: Session, payload: OfferCreate):
 
 def update_offer(db: Session, offer_id: int, payload: OfferUpdate):
     offer = get_offer_or_404(db=db, offer_id=offer_id)
+
+    if offer.status == "agreement":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlaşmaya çevrilmiş teklif doğrudan düzenlenemez. Revizyon / ek protokol akışı kullanılmalıdır.",
+        )
+
     data = payload.model_dump(exclude_unset=True)
 
     _validate_choice("status", data.get("status"), constants.OFFER_STATUSES)
@@ -167,7 +174,7 @@ def update_offer(db: Session, offer_id: int, payload: OfferUpdate):
     _validate_choice("currency", data.get("currency"), constants.CURRENCIES)
     _validate_choice("advance_payment_currency", data.get("advance_payment_currency"), constants.CURRENCIES)
 
-    customer_id = offer.customer_id
+    customer_id = data.get("customer_id", offer.customer_id)
     venue_id = data.get("venue_id", offer.venue_id)
     package_id = data.get("package_id", offer.package_id)
     _validate_offer_refs(db=db, customer_id=customer_id, venue_id=venue_id, package_id=package_id)

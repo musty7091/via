@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import {
   currencyOptions,
@@ -12,6 +12,7 @@ import type {
   InvoiceType,
   OfferCreatePayload,
   OfferItemCreatePayload,
+  OfferListItem,
   PackageOption,
   VenueOption,
 } from "../types/offerTypes";
@@ -53,6 +54,8 @@ export function OfferForm({
   customers,
   venues,
   packages,
+  initialOffer = null,
+  submitLabel = "Teklifi Oluştur",
   onCustomerChange,
   onSubmit,
   onDone,
@@ -60,6 +63,8 @@ export function OfferForm({
   customers: CustomerOption[];
   venues: VenueOption[];
   packages: PackageOption[];
+  initialOffer?: OfferListItem | null;
+  submitLabel?: string;
   onCustomerChange: (customerId: number | null) => void;
   onSubmit: (payload: OfferCreatePayload, packageId: number | null) => Promise<void>;
   onDone: () => void;
@@ -78,7 +83,41 @@ export function OfferForm({
   const [customerVisibleNotes, setCustomerVisibleNotes] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
   const selectedPackage = packages.find((item) => String(item.id) === packageId) ?? null;
-  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!initialOffer) {
+      setCustomerId("");
+      setVenueId("");
+      setPackageId("");
+      setTitle("Etkinlik Program Teklifi");
+      setEventDate("");
+      setValidUntil("");
+      setInvoiceType("without_invoice");
+      setVatRate("16");
+      setCurrency("TRY");
+      setAdvancePaymentAmount("0");
+      setPaymentTerms("");
+      setCustomerVisibleNotes("");
+      setInternalNotes("");
+      return;
+    }
+
+    setCustomerId(String(initialOffer.customer_id));
+    setVenueId(initialOffer.venue_id ? String(initialOffer.venue_id) : "");
+    setPackageId(initialOffer.package_id ? String(initialOffer.package_id) : "");
+    setTitle(initialOffer.title);
+    setEventDate(initialOffer.event_date ?? "");
+    setValidUntil(initialOffer.valid_until ?? "");
+    setInvoiceType(initialOffer.invoice_type);
+    setVatRate(String(initialOffer.vat_rate ?? 16));
+    setCurrency(initialOffer.currency);
+    setAdvancePaymentAmount(String(initialOffer.advance_payment_amount ?? 0));
+    setPaymentTerms(initialOffer.payment_terms ?? "");
+    setCustomerVisibleNotes(initialOffer.customer_visible_notes ?? "");
+    setInternalNotes(initialOffer.internal_notes ?? "");
+  }, [initialOffer]);
+
+    const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,7 +266,7 @@ export function OfferForm({
         onChange={setInternalNotes}
       />
 
-      <SubmitButton isSaving={isSaving} label="Teklifi Oluştur" />
+      <SubmitButton isSaving={isSaving} label={submitLabel} />
     </form>
   );
 }

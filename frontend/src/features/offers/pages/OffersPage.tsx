@@ -12,6 +12,7 @@ import {
   fetchOffers,
   fetchPackages,
   importPackageToOffer,
+  updateOffer,
 } from "../api/offersApi";
 import { OfferDetailPanel } from "../components/OfferDetailPanel";
 import { OfferEmptyState } from "../components/OfferEmptyState";
@@ -29,6 +30,7 @@ import type {
   OfferDetail,
   OfferItemCreatePayload,
   OfferListItem,
+  OfferUpdatePayload,
   PackageOption,
   VenueOption,
 } from "../types/offerTypes";
@@ -56,6 +58,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<number | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -140,6 +143,31 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       nextSelectedOfferId: created.id,
     });
     await loadOfferDetail(created.id);
+  }
+
+  async function handleUpdateOffer(
+    payload: OfferCreatePayload,
+    packageId: number | null
+  ) {
+    if (!selectedOfferId || !offerDetail) {
+      return;
+    }
+
+    const updatePayload: OfferUpdatePayload = payload;
+    const previousPackageId = offerDetail.offer.package_id;
+
+    const updated = await updateOffer(selectedOfferId, updatePayload);
+
+    if (packageId && packageId !== previousPackageId) {
+      await importPackageToOffer(updated.id, packageId, true);
+    }
+
+    await loadOffers({
+      nextPageIndex: pageIndex,
+      nextSearch: search,
+      nextSelectedOfferId: updated.id,
+    });
+    await loadOfferDetail(updated.id);
   }
 
   async function handleCreateOfferItem(payload: OfferItemCreatePayload) {
@@ -319,6 +347,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
               <OfferDetailPanel
                 detail={offerDetail}
                 onOpenItemForm={() => setShowItemModal(true)}
+                onOpenEdit={() => setShowEditModal(true)}
                 onRemoveItem={handleRemoveItem}
                 onPrint={handlePrint}
                 onConvertToAgreement={handleConvertToAgreement}
@@ -345,6 +374,25 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
             onCustomerChange={loadCustomerVenues}
             onSubmit={handleCreateOffer}
             onDone={() => setShowCreateModal(false)}
+          />
+        </ModalShell>
+      ) : null}
+
+      {showEditModal && offerDetail ? (
+        <ModalShell
+          eyebrow="Teklif"
+          title="Teklifi Düzenle"
+          onClose={() => setShowEditModal(false)}
+        >
+          <OfferForm
+            customers={customers}
+            venues={venues}
+            packages={packages}
+            initialOffer={offerDetail.offer}
+            submitLabel="Değişiklikleri Kaydet"
+            onCustomerChange={loadCustomerVenues}
+            onSubmit={handleUpdateOffer}
+            onDone={() => setShowEditModal(false)}
           />
         </ModalShell>
       ) : null}

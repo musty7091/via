@@ -10,6 +10,7 @@ import { formatDate, formatMoney, formatTime } from "./formatters";
 type OfferDetailPanelProps = {
   detail: OfferDetail;
   onOpenItemForm: () => void;
+  onOpenEdit: () => void;
   onRemoveItem: (itemId: number) => void;
   onPrint: () => void;
   onConvertToAgreement: () => void;
@@ -20,6 +21,7 @@ type OfferDetailPanelProps = {
 export function OfferDetailPanel({
   detail,
   onOpenItemForm,
+  onOpenEdit,
   onRemoveItem,
   onPrint,
   onConvertToAgreement,
@@ -51,6 +53,13 @@ export function OfferDetailPanel({
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            onClick={onOpenEdit}
+            disabled={offer.status === "agreement"}
+            className="rounded-full bg-white px-5 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Teklifi Düzenle
+          </button>
           <button
             onClick={onPrint}
             className="rounded-full bg-white px-5 py-3 text-sm font-black text-slate-950"

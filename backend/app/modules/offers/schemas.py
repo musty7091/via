@@ -22,6 +22,7 @@ class OfferCreate(BaseModel):
 
 
 class OfferUpdate(BaseModel):
+    customer_id: int | None = None
     title: str | None = None
     status: str | None = None
     venue_id: int | None = None

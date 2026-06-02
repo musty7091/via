@@ -7,6 +7,7 @@ import type {
   OfferItemCreatePayload,
   OfferListItem,
   OfferPrintView,
+  OfferUpdatePayload,
   PackageOption,
   VenueOption,
 } from "../types/offerTypes";
@@ -111,6 +112,16 @@ export async function createOffer(
 
 export async function fetchOfferDetail(offerId: number): Promise<OfferDetail> {
   return requestJson<OfferDetail>(`/offers/${offerId}/detail`);
+}
+
+export async function updateOffer(
+  offerId: number,
+  payload: OfferUpdatePayload
+): Promise<OfferListItem> {
+  return requestJson<OfferListItem>(`/offers/${offerId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function importPackageToOffer(

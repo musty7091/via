@@ -85,6 +85,8 @@ export type OfferCreatePayload = {
   internal_notes?: string | null;
 };
 
+export type OfferUpdatePayload = Partial<OfferCreatePayload>;
+
 export type OfferItem = {
   id: number;
   offer_id: number;
