@@ -43,7 +43,7 @@ http://127.0.0.1:8000/api/v1/health
 Local geliştirme için oluşturulan ilk admin:
 
 ```text
-E-posta: admin@via.local
+E-posta: admin@viaevents.com
 Şifre: Via12345!
 ```
 
@@ -60,7 +60,7 @@ Login JSON örneği:
 
 ```json
 {
-  "email": "admin@via.local",
+  "email": "admin@viaevents.com",
   "password": "Via12345!"
 }
 ```

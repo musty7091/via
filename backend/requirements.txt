@@ -4,7 +4,7 @@ sqlalchemy
 pydantic-settings
 python-dotenv
 passlib[bcrypt]
-bcrypt<5.0
+bcrypt==4.0.1
 python-jose[cryptography]
 email-validator
 pytest
