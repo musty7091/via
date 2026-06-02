@@ -13,6 +13,7 @@ import {
   fetchCustomerVenues,
 } from "../api/customersApi";
 import { CustomerDetailPanel } from "../components/CustomerDetailPanel";
+import { CustomerEmptyState } from "../components/CustomerEmptyState";
 import { CustomerForm } from "../components/CustomerForm";
 import { CustomerSelector } from "../components/CustomerSelector";
 import type {
@@ -253,13 +254,22 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
           </div>
         ) : null}
 
-        <CustomerDetailPanel
-          bundle={bundle}
-          isLoading={isLoadingDetail}
-          onCreateContact={handleCreateContact}
-          onCreateVenue={handleCreateVenue}
-          onCreateMovement={handleCreateMovement}
-        />
+        {selectedCustomerId ? (
+          <CustomerDetailPanel
+            bundle={bundle}
+            isLoading={isLoadingDetail}
+            onCreateContact={handleCreateContact}
+            onCreateVenue={handleCreateVenue}
+            onCreateMovement={handleCreateMovement}
+          />
+        ) : (
+          <CustomerEmptyState
+            customers={customers}
+            onOpenSelector={() => setIsSelectorOpen(true)}
+            onOpenCreatePanel={() => setShowCreatePanel(true)}
+            onSelectCustomer={handleSelectCustomer}
+          />
+        )}
       </section>
 
       {showCreatePanel ? (
