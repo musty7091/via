@@ -26,59 +26,46 @@ export function CustomerEmptyState({
           Müşteri Çalışma Alanı
         </p>
         <h2 className="mt-3 text-3xl font-black">
-          Önce bir müşteri seç veya yeni kayıt oluştur.
+          Müşteri seçildiğinde detay ekranı burada açılır.
         </h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-          Seçilen müşterinin genel bilgileri, yetkilileri, mekânları ve cari
-          hesap hareketleri bu alanda açılır. Böylece liste uzamaz; ekran her
-          zaman tek müşteri üzerinde çalışır.
+          Bu ekran listeyi sonsuza kadar uzatmak yerine tek müşteri üzerinde
+          çalışmak için tasarlandı. Üstteki arama alanından müşteri seçebilir
+          veya sağ üstteki Yeni Müşteri butonuyla kayıt oluşturabilirsin.
         </p>
-
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            onClick={onOpenSelector}
-            className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950"
-          >
-            Müşteri Ara / Seç
-          </button>
-          <button
-            onClick={onOpenCreatePanel}
-            className="rounded-full bg-white/10 px-5 py-3 text-sm font-black text-white"
-          >
-            Yeni Müşteri Oluştur
-          </button>
-        </div>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <article className="rounded-3xl bg-slate-50 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-            1. Seç
+            1. Ara
           </p>
-          <h3 className="mt-2 font-black text-slate-950">Müşteri arama</h3>
+          <h3 className="mt-2 font-black text-slate-950">Kayıt bul</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Üstteki seçiciye ad, telefon veya vergi no yazıp müşteriyi bul.
+            Üstteki müşteri seçiciye ad, telefon veya vergi no yazarak kayıtları
+            filtrele.
           </p>
         </article>
 
         <article className="rounded-3xl bg-slate-50 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-            2. Yönet
+            2. Seç
           </p>
-          <h3 className="mt-2 font-black text-slate-950">Detay ekranı</h3>
+          <h3 className="mt-2 font-black text-slate-950">Detaya geç</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Yetkililer, mekânlar ve hesap hareketleri seçilen müşteri altında
-            yönetilir.
+            Müşteri seçildiğinde yetkililer, mekânlar ve hesap hareketleri aynı
+            çalışma alanında açılır.
           </p>
         </article>
 
         <article className="rounded-3xl bg-slate-50 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-            3. Takip
+            3. Yönet
           </p>
-          <h3 className="mt-2 font-black text-slate-950">Cari bakiye</h3>
+          <h3 className="mt-2 font-black text-slate-950">Cari takibi yap</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Borç, tahsilat ve kümülatif bakiye müşteri bazında izlenir.
+            Borç, tahsilat ve kümülatif bakiye müşteri bazında kontrollü şekilde
+            izlenir.
           </p>
         </article>
       </div>
@@ -98,7 +85,7 @@ export function CustomerEmptyState({
             onClick={onOpenSelector}
             className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
           >
-            Tümünü Ara
+            Seçiciyi Aç
           </button>
         </div>
 
@@ -108,8 +95,14 @@ export function CustomerEmptyState({
               Henüz müşteri yok.
             </p>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              İlk müşteriyi oluşturduğunda burada hızlı seçim olarak görünecek.
+              İlk müşteriyi sağ üstteki Yeni Müşteri butonuyla oluştur.
             </p>
+            <button
+              onClick={onOpenCreatePanel}
+              className="mt-4 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white"
+            >
+              İlk Müşteriyi Oluştur
+            </button>
           </div>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">

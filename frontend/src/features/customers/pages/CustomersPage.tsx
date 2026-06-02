@@ -273,8 +273,8 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
       </section>
 
       {showCreatePanel ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 p-3 backdrop-blur-sm">
-          <div className="ml-auto flex h-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
+          <div className="flex h-[min(92vh,860px)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 p-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
