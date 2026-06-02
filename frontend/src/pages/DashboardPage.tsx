@@ -7,6 +7,7 @@ type DashboardPageProps = {
   onOpenServiceCatalog: () => void;
   onOpenOffers: () => void;
   onOpenEvents: () => void;
+  onOpenPartners: () => void;
 };
 
 const dashboardCards = [
@@ -34,6 +35,12 @@ const dashboardCards = [
     description: "Anlaşmadan oluşan gerçek etkinlik dosyaları.",
     action: "events",
   },
+  {
+    title: "Ortaklar",
+    value: "3 Ortak",
+    description: "Ortak isimleri, pay oranları ve aktiflik durumu.",
+    action: "partners",
+  },
 ];
 
 export function DashboardPage({
@@ -43,6 +50,7 @@ export function DashboardPage({
   onOpenServiceCatalog,
   onOpenOffers,
   onOpenEvents,
+  onOpenPartners,
 }: DashboardPageProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -80,7 +88,7 @@ export function DashboardPage({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {dashboardCards.map((card) => (
             <button
               key={card.title}
@@ -91,7 +99,9 @@ export function DashboardPage({
                     ? onOpenServiceCatalog
                     : card.action === "offers"
                       ? onOpenOffers
-                      : onOpenEvents
+                      : card.action === "partners"
+                        ? onOpenPartners
+                        : onOpenEvents
               }
               className="rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition hover:-translate-y-1 hover:shadow-xl"
             >

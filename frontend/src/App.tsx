@@ -4,6 +4,7 @@ import { CustomersPage } from "./features/customers/pages/CustomersPage";
 import { EventsPage } from "./features/events/pages/EventsPage";
 import { OffersPage } from "./features/offers/pages/OffersPage";
 import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
+import { PartnersPage } from "./features/partners/pages/PartnersPage";
 import { BackOfficePreview } from "./pages/BackOfficePreview";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EventsLandingPreview } from "./pages/EventsLandingPreview";
@@ -18,7 +19,8 @@ type AppScreen =
   | "customers"
   | "serviceCatalog"
   | "offers"
-  | "events";
+  | "events"
+  | "partners";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
@@ -57,6 +59,7 @@ function App() {
         onOpenServiceCatalog={() => setScreen("serviceCatalog")}
         onOpenOffers={() => setScreen("offers")}
         onOpenEvents={() => setScreen("events")}
+        onOpenPartners={() => setScreen("partners")}
       />
     );
   }
@@ -77,6 +80,10 @@ function App() {
 
   if (screen === "events" && currentUser) {
     return <EventsPage onBackToDashboard={() => setScreen("dashboard")} />;
+  }
+
+  if (screen === "partners" && currentUser) {
+    return <PartnersPage onBackToDashboard={() => setScreen("dashboard")} />;
   }
 
   return (

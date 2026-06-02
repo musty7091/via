@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.api_router import api_router
+from app.modules.partners.router import router as partners_router
 from app.core.config import settings
 
 
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(partners_router, prefix="/api/v1")
 
 
 @app.get("/")
