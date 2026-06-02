@@ -8,6 +8,7 @@ from app.modules.offers.router import router as offers_router
 from app.modules.service_catalog.router import router as service_catalog_router
 from app.modules.user_management.router import router as user_management_router
 
+from app.modules.event_payments.router import router as event_payments_router
 api_router = APIRouter()
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
@@ -15,4 +16,5 @@ api_router.include_router(user_management_router)
 api_router.include_router(customers_router)
 api_router.include_router(service_catalog_router)
 api_router.include_router(offers_router)
+api_router.include_router(event_payments_router)
 api_router.include_router(events_router)
