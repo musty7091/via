@@ -14,7 +14,7 @@ import {
 } from "../api/customersApi";
 import { CustomerDetailPanel } from "../components/CustomerDetailPanel";
 import { CustomerForm } from "../components/CustomerForm";
-import { CustomerList } from "../components/CustomerList";
+import { CustomerSelector } from "../components/CustomerSelector";
 import type {
   CustomerContactCreatePayload,
   CustomerCreatePayload,
@@ -37,11 +37,11 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
   );
   const [bundle, setBundle] = useState<CustomerDetailBundle | null>(null);
   const [search, setSearch] = useState("");
-  const [showPassive, setShowPassive] = useState(false);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -49,17 +49,18 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     nextSelectedId?: number;
     nextPageIndex?: number;
     nextSearch?: string;
+    keepDropdownOpen?: boolean;
   }) {
     const targetPageIndex = options?.nextPageIndex ?? pageIndex;
     const targetSearch = options?.nextSearch ?? search;
 
-    setIsLoadingList(true);
+    setIsLoadingCustomers(true);
     setErrorMessage("");
 
     try {
       const data = await fetchCustomers({
         search: targetSearch,
-        isActive: showPassive ? null : true,
+        isActive: true,
         skip: targetPageIndex * PAGE_SIZE,
         limit: PAGE_SIZE,
       });
@@ -70,20 +71,17 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
 
       if (options?.nextSelectedId) {
         setSelectedCustomerId(options.nextSelectedId);
-      } else if (
-        selectedCustomerId &&
-        data.some((customer) => customer.id === selectedCustomerId)
-      ) {
-        setSelectedCustomerId(selectedCustomerId);
-      } else {
-        setSelectedCustomerId(data[0]?.id ?? null);
+      }
+
+      if (options?.keepDropdownOpen) {
+        setIsSelectorOpen(true);
       }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Müşteri listesi alınamadı."
       );
     } finally {
-      setIsLoadingList(false);
+      setIsLoadingCustomers(false);
     }
   }
 
@@ -124,6 +122,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
       nextSelectedId: createdCustomer.id,
       nextPageIndex: 0,
       nextSearch: "",
+      keepDropdownOpen: false,
     });
   }
 
@@ -156,23 +155,26 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     await loadCustomerDetail(selectedCustomerId);
   }
 
-  function handleSearch() {
+  function handleSearchSubmit() {
     void loadCustomers({
       nextPageIndex: 0,
       nextSearch: search,
+      keepDropdownOpen: true,
     });
   }
 
   function handleSelectCustomer(customerId: number) {
     setSelectedCustomerId(customerId);
+    setIsSelectorOpen(false);
   }
 
   useEffect(() => {
     void loadCustomers({
       nextPageIndex: 0,
+      keepDropdownOpen: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showPassive]);
+  }, []);
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -182,7 +184,10 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     }
   }, [selectedCustomerId]);
 
-  const isDetailOpenOnMobile = selectedCustomerId !== null;
+  const selectedCustomerName =
+    bundle?.customer.name ??
+    customers.find((customer) => customer.id === selectedCustomerId)?.name ??
+    null;
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -202,7 +207,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
               onClick={() => setShowCreatePanel(true)}
               className="rounded-full bg-teal-300 px-4 py-2 text-sm font-black text-slate-950"
             >
-              Yeni
+              Yeni Müşteri
             </button>
             <button
               onClick={onBackToDashboard}
@@ -214,133 +219,47 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 xl:grid-cols-[390px_1fr]">
-        <aside
-          className={`space-y-4 ${
-            isDetailOpenOnMobile ? "hidden xl:block" : "block"
-          }`}
-        >
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-black text-slate-950">
-                  Müşteri Listesi
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Sayfa {pageIndex + 1} • {customers.length} kayıt
-                </p>
-              </div>
+      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
+        <CustomerSelector
+          customers={customers}
+          selectedCustomerId={selectedCustomerId}
+          selectedCustomerName={selectedCustomerName}
+          search={search}
+          pageIndex={pageIndex}
+          hasNextPage={hasNextPage}
+          isLoading={isLoadingCustomers}
+          isOpen={isSelectorOpen}
+          onToggleOpen={() => setIsSelectorOpen((value) => !value)}
+          onSearchChange={setSearch}
+          onSearchSubmit={handleSearchSubmit}
+          onSelectCustomer={handleSelectCustomer}
+          onPreviousPage={() =>
+            void loadCustomers({
+              nextPageIndex: Math.max(pageIndex - 1, 0),
+              keepDropdownOpen: true,
+            })
+          }
+          onNextPage={() =>
+            void loadCustomers({
+              nextPageIndex: pageIndex + 1,
+              keepDropdownOpen: true,
+            })
+          }
+        />
 
-              <button
-                onClick={() => void loadCustomers()}
-                className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-700"
-              >
-                Yenile
-              </button>
-            </div>
-
-            <div className="mt-4 grid gap-3">
-              <div className="flex gap-2">
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      handleSearch();
-                    }
-                  }}
-                  placeholder="Müşteri ara..."
-                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-                />
-
-                <button
-                  onClick={handleSearch}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white"
-                >
-                  Ara
-                </button>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={showPassive}
-                  onChange={(event) => setShowPassive(event.target.checked)}
-                />
-                Pasif müşterileri de göster
-              </label>
-            </div>
+        {errorMessage ? (
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {errorMessage}
           </div>
+        ) : null}
 
-          {errorMessage ? (
-            <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-              {errorMessage}
-            </div>
-          ) : null}
-
-          {isLoadingList ? (
-            <div className="rounded-3xl bg-white p-5 text-sm text-slate-500">
-              Müşteri listesi yükleniyor...
-            </div>
-          ) : (
-            <CustomerList
-              customers={customers}
-              selectedCustomerId={selectedCustomerId}
-              onSelectCustomer={handleSelectCustomer}
-            />
-          )}
-
-          <div className="flex items-center justify-between gap-3 rounded-3xl bg-white p-3 shadow-sm">
-            <button
-              disabled={pageIndex === 0 || isLoadingList}
-              onClick={() =>
-                void loadCustomers({
-                  nextPageIndex: Math.max(pageIndex - 1, 0),
-                })
-              }
-              className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Önceki
-            </button>
-
-            <span className="text-sm font-bold text-slate-500">
-              {PAGE_SIZE} kayıt / sayfa
-            </span>
-
-            <button
-              disabled={!hasNextPage || isLoadingList}
-              onClick={() =>
-                void loadCustomers({
-                  nextPageIndex: pageIndex + 1,
-                })
-              }
-              className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Sonraki
-            </button>
-          </div>
-        </aside>
-
-        <section
-          className={`${isDetailOpenOnMobile ? "block" : "hidden xl:block"}`}
-        >
-          {isDetailOpenOnMobile ? (
-            <button
-              onClick={() => setSelectedCustomerId(null)}
-              className="mb-4 rounded-full bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm xl:hidden"
-            >
-              ← Müşteri listesine dön
-            </button>
-          ) : null}
-
-          <CustomerDetailPanel
-            bundle={bundle}
-            isLoading={isLoadingDetail}
-            onCreateContact={handleCreateContact}
-            onCreateVenue={handleCreateVenue}
-            onCreateMovement={handleCreateMovement}
-          />
-        </section>
+        <CustomerDetailPanel
+          bundle={bundle}
+          isLoading={isLoadingDetail}
+          onCreateContact={handleCreateContact}
+          onCreateVenue={handleCreateVenue}
+          onCreateMovement={handleCreateMovement}
+        />
       </section>
 
       {showCreatePanel ? (
