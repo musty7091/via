@@ -1,5 +1,7 @@
 from app.models.artist import Artist, ArtistRiderTemplateItem, ServiceItem
-from app.models.customer import Customer, CustomerContact, Venue
+from app.models.customer import Customer
+from app.models.customer_account_movement import CustomerAccountMovement
+from app.models.customer_contact import CustomerContact
 from app.models.event import Event, EventItem, EventProfitSnapshot
 from app.models.expense import Expense, ExpenseAllocation
 from app.models.offer import Offer, OfferItem
@@ -9,6 +11,7 @@ from app.models.payment import CashAccount, CashTransfer, Collection, PaymentPla
 from app.models.period import MonthlyPartnerSummary, MonthlyPeriod
 from app.models.system import AuditLog, CurrencyRate, Document, SystemSetting
 from app.models.user import User, UserRole
+from app.models.venue import Venue
 
 __all__ = [
     "Artist",
@@ -19,6 +22,7 @@ __all__ = [
     "Collection",
     "CurrencyRate",
     "Customer",
+    "CustomerAccountMovement",
     "CustomerContact",
     "Document",
     "Event",
