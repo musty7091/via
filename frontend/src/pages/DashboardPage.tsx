@@ -6,6 +6,7 @@ type DashboardPageProps = {
   onOpenCustomers: () => void;
   onOpenServiceCatalog: () => void;
   onOpenOffers: () => void;
+  onOpenEvents: () => void;
 };
 
 const dashboardCards = [
@@ -28,10 +29,10 @@ const dashboardCards = [
     action: "offers",
   },
   {
-    title: "Operasyon",
-    value: "0",
-    description: "Rider, görev ve saha hazırlıkları burada yönetilecek.",
-    action: "operations",
+    title: "Etkinlikler",
+    value: "Dosya",
+    description: "Anlaşmadan oluşan gerçek etkinlik dosyaları.",
+    action: "events",
   },
 ];
 
@@ -41,6 +42,7 @@ export function DashboardPage({
   onOpenCustomers,
   onOpenServiceCatalog,
   onOpenOffers,
+  onOpenEvents,
 }: DashboardPageProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -79,56 +81,40 @@ export function DashboardPage({
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {dashboardCards.map((card) => {
-            const isCustomerCard = card.action === "customers";
-            const isServiceCatalogCard = card.action === "serviceCatalog";
-            const isOffersCard = card.action === "offers";
-            const isActiveCard = isCustomerCard || isServiceCatalogCard || isOffersCard;
-
-            return (
-              <button
-                key={card.title}
-                onClick={
-                  isCustomerCard
-                    ? onOpenCustomers
-                    : isServiceCatalogCard
-                      ? onOpenServiceCatalog
-                      : isOffersCard
-                        ? onOpenOffers
-                        : undefined
-                }
-                className={`rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition ${
-                  isActiveCard
-                    ? "hover:-translate-y-1 hover:shadow-xl"
-                    : "cursor-default opacity-80"
-                }`}
-              >
-                <p className="text-sm font-bold text-slate-500">{card.title}</p>
-                <p className="mt-3 text-3xl font-black">{card.value}</p>
-                <p className="mt-3 text-sm leading-6 text-slate-500">
-                  {card.description}
-                </p>
-                {isActiveCard ? (
-                  <p className="mt-4 text-sm font-black text-teal-700">
-                    Modülü aç →
-                  </p>
-                ) : (
-                  <p className="mt-4 text-sm font-semibold text-slate-400">
-                    Sonraki adım
-                  </p>
-                )}
-              </button>
-            );
-          })}
+          {dashboardCards.map((card) => (
+            <button
+              key={card.title}
+              onClick={
+                card.action === "customers"
+                  ? onOpenCustomers
+                  : card.action === "serviceCatalog"
+                    ? onOpenServiceCatalog
+                    : card.action === "offers"
+                      ? onOpenOffers
+                      : onOpenEvents
+              }
+              className="rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition hover:-translate-y-1 hover:shadow-xl"
+            >
+              <p className="text-sm font-bold text-slate-500">{card.title}</p>
+              <p className="mt-3 text-3xl font-black">{card.value}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                {card.description}
+              </p>
+              <p className="mt-4 text-sm font-black text-teal-700">
+                Modülü aç →
+              </p>
+            </button>
+          ))}
         </div>
 
         <div className="mt-6 rounded-[1.5rem] border border-teal-200 bg-teal-50 p-5">
           <p className="text-sm font-bold text-teal-800">
-            Teklif ve Anlaşma modülü başladı.
+            Etkinlik dosyaları aktif.
           </p>
           <p className="mt-2 text-sm leading-6 text-teal-900">
-            Print çıktısı müşteri güvenli olacak; maliyet ve iç notlar sadece
-            Back Office içinde kalacak.
+            Anlaşmaya çevrilen teklifler artık gerçek etkinlik dosyasına
+            dönüşüyor. Operasyon, ödeme ve kârlılık bundan sonra bu dosyaya
+            bağlanacak.
           </p>
         </div>
       </section>

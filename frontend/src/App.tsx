@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
+import { EventsPage } from "./features/events/pages/EventsPage";
 import { OffersPage } from "./features/offers/pages/OffersPage";
 import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
 import { BackOfficePreview } from "./pages/BackOfficePreview";
@@ -16,7 +17,8 @@ type AppScreen =
   | "dashboard"
   | "customers"
   | "serviceCatalog"
-  | "offers";
+  | "offers"
+  | "events";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
@@ -54,6 +56,7 @@ function App() {
         onOpenCustomers={() => setScreen("customers")}
         onOpenServiceCatalog={() => setScreen("serviceCatalog")}
         onOpenOffers={() => setScreen("offers")}
+        onOpenEvents={() => setScreen("events")}
       />
     );
   }
@@ -70,6 +73,10 @@ function App() {
 
   if (screen === "offers" && currentUser) {
     return <OffersPage onBackToDashboard={() => setScreen("dashboard")} />;
+  }
+
+  if (screen === "events" && currentUser) {
+    return <EventsPage onBackToDashboard={() => setScreen("dashboard")} />;
   }
 
   return (
@@ -89,7 +96,7 @@ function App() {
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200 shadow-lg shadow-black/20 backdrop-blur">
-              v0.6
+              v0.7
             </div>
           </header>
 
@@ -105,8 +112,8 @@ function App() {
                 </h2>
 
                 <p className="mt-5 text-base leading-7 text-slate-300 sm:text-lg">
-                  VIA EVENTS; sanatçı, müşteri, teklif, tahsilat, rider,
-                  operasyon ve ay sonu ortak mahsuplaşmasını tek sistemde
+                  VIA EVENTS; sanatçı, müşteri, teklif, etkinlik, tahsilat,
+                  rider, operasyon ve ay sonu ortak mahsuplaşmasını tek sistemde
                   toplamak için hazırlanıyor.
                 </p>
 
@@ -134,11 +141,11 @@ function App() {
                 <div className="grid gap-3">
                   <div className="rounded-2xl bg-white p-4 text-slate-950">
                     <p className="text-sm font-medium text-slate-500">
-                      Teklif / Anlaşma
+                      Etkinlik Dosyası
                     </p>
-                    <p className="mt-1 text-3xl font-black">Hazır</p>
+                    <p className="mt-1 text-3xl font-black">Aktif</p>
                     <p className="mt-2 text-sm text-slate-500">
-                      Müşteri print çıktısı maliyet göstermeden hazırlanacak.
+                      Anlaşmalar artık gerçek etkinlik dosyasına dönüşüyor.
                     </p>
                   </div>
 
@@ -156,18 +163,18 @@ function App() {
                       <p className="mt-2 text-2xl font-black">Print</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs text-slate-400">Ortak Hesabı</p>
-                      <p className="mt-2 text-2xl font-black">3</p>
+                      <p className="text-xs text-slate-400">Etkinlik</p>
+                      <p className="mt-2 text-2xl font-black">Dosya</p>
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-teal-300/20 bg-teal-300/10 p-4">
                     <p className="text-sm font-semibold text-teal-100">
-                      Müşteri çıktısı güvenli
+                      Operasyon merkezi hazırlandı
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
-                      Print görünümünde iç maliyet ve kârlılık bilgileri yer
-                      almaz.
+                      Sıradaki adımda ödeme planı ve operasyon föyü etkinlik
+                      dosyasına bağlanacak.
                     </p>
                   </div>
                 </div>
