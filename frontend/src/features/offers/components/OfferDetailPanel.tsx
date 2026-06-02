@@ -27,6 +27,10 @@ export function OfferDetailPanel({
   isConverting,
 }: OfferDetailPanelProps) {
   const offer = detail.offer;
+  const remainingPaymentAmount =
+    offer.advance_payment_currency === offer.currency
+      ? Math.max(offer.total_amount - offer.advance_payment_amount, 0)
+      : offer.total_amount;
 
   return (
     <section className="space-y-4">
@@ -89,10 +93,11 @@ export function OfferDetailPanel({
         </section>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-4">
         <Metric title="Fatura Tipi" value={getOptionLabel(invoiceTypeOptions, offer.invoice_type)} />
         <Metric title="Ön Ödeme" value={formatMoney(offer.advance_payment_amount, offer.advance_payment_currency)} />
         <Metric title="Ana Toplam" value={formatMoney(offer.total_amount, offer.currency)} />
+        <Metric title="Kalan Ödeme" value={formatMoney(remainingPaymentAmount, offer.currency)} />
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -181,7 +186,7 @@ export function OfferDetailPanel({
                   </p>
                 </div>
 
-                <Amount title="Satış" value={formatMoney(item.base_amount, item.currency)} />
+                <Amount title="Satış" value={item.source_type === "package_component" ? "Paket içinde" : formatMoney(item.base_amount, item.currency)} />
                 <Amount title="Maliyet" value={formatMoney(item.internal_total_cost, item.internal_cost_currency)} />
                 <Amount
                   title="Kâr"

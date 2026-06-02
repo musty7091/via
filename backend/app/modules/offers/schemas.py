@@ -153,6 +153,7 @@ class OfferPrintLine(BaseModel):
     unit_price: float
     currency: str
     line_amount: float
+    show_pricing: bool = True
 
 
 class OfferPrintView(BaseModel):

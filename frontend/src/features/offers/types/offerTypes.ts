@@ -159,6 +159,7 @@ export type OfferPrintLine = {
   unit_price: number;
   currency: Currency;
   line_amount: number;
+  show_pricing: boolean;
 };
 
 export type OfferPrintView = {

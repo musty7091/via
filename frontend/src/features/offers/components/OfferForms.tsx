@@ -5,6 +5,7 @@ import {
   invoiceTypeOptions,
   programSectionOptions,
 } from "../constants/offerConstants";
+import { formatMoney } from "./formatters";
 import type {
   Currency,
   CustomerOption,
@@ -76,6 +77,7 @@ export function OfferForm({
   const [paymentTerms, setPaymentTerms] = useState("");
   const [customerVisibleNotes, setCustomerVisibleNotes] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
+  const selectedPackage = packages.find((item) => String(item.id) === packageId) ?? null;
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -149,7 +151,13 @@ export function OfferForm({
       <SelectField
         label="Program paketi"
         value={packageId}
-        onChange={setPackageId}
+        onChange={(value) => {
+          setPackageId(value);
+          const nextPackage = packages.find((item) => String(item.id) === value);
+          if (nextPackage) {
+            setCurrency(nextPackage.default_sale_currency);
+          }
+        }}
         options={[
           { value: "", label: "Paket seçmeden devam et" },
           ...packages.map((item) => ({
@@ -158,6 +166,18 @@ export function OfferForm({
           })),
         ]}
       />
+
+      {selectedPackage ? (
+        <div className="rounded-3xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-950">
+          <p className="font-black">Paket satış fiyatı</p>
+          <p className="mt-1">
+            Bu teklifin müşteri toplamı, paket içindeki kalemlerden değil bu paket bedelinden hesaplanır:
+            <span className="ml-2 font-black">
+              {formatMoney(selectedPackage.default_sale_amount, selectedPackage.default_sale_currency)}
+            </span>
+          </p>
+        </div>
+      ) : null}
 
       <TextField label="Teklif başlığı" value={title} onChange={setTitle} required />
 
@@ -182,9 +202,10 @@ export function OfferForm({
         />
       </div>
 
-      <NumberField
+      <MoneyField
         label="Ön ödeme"
         value={advancePaymentAmount}
+        currency={currency}
         onChange={setAdvancePaymentAmount}
       />
 
@@ -345,6 +366,35 @@ function DateField({
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none ring-teal-500 transition focus:ring-4"
       />
+    </label>
+  );
+}
+
+function MoneyField({
+  label,
+  value,
+  currency,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  currency: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-bold text-slate-700">{label}</span>
+      <div className="mt-2 flex overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 focus-within:ring-4 focus-within:ring-teal-500">
+        <input
+          type="number"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none"
+        />
+        <span className="flex items-center border-l border-slate-200 bg-white px-4 text-sm font-black text-slate-700">
+          {currency}
+        </span>
+      </div>
     </label>
   );
 }

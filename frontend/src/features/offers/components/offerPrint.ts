@@ -30,9 +30,9 @@ export function openOfferPrintWindow(view: OfferPrintView) {
             <div class="muted">${escapeHtml(getOptionLabel(programSectionOptions, line.program_section))}</div>
             <div>${escapeHtml(line.description)}</div>
           </td>
-          <td class="right">${escapeHtml(String(line.quantity))}</td>
-          <td class="right">${escapeHtml(formatMoney(line.unit_price, line.currency))}</td>
-          <td class="right">${escapeHtml(formatMoney(line.line_amount, line.currency))}</td>
+          <td class="right">${line.show_pricing ? escapeHtml(String(line.quantity)) : ""}</td>
+          <td class="right">${line.show_pricing ? escapeHtml(formatMoney(line.unit_price, line.currency)) : ""}</td>
+          <td class="right">${line.show_pricing ? escapeHtml(formatMoney(line.line_amount, line.currency)) : "Dahil"}</td>
         </tr>
       `
     )
@@ -50,6 +50,14 @@ export function openOfferPrintWindow(view: OfferPrintView) {
       `
     )
     .join("");
+
+  const primaryPaymentSummary = view.summaries.find(
+    (summary) => summary.currency === view.advance_payment_currency
+  );
+  const remainingPaymentAmount = Math.max(
+    (primaryPaymentSummary?.total_amount ?? 0) - view.advance_payment_amount,
+    0
+  );
 
   const html = `<!doctype html>
 <html lang="tr">
@@ -139,6 +147,7 @@ export function openOfferPrintWindow(view: OfferPrintView) {
       <h2>Ödeme Bilgisi</h2>
       <div class="box">
         <div class="row"><span>Ön ödeme</span><strong>${escapeHtml(formatMoney(view.advance_payment_amount, view.advance_payment_currency))}</strong></div>
+        <div class="row"><span>Kalan ödeme</span><strong>${escapeHtml(formatMoney(remainingPaymentAmount, view.advance_payment_currency))}</strong></div>
         ${view.payment_terms ? `<div class="note" style="margin-top: 10px;">${escapeHtml(view.payment_terms)}</div>` : ""}
       </div>
     </div>

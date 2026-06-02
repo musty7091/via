@@ -315,10 +315,48 @@ def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRe
         .all()
     )
 
+    package_sale_amount = _as_float(package.default_sale_amount)
+    package_sale_currency = package.default_sale_currency or offer.currency or "TRY"
+
+    if package_sale_amount <= 0:
+        package_sale_amount = round(
+            sum(
+                _as_float(package_item.total_sale_amount)
+                for package_item in package_items
+                if package_item.is_visible_on_offer
+                and package_item.unit_sale_currency == package_sale_currency
+            ),
+            4,
+        )
+
+    package_total_item = {
+        "offer_id": offer.id,
+        "source_type": "package_total",
+        "source_package_item_id": None,
+        "artist_id": None,
+        "service_item_id": None,
+        "title": package.name,
+        "description": package.description or "Kombine paket bedeli",
+        "program_section": "other",
+        "start_time": None,
+        "end_time": None,
+        "quantity": 1,
+        "unit_price": package_sale_amount,
+        "currency": package_sale_currency,
+        "base_amount": package_sale_amount,
+        "internal_unit_cost": 0,
+        "internal_cost_currency": package_sale_currency,
+        "internal_total_cost": 0,
+        "is_visible_on_offer": True,
+        "is_active": True,
+        "sort_order": -1000,
+    }
+    offer_repository.create_offer_item(db=db, data=package_total_item)
+
     for package_item in package_items:
         data = {
             "offer_id": offer.id,
-            "source_type": package_item.component_type,
+            "source_type": "package_component",
             "source_package_item_id": package_item.id,
             "artist_id": package_item.artist_id,
             "service_item_id": package_item.service_item_id,
@@ -328,9 +366,9 @@ def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRe
             "start_time": package_item.start_time,
             "end_time": package_item.end_time,
             "quantity": package_item.quantity,
-            "unit_price": package_item.unit_sale_amount,
-            "currency": package_item.unit_sale_currency,
-            "base_amount": package_item.total_sale_amount,
+            "unit_price": 0,
+            "currency": package_sale_currency,
+            "base_amount": 0,
             "internal_unit_cost": package_item.unit_cost_amount,
             "internal_cost_currency": package_item.unit_cost_currency,
             "internal_total_cost": package_item.total_cost_amount,
@@ -341,6 +379,8 @@ def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRe
         offer_repository.create_offer_item(db=db, data=data)
 
     offer.package_id = package.id
+    offer.currency = package_sale_currency
+    offer.advance_payment_currency = package_sale_currency
     db.commit()
     _recalculate_offer(db=db, offer=offer)
 
@@ -475,6 +515,7 @@ def get_print_view(db: Session, offer_id: int) -> OfferPrintView:
                 unit_price=_as_float(item.unit_price),
                 currency=item.currency,
                 line_amount=_as_float(item.base_amount),
+                show_pricing=item.source_type != "package_component",
             )
             for item in visible_items
         ],
