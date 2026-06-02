@@ -3,32 +3,41 @@ import type { AuthUser } from "../types/auth";
 type DashboardPageProps = {
   user: AuthUser;
   onLogout: () => void;
+  onOpenCustomers: () => void;
 };
 
 const dashboardCards = [
   {
+    title: "Müşteriler",
+    value: "Kartlar",
+    description: "Müşteri, yetkili, mekân ve cari hesap hareketleri.",
+    action: "customers",
+  },
+  {
     title: "Etkinlikler",
     value: "0",
     description: "Planlanan ve tamamlanan işler burada takip edilecek.",
+    action: "events",
   },
   {
     title: "Bekleyen Tahsilat",
     value: "₺0,00",
     description: "Ödeme planı ve geciken tahsilatlar burada görülecek.",
+    action: "collections",
   },
   {
     title: "Operasyon",
     value: "0",
     description: "Rider, görev ve saha hazırlıkları burada yönetilecek.",
-  },
-  {
-    title: "Ortak Hesapları",
-    value: "3",
-    description: "Ay sonu kâr paylaşımı ve mahsuplaşma burada olacak.",
+    action: "operations",
   },
 ];
 
-export function DashboardPage({ user, onLogout }: DashboardPageProps) {
+export function DashboardPage({
+  user,
+  onLogout,
+  onOpenCustomers,
+}: DashboardPageProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
@@ -66,26 +75,45 @@ export function DashboardPage({ user, onLogout }: DashboardPageProps) {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {dashboardCards.map((card) => (
-            <article
-              key={card.title}
-              className="rounded-[1.5rem] bg-white p-5 shadow-lg shadow-slate-200"
-            >
-              <p className="text-sm font-bold text-slate-500">{card.title}</p>
-              <p className="mt-3 text-3xl font-black">{card.value}</p>
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                {card.description}
-              </p>
-            </article>
-          ))}
+          {dashboardCards.map((card) => {
+            const isCustomerCard = card.action === "customers";
+
+            return (
+              <button
+                key={card.title}
+                onClick={isCustomerCard ? onOpenCustomers : undefined}
+                className={`rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition ${
+                  isCustomerCard
+                    ? "hover:-translate-y-1 hover:shadow-xl"
+                    : "cursor-default opacity-80"
+                }`}
+              >
+                <p className="text-sm font-bold text-slate-500">{card.title}</p>
+                <p className="mt-3 text-3xl font-black">{card.value}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-500">
+                  {card.description}
+                </p>
+                {isCustomerCard ? (
+                  <p className="mt-4 text-sm font-black text-teal-700">
+                    Modülü aç →
+                  </p>
+                ) : (
+                  <p className="mt-4 text-sm font-semibold text-slate-400">
+                    Sonraki adım
+                  </p>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-6 rounded-[1.5rem] border border-teal-200 bg-teal-50 p-5">
           <p className="text-sm font-bold text-teal-800">
-            Giriş bağlantısı başarılı.
+            Müşteri modülü hazır.
           </p>
           <p className="mt-2 text-sm leading-6 text-teal-900">
-            Frontend artık backend auth sisteminden token alıyor.
+            Müşteri kartı, yetkili kişiler, mekânlar ve kümülatif bakiyeli
+            hesap hareketleri artık arayüzden yönetilebilir.
           </p>
         </div>
       </section>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { CustomersPage } from "./features/customers/pages/CustomersPage";
 import { BackOfficePreview } from "./pages/BackOfficePreview";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EventsLandingPreview } from "./pages/EventsLandingPreview";
@@ -7,7 +8,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
 import type { AuthUser } from "./types/auth";
 
-type AppScreen = "landing" | "login" | "dashboard";
+type AppScreen = "landing" | "login" | "dashboard" | "customers";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
@@ -38,7 +39,17 @@ function App() {
   }
 
   if (screen === "dashboard" && currentUser) {
-    return <DashboardPage user={currentUser} onLogout={handleLogout} />;
+    return (
+      <DashboardPage
+        user={currentUser}
+        onLogout={handleLogout}
+        onOpenCustomers={() => setScreen("customers")}
+      />
+    );
+  }
+
+  if (screen === "customers" && currentUser) {
+    return <CustomersPage onBackToDashboard={() => setScreen("dashboard")} />;
   }
 
   return (
@@ -58,7 +69,7 @@ function App() {
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200 shadow-lg shadow-black/20 backdrop-blur">
-              v0.2
+              v0.3
             </div>
           </header>
 
@@ -113,6 +124,10 @@ function App() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                      <p className="text-xs text-slate-400">Müşteri</p>
+                      <p className="mt-2 text-2xl font-black">Aktif</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs text-slate-400">Etkinlik</p>
                       <p className="mt-2 text-2xl font-black">0</p>
                     </div>
@@ -123,10 +138,6 @@ function App() {
                       <p className="mt-2 text-2xl font-black">0</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs text-slate-400">Operasyon</p>
-                      <p className="mt-2 text-2xl font-black">0</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs text-slate-400">Ortak Hesabı</p>
                       <p className="mt-2 text-2xl font-black">3</p>
                     </div>
@@ -134,11 +145,11 @@ function App() {
 
                   <div className="rounded-2xl border border-teal-300/20 bg-teal-300/10 p-4">
                     <p className="text-sm font-semibold text-teal-100">
-                      Sıradaki çekirdek hedef
+                      İlk veri modülü
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
-                      Müşteri, sanatçı/hizmet ve etkinlik kartlarının ilk CRUD
-                      altyapısı.
+                      Müşteri kartı, yetkili kişiler, mekânlar ve cari hesap
+                      hareketleri aktif.
                     </p>
                   </div>
                 </div>
