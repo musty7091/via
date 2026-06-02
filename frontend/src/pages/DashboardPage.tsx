@@ -4,6 +4,7 @@ type DashboardPageProps = {
   user: AuthUser;
   onLogout: () => void;
   onOpenCustomers: () => void;
+  onOpenServiceCatalog: () => void;
 };
 
 const dashboardCards = [
@@ -14,16 +15,16 @@ const dashboardCards = [
     action: "customers",
   },
   {
+    title: "Hizmet Kataloğu",
+    value: "Katalog",
+    description: "Sanatçı hizmetleri, teknik hizmetler ve program paketleri.",
+    action: "serviceCatalog",
+  },
+  {
     title: "Etkinlikler",
     value: "0",
     description: "Planlanan ve tamamlanan işler burada takip edilecek.",
     action: "events",
-  },
-  {
-    title: "Bekleyen Tahsilat",
-    value: "₺0,00",
-    description: "Ödeme planı ve geciken tahsilatlar burada görülecek.",
-    action: "collections",
   },
   {
     title: "Operasyon",
@@ -37,6 +38,7 @@ export function DashboardPage({
   user,
   onLogout,
   onOpenCustomers,
+  onOpenServiceCatalog,
 }: DashboardPageProps) {
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -77,13 +79,21 @@ export function DashboardPage({
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {dashboardCards.map((card) => {
             const isCustomerCard = card.action === "customers";
+            const isServiceCatalogCard = card.action === "serviceCatalog";
+            const isActiveCard = isCustomerCard || isServiceCatalogCard;
 
             return (
               <button
                 key={card.title}
-                onClick={isCustomerCard ? onOpenCustomers : undefined}
-                className={`rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition ${
+                onClick={
                   isCustomerCard
+                    ? onOpenCustomers
+                    : isServiceCatalogCard
+                      ? onOpenServiceCatalog
+                      : undefined
+                }
+                className={`rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition ${
+                  isActiveCard
                     ? "hover:-translate-y-1 hover:shadow-xl"
                     : "cursor-default opacity-80"
                 }`}
@@ -93,7 +103,7 @@ export function DashboardPage({
                 <p className="mt-3 text-sm leading-6 text-slate-500">
                   {card.description}
                 </p>
-                {isCustomerCard ? (
+                {isActiveCard ? (
                   <p className="mt-4 text-sm font-black text-teal-700">
                     Modülü aç →
                   </p>
@@ -109,11 +119,11 @@ export function DashboardPage({
 
         <div className="mt-6 rounded-[1.5rem] border border-teal-200 bg-teal-50 p-5">
           <p className="text-sm font-bold text-teal-800">
-            Müşteri modülü hazır.
+            Hizmet Kataloğu omurgası hazır.
           </p>
           <p className="mt-2 text-sm leading-6 text-teal-900">
-            Müşteri kartı, yetkili kişiler, mekânlar ve kümülatif bakiyeli
-            hesap hareketleri artık arayüzden yönetilebilir.
+            Sanatçı hizmetleri, teknik hizmetler ve program paketleri artık
+            arayüzden yönetilmeye başlanabilir.
           </p>
         </div>
       </section>

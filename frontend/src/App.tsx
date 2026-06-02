@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
+import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
 import { BackOfficePreview } from "./pages/BackOfficePreview";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EventsLandingPreview } from "./pages/EventsLandingPreview";
@@ -8,7 +9,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
 import type { AuthUser } from "./types/auth";
 
-type AppScreen = "landing" | "login" | "dashboard" | "customers";
+type AppScreen = "landing" | "login" | "dashboard" | "customers" | "serviceCatalog";
 
 function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
@@ -44,12 +45,19 @@ function App() {
         user={currentUser}
         onLogout={handleLogout}
         onOpenCustomers={() => setScreen("customers")}
+        onOpenServiceCatalog={() => setScreen("serviceCatalog")}
       />
     );
   }
 
   if (screen === "customers" && currentUser) {
     return <CustomersPage onBackToDashboard={() => setScreen("dashboard")} />;
+  }
+
+  if (screen === "serviceCatalog" && currentUser) {
+    return (
+      <ServiceCatalogPage onBackToDashboard={() => setScreen("dashboard")} />
+    );
   }
 
   return (
@@ -69,7 +77,7 @@ function App() {
             </div>
 
             <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200 shadow-lg shadow-black/20 backdrop-blur">
-              v0.3
+              v0.4
             </div>
           </header>
 
@@ -128,8 +136,8 @@ function App() {
                       <p className="mt-2 text-2xl font-black">Aktif</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                      <p className="text-xs text-slate-400">Etkinlik</p>
-                      <p className="mt-2 text-2xl font-black">0</p>
+                      <p className="text-xs text-slate-400">Hizmet</p>
+                      <p className="mt-2 text-2xl font-black">Katalog</p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs text-slate-400">
@@ -145,11 +153,11 @@ function App() {
 
                   <div className="rounded-2xl border border-teal-300/20 bg-teal-300/10 p-4">
                     <p className="text-sm font-semibold text-teal-100">
-                      İlk veri modülü
+                      Katalog omurgası
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-300">
-                      Müşteri kartı, yetkili kişiler, mekânlar ve cari hesap
-                      hareketleri aktif.
+                      Sanatçı hizmetleri, teknik hizmetler ve program paketleri
+                      artık sistem omurgasına bağlanıyor.
                     </p>
                   </div>
                 </div>
