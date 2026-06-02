@@ -53,6 +53,8 @@ function getAuthHeaders() {
 export async function fetchCustomers(params?: {
   search?: string;
   isActive?: boolean | null;
+  skip?: number;
+  limit?: number;
 }): Promise<CustomerListItem[]> {
   const url = new URL(`${API_BASE_URL}/customers`);
 
@@ -62,6 +64,14 @@ export async function fetchCustomers(params?: {
 
   if (params?.isActive !== undefined && params.isActive !== null) {
     url.searchParams.set("is_active", String(params.isActive));
+  }
+
+  if (params?.skip !== undefined) {
+    url.searchParams.set("skip", String(params.skip));
+  }
+
+  if (params?.limit !== undefined) {
+    url.searchParams.set("limit", String(params.limit));
   }
 
   const response = await fetch(url.toString(), {

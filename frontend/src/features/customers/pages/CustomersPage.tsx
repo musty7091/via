@@ -28,6 +28,8 @@ type CustomersPageProps = {
   onBackToDashboard: () => void;
 };
 
+const PAGE_SIZE = 20;
+
 export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
@@ -36,26 +38,45 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
   const [bundle, setBundle] = useState<CustomerDetailBundle | null>(null);
   const [search, setSearch] = useState("");
   const [showPassive, setShowPassive] = useState(false);
+  const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function loadCustomers(nextSelectedId?: number) {
+  async function loadCustomers(options?: {
+    nextSelectedId?: number;
+    nextPageIndex?: number;
+    nextSearch?: string;
+  }) {
+    const targetPageIndex = options?.nextPageIndex ?? pageIndex;
+    const targetSearch = options?.nextSearch ?? search;
+
     setIsLoadingList(true);
     setErrorMessage("");
 
     try {
       const data = await fetchCustomers({
-        search,
+        search: targetSearch,
         isActive: showPassive ? null : true,
+        skip: targetPageIndex * PAGE_SIZE,
+        limit: PAGE_SIZE,
       });
 
       setCustomers(data);
+      setPageIndex(targetPageIndex);
+      setHasNextPage(data.length === PAGE_SIZE);
 
-      if (nextSelectedId) {
-        setSelectedCustomerId(nextSelectedId);
-      } else if (!selectedCustomerId && data.length > 0) {
-        setSelectedCustomerId(data[0].id);
+      if (options?.nextSelectedId) {
+        setSelectedCustomerId(options.nextSelectedId);
+      } else if (
+        selectedCustomerId &&
+        data.some((customer) => customer.id === selectedCustomerId)
+      ) {
+        setSelectedCustomerId(selectedCustomerId);
+      } else {
+        setSelectedCustomerId(data[0]?.id ?? null);
       }
     } catch (error) {
       setErrorMessage(
@@ -97,7 +118,13 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
 
   async function handleCreateCustomer(payload: CustomerCreatePayload) {
     const createdCustomer = await createCustomer(payload);
-    await loadCustomers(createdCustomer.id);
+    setSearch("");
+    setShowCreatePanel(false);
+    await loadCustomers({
+      nextSelectedId: createdCustomer.id,
+      nextPageIndex: 0,
+      nextSearch: "",
+    });
   }
 
   async function handleCreateContact(payload: CustomerContactCreatePayload) {
@@ -129,8 +156,21 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     await loadCustomerDetail(selectedCustomerId);
   }
 
+  function handleSearch() {
+    void loadCustomers({
+      nextPageIndex: 0,
+      nextSearch: search,
+    });
+  }
+
+  function handleSelectCustomer(customerId: number) {
+    setSelectedCustomerId(customerId);
+  }
+
   useEffect(() => {
-    void loadCustomers();
+    void loadCustomers({
+      nextPageIndex: 0,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showPassive]);
 
@@ -142,30 +182,44 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     }
   }, [selectedCustomerId]);
 
+  const isDetailOpenOnMobile = selectedCustomerId !== null;
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <div>
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.35em] text-teal-700">
               VIA EVENTS
             </p>
-            <h1 className="mt-1 text-xl font-black sm:text-2xl">
+            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
               Müşteriler
             </h1>
           </div>
 
-          <button
-            onClick={onBackToDashboard}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-          >
-            Dashboard
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => setShowCreatePanel(true)}
+              className="rounded-full bg-teal-300 px-4 py-2 text-sm font-black text-slate-950"
+            >
+              Yeni
+            </button>
+            <button
+              onClick={onBackToDashboard}
+              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
+            >
+              Dashboard
+            </button>
+          </div>
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-5 py-6 xl:grid-cols-[420px_1fr]">
-        <aside className="space-y-4">
+      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 xl:grid-cols-[390px_1fr]">
+        <aside
+          className={`space-y-4 ${
+            isDetailOpenOnMobile ? "hidden xl:block" : "block"
+          }`}
+        >
           <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -173,7 +227,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
                   Müşteri Listesi
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  {customers.length} kayıt
+                  Sayfa {pageIndex + 1} • {customers.length} kayıt
                 </p>
               </div>
 
@@ -186,17 +240,26 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
             </div>
 
             <div className="mt-4 grid gap-3">
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    void loadCustomers();
-                  }
-                }}
-                placeholder="Müşteri ara..."
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              />
+              <div className="flex gap-2">
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
+                  placeholder="Müşteri ara..."
+                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+                />
+
+                <button
+                  onClick={handleSearch}
+                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white"
+                >
+                  Ara
+                </button>
+              </div>
 
               <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                 <input
@@ -223,21 +286,90 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
             <CustomerList
               customers={customers}
               selectedCustomerId={selectedCustomerId}
-              onSelectCustomer={setSelectedCustomerId}
+              onSelectCustomer={handleSelectCustomer}
             />
           )}
 
-          <CustomerForm onCreateCustomer={handleCreateCustomer} />
+          <div className="flex items-center justify-between gap-3 rounded-3xl bg-white p-3 shadow-sm">
+            <button
+              disabled={pageIndex === 0 || isLoadingList}
+              onClick={() =>
+                void loadCustomers({
+                  nextPageIndex: Math.max(pageIndex - 1, 0),
+                })
+              }
+              className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Önceki
+            </button>
+
+            <span className="text-sm font-bold text-slate-500">
+              {PAGE_SIZE} kayıt / sayfa
+            </span>
+
+            <button
+              disabled={!hasNextPage || isLoadingList}
+              onClick={() =>
+                void loadCustomers({
+                  nextPageIndex: pageIndex + 1,
+                })
+              }
+              className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Sonraki
+            </button>
+          </div>
         </aside>
 
-        <CustomerDetailPanel
-          bundle={bundle}
-          isLoading={isLoadingDetail}
-          onCreateContact={handleCreateContact}
-          onCreateVenue={handleCreateVenue}
-          onCreateMovement={handleCreateMovement}
-        />
+        <section
+          className={`${isDetailOpenOnMobile ? "block" : "hidden xl:block"}`}
+        >
+          {isDetailOpenOnMobile ? (
+            <button
+              onClick={() => setSelectedCustomerId(null)}
+              className="mb-4 rounded-full bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm xl:hidden"
+            >
+              ← Müşteri listesine dön
+            </button>
+          ) : null}
+
+          <CustomerDetailPanel
+            bundle={bundle}
+            isLoading={isLoadingDetail}
+            onCreateContact={handleCreateContact}
+            onCreateVenue={handleCreateVenue}
+            onCreateMovement={handleCreateMovement}
+          />
+        </section>
       </section>
+
+      {showCreatePanel ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 p-3 backdrop-blur-sm">
+          <div className="ml-auto flex h-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
+                  Kayıt Paneli
+                </p>
+                <h2 className="mt-1 text-xl font-black text-slate-950">
+                  Yeni Müşteri
+                </h2>
+              </div>
+
+              <button
+                onClick={() => setShowCreatePanel(false)}
+                className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              <CustomerForm onCreateCustomer={handleCreateCustomer} />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
