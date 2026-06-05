@@ -3,6 +3,7 @@ from app.models.customer import Customer
 from app.models.customer_account_movement import CustomerAccountMovement
 from app.models.customer_contact import CustomerContact
 from app.models.event import Event, EventItem, EventProfitSnapshot
+from app.models.finance import CarryForwardItem, EventFinancialClosure, EventSupplierPayable, EventSupplierPayment, FinancialMovement
 from app.models.expense import Expense, ExpenseAllocation
 from app.models.offer import Offer, OfferItem
 from app.models.operation import EventRiderCheck, OperationNote, OperationTask
@@ -29,6 +30,11 @@ __all__ = [
     "Event",
     "EventItem",
     "EventProfitSnapshot",
+    "FinancialMovement",
+    "EventSupplierPayment",
+    "EventSupplierPayable",
+    "EventFinancialClosure",
+    "CarryForwardItem",
     "EventRiderCheck",
     "Expense",
     "ExpenseAllocation",
