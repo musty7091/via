@@ -2,7 +2,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.models.finance import FinancialMovement
+from app.models.finance import EventSupplierPayable, EventSupplierPayment, FinancialMovement
 from app.models.payment import CashTransfer, Collection
 
 
@@ -331,6 +331,183 @@ def record_collection_cancelled(
         document_no=collection.document_no,
         description=description,
         notes=collection.cancellation_reason or collection.notes,
+        created_by_user_id=current_user_id,
+        approved_by_user_id=current_user_id,
+    )
+
+def record_supplier_payable_created(
+    db: Session,
+    *,
+    payable: EventSupplierPayable,
+    current_user_id: int | None,
+) -> FinancialMovement | None:
+    if _movement_exists(
+        db=db,
+        source_type="event_supplier_payable",
+        source_id=payable.id,
+        movement_type="supplier_payable_created",
+    ):
+        return None
+
+    movement_date = payable.due_date or date.today()
+
+    return create_financial_movement(
+        db=db,
+        movement_date=movement_date,
+        source_type="event_supplier_payable",
+        source_id=payable.id,
+        movement_type="supplier_payable_created",
+        account_area="supplier_payable",
+        direction="out",
+        amount=payable.amount,
+        currency=payable.currency,
+        exchange_rate=payable.exchange_rate,
+        base_amount=payable.base_amount,
+        title="Sanatçı/hizmet sağlayıcı borcu oluştu",
+        event_id=payable.event_id,
+        artist_id=payable.artist_id,
+        service_item_id=payable.service_item_id,
+        movement_group_key=f"supplier_payable:{payable.id}",
+        customer_effect="none",
+        cash_effect="none",
+        partner_effect="none",
+        profit_effect="decrease_operational_profit",
+        document_no=None,
+        description="Etkinlik maliyeti oluştu. Nakit çıkışı henüz gerçekleşmedi.",
+        notes=payable.notes,
+        created_by_user_id=current_user_id,
+        approved_by_user_id=current_user_id,
+    )
+
+
+def record_supplier_payment_created(
+    db: Session,
+    *,
+    payable: EventSupplierPayable,
+    payment: EventSupplierPayment,
+    current_user_id: int | None,
+) -> FinancialMovement | None:
+    if payment.is_cancelled:
+        return None
+
+    if _movement_exists(
+        db=db,
+        source_type="event_supplier_payment",
+        source_id=payment.id,
+        movement_type="supplier_payment_created",
+    ):
+        return None
+
+    is_partner_payment = payment.paid_by_partner_id is not None
+
+    if is_partner_payment:
+        account_area = "partner_supplier_payment"
+        cash_effect = "none"
+        partner_effect = "company_payable_to_partner_increase"
+        title = "Ortak sanatçı/hizmet borcu ödedi"
+        description = (
+            "Şirket kasası etkilenmez. Ortağın şirketten alacağı oluşur. "
+            "Sanatçı/hizmet borcu azalır."
+        )
+    else:
+        account_area = "company_cash"
+        cash_effect = "decrease_company_cash"
+        partner_effect = "none"
+        title = "Şirket sanatçı/hizmet borcu ödedi"
+        description = "Şirket kasa/banka çıkışı oluşur. Sanatçı/hizmet borcu azalır."
+
+    return create_financial_movement(
+        db=db,
+        movement_date=payment.payment_date,
+        source_type="event_supplier_payment",
+        source_id=payment.id,
+        movement_type="supplier_payment_created",
+        account_area=account_area,
+        direction="out",
+        amount=payment.amount,
+        currency=payment.currency,
+        exchange_rate=payment.exchange_rate,
+        base_amount=payment.base_amount,
+        title=title,
+        event_id=payment.event_id,
+        partner_id=payment.paid_by_partner_id,
+        artist_id=payable.artist_id,
+        service_item_id=payable.service_item_id,
+        cash_account_id=payment.cash_account_id,
+        movement_group_key=f"supplier_payment:{payment.id}",
+        customer_effect="none",
+        cash_effect=cash_effect,
+        partner_effect=partner_effect,
+        profit_effect="none",
+        document_no=payment.document_no,
+        description=description,
+        notes=payment.notes,
+        created_by_user_id=current_user_id,
+        approved_by_user_id=current_user_id,
+    )
+
+
+def record_supplier_payment_cancelled(
+    db: Session,
+    *,
+    payable: EventSupplierPayable,
+    payment: EventSupplierPayment,
+    current_user_id: int | None,
+) -> FinancialMovement | None:
+    if not payment.is_cancelled:
+        return None
+
+    if _movement_exists(
+        db=db,
+        source_type="event_supplier_payment",
+        source_id=payment.id,
+        movement_type="supplier_payment_cancelled",
+    ):
+        return None
+
+    is_partner_payment = payment.paid_by_partner_id is not None
+
+    if is_partner_payment:
+        account_area = "partner_supplier_payment"
+        cash_effect = "none"
+        partner_effect = "company_payable_to_partner_decrease"
+        title = "Ortak tarafından yapılan sanatçı/hizmet ödemesi iptal edildi"
+        description = (
+            "Sanatçı/hizmet borcu tekrar artar. Ortağın şirketten alacağı azaltılır."
+        )
+    else:
+        account_area = "company_cash"
+        cash_effect = "increase_company_cash"
+        partner_effect = "none"
+        title = "Şirket sanatçı/hizmet ödemesi iptal edildi"
+        description = "Sanatçı/hizmet borcu tekrar artar ve şirket kasa/banka hareketi terslenir."
+
+    return create_financial_movement(
+        db=db,
+        movement_date=payment.payment_date,
+        source_type="event_supplier_payment",
+        source_id=payment.id,
+        movement_type="supplier_payment_cancelled",
+        account_area=account_area,
+        direction="in",
+        amount=payment.amount,
+        currency=payment.currency,
+        exchange_rate=payment.exchange_rate,
+        base_amount=payment.base_amount,
+        title=title,
+        event_id=payment.event_id,
+        partner_id=payment.paid_by_partner_id,
+        artist_id=payable.artist_id,
+        service_item_id=payable.service_item_id,
+        cash_account_id=payment.cash_account_id,
+        movement_group_key=f"supplier_payment:{payment.id}",
+        customer_effect="none",
+        cash_effect=cash_effect,
+        partner_effect=partner_effect,
+        profit_effect="none",
+        document_no=payment.document_no,
+        description=description,
+        notes=payment.cancellation_reason or payment.notes,
         created_by_user_id=current_user_id,
         approved_by_user_id=current_user_id,
     )
