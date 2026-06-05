@@ -1,13 +1,21 @@
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
 from app.models.partner import Partner
-from app.models.payment import Collection, PaymentPlan
+from app.models.payment import CashAccount, CashTransfer, Collection, PaymentPlan
 from app.models.user import User
-from app.modules.finance_engine.service import record_collection_cancelled, record_collection_created
+from app.modules.finance_engine.service import (
+    record_collection_cancelled,
+    record_collection_created,
+    record_collection_transferred_to_company,
+)
 from app.modules.event_payments.schemas import (
+    CashTransferCreate,
+    CashTransferRead,
     CollectionCancel,
     CollectionCreate,
     CollectionRead,
@@ -73,6 +81,24 @@ def _get_collection_or_404(db: Session, event_id: int, collection_id: int) -> Co
     return collection
 
 
+def _get_cash_account_or_404(db: Session, cash_account_id: int) -> CashAccount:
+    cash_account = db.get(CashAccount, cash_account_id)
+
+    if cash_account is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kasa/banka hesabı bulunamadı.",
+        )
+
+    if not cash_account.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pasif kasa/banka hesabına para teslimi yapılamaz.",
+        )
+
+    return cash_account
+
+
 def _validate_partner(db: Session, partner_id: int | None) -> None:
     if partner_id is None:
         return
@@ -133,6 +159,16 @@ def _list_collections(db: Session, event_id: int) -> list[Collection]:
     )
 
 
+def _list_cash_transfers(db: Session, event_id: int) -> list[CashTransfer]:
+    return (
+        db.query(CashTransfer)
+        .join(Collection, CashTransfer.collection_id == Collection.id)
+        .filter(Collection.event_id == event_id)
+        .order_by(CashTransfer.transfer_date.desc(), CashTransfer.id.desc())
+        .all()
+    )
+
+
 def _build_detail(db: Session, event: Event) -> EventPaymentsDetail:
     plans = _list_payment_plans(db=db, event_id=event.id)
     collections = _list_collections(db=db, event_id=event.id)
@@ -158,10 +194,13 @@ def _build_detail(db: Session, event: Event) -> EventPaymentsDetail:
         unplanned_base_amount=round(event_base_total_amount - planned_base_amount, 4),
     )
 
+    cash_transfers = _list_cash_transfers(db=db, event_id=event.id)
+
     return EventPaymentsDetail(
         summary=summary,
         payment_plans=[PaymentPlanRead.model_validate(plan) for plan in plans],
         collections=[CollectionRead.model_validate(collection) for collection in collections],
+        cash_transfers=[CashTransferRead.model_validate(cash_transfer) for cash_transfer in cash_transfers],
     )
 
 
@@ -338,3 +377,77 @@ def cancel_collection(
     db.refresh(collection)
 
     return collection
+
+
+def transfer_collection_to_company(
+    db: Session,
+    event_id: int,
+    collection_id: int,
+    payload: CashTransferCreate,
+    current_user: User,
+) -> CashTransfer:
+    collection = _get_collection_or_404(
+        db=db,
+        event_id=event_id,
+        collection_id=collection_id,
+    )
+
+    if collection.is_cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="İptal edilmiş tahsilat şirket kasasına teslim edilemez.",
+        )
+
+    if collection.received_by_partner_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu tahsilat ortak üzerinde görünmüyor. Şirket teslim işlemi gerekmiyor.",
+        )
+
+    if collection.is_transferred_to_company:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu tahsilat zaten şirkete teslim edilmiş.",
+        )
+
+    cash_account = _get_cash_account_or_404(
+        db=db,
+        cash_account_id=payload.to_cash_account_id,
+    )
+
+    transfer = CashTransfer(
+        collection_id=collection.id,
+        from_partner_id=collection.received_by_partner_id,
+        from_user_id=current_user.id,
+        to_cash_account_id=cash_account.id,
+        approved_by_user_id=current_user.id,
+        transfer_date=payload.transfer_date,
+        amount=float(collection.amount),
+        currency=collection.currency,
+        exchange_rate=collection.exchange_rate,
+        base_amount=collection.base_amount,
+        transfer_method=payload.transfer_method.strip(),
+        document_no=payload.document_no.strip() if payload.document_no else None,
+        status="approved",
+        print_count=0,
+        notes=payload.notes.strip() if payload.notes else None,
+    )
+
+    db.add(transfer)
+    db.flush()
+
+    collection.current_location = "company"
+    collection.is_transferred_to_company = True
+    collection.transferred_at = datetime.now(timezone.utc)
+
+    record_collection_transferred_to_company(
+        db=db,
+        collection=collection,
+        cash_transfer=transfer,
+        current_user_id=current_user.id,
+    )
+
+    db.commit()
+    db.refresh(transfer)
+
+    return transfer

@@ -5,6 +5,8 @@ from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
 from app.modules.event_payments.schemas import (
+    CashTransferCreate,
+    CashTransferRead,
     CollectionCancel,
     CollectionCreate,
     CollectionRead,
@@ -84,6 +86,28 @@ def cancel_collection(
     current_user: User = Depends(get_current_user),
 ):
     return event_payment_service.cancel_collection(
+        db=db,
+        event_id=event_id,
+        collection_id=collection_id,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+
+@router.post(
+    "/collections/{collection_id}/transfer-to-company",
+    response_model=CashTransferRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def transfer_collection_to_company(
+    event_id: int,
+    collection_id: int,
+    payload: CashTransferCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return event_payment_service.transfer_collection_to_company(
         db=db,
         event_id=event_id,
         collection_id=collection_id,

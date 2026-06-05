@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.models.finance import FinancialMovement
-from app.models.payment import Collection
+from app.models.payment import CashTransfer, Collection
 
 
 def _to_float(value) -> float:
@@ -175,6 +175,101 @@ def record_collection_created(
         created_by_user_id=current_user_id,
         approved_by_user_id=current_user_id,
     )
+
+
+def record_collection_transferred_to_company(
+    db: Session,
+    *,
+    collection: Collection,
+    cash_transfer: CashTransfer,
+    current_user_id: int | None,
+) -> list[FinancialMovement]:
+    if collection.is_cancelled:
+        return []
+
+    if _movement_exists(
+        db=db,
+        source_type="cash_transfer",
+        source_id=cash_transfer.id,
+        movement_type="partner_cash_transfer_to_company",
+    ):
+        return []
+
+    if _movement_exists(
+        db=db,
+        source_type="cash_transfer",
+        source_id=cash_transfer.id,
+        movement_type="company_cash_transfer_from_partner",
+    ):
+        return []
+
+    movement_group_key = f"cash_transfer:{cash_transfer.id}"
+
+    partner_out = create_financial_movement(
+        db=db,
+        movement_date=cash_transfer.transfer_date,
+        source_type="cash_transfer",
+        source_id=cash_transfer.id,
+        movement_type="partner_cash_transfer_to_company",
+        account_area="partner_cash_on_hand",
+        direction="out",
+        amount=cash_transfer.amount,
+        currency=cash_transfer.currency,
+        exchange_rate=cash_transfer.exchange_rate,
+        base_amount=cash_transfer.base_amount,
+        title="Ortak üzerindeki tahsilat şirkete teslim edildi",
+        event_id=collection.event_id,
+        customer_id=collection.customer_id,
+        partner_id=cash_transfer.from_partner_id,
+        cash_account_id=cash_transfer.to_cash_account_id,
+        movement_group_key=movement_group_key,
+        customer_effect="none",
+        cash_effect="decrease_partner_cash_on_hand",
+        partner_effect="company_receivable_from_partner_decrease",
+        profit_effect="none",
+        document_no=cash_transfer.document_no,
+        description=(
+            "Müşteri cari tekrar etkilenmez. Daha önce ortağın üzerinde görünen "
+            "şirket emaneti azaltılır."
+        ),
+        notes=cash_transfer.notes,
+        created_by_user_id=current_user_id,
+        approved_by_user_id=current_user_id,
+    )
+
+    company_in = create_financial_movement(
+        db=db,
+        movement_date=cash_transfer.transfer_date,
+        source_type="cash_transfer",
+        source_id=cash_transfer.id,
+        movement_type="company_cash_transfer_from_partner",
+        account_area="company_cash",
+        direction="in",
+        amount=cash_transfer.amount,
+        currency=cash_transfer.currency,
+        exchange_rate=cash_transfer.exchange_rate,
+        base_amount=cash_transfer.base_amount,
+        title="Ortak tahsilatı şirket kasasına/bankasına alındı",
+        event_id=collection.event_id,
+        customer_id=collection.customer_id,
+        partner_id=cash_transfer.from_partner_id,
+        cash_account_id=cash_transfer.to_cash_account_id,
+        movement_group_key=movement_group_key,
+        customer_effect="none",
+        cash_effect="increase_company_cash",
+        partner_effect="none",
+        profit_effect="none",
+        document_no=cash_transfer.document_no,
+        description=(
+            "Müşteri cari tekrar etkilenmez. Para şirket kasa/banka hesabına "
+            "giriş olarak izlenir."
+        ),
+        notes=cash_transfer.notes,
+        created_by_user_id=current_user_id,
+        approved_by_user_id=current_user_id,
+    )
+
+    return [partner_out, company_in]
 
 
 def record_collection_cancelled(

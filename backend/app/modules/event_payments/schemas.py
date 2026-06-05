@@ -57,6 +57,39 @@ class CollectionCancel(BaseModel):
     cancellation_reason: str = Field(min_length=1, max_length=1000)
 
 
+class CashTransferCreate(BaseModel):
+    to_cash_account_id: int
+    transfer_date: date
+    transfer_method: str = Field(default="cash", min_length=2, max_length=50)
+    document_no: str | None = Field(default=None, max_length=100)
+    notes: str | None = None
+
+
+class CashTransferRead(BaseModel):
+    id: int
+    collection_id: int | None = None
+    from_partner_id: int | None = None
+    from_user_id: int | None = None
+    to_cash_account_id: int
+    approved_by_user_id: int | None = None
+    transfer_date: date
+    amount: float
+    currency: str
+    exchange_rate: float
+    base_amount: float
+    transfer_method: str
+    document_no: str | None = None
+    status: str
+    print_count: int
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class CollectionRead(BaseModel):
     id: int
     event_id: int
@@ -100,3 +133,4 @@ class EventPaymentsDetail(BaseModel):
     summary: EventPaymentSummary
     payment_plans: list[PaymentPlanRead]
     collections: list[CollectionRead]
+    cash_transfers: list[CashTransferRead]
