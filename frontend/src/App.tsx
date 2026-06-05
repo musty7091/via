@@ -138,7 +138,7 @@ function App() {
                 <LandingCenterCard
                   eyebrow="Halka Açık"
                   title="Events"
-                  subtitle="Etkinlik Vitrini"
+                  subtitle="Hizmet Kataloğu"
                   description="Sanatçı tanıtımları, kısa videolar, program seçenekleri ve etkinlik hizmetleri bu alanda ziyaretçilere sunulur."
                   icon="✦"
                   tone="light"
@@ -149,7 +149,7 @@ function App() {
                   eyebrow="Yetkili Giriş"
                   title="Operations Center"
                   subtitle="Operasyon Merkezi"
-                  description="Yetkili ekipler için teklif, anlaşma, etkinlik dosyası ve saha operasyon yönetimi."
+                  description="Teklif, anlaşma, etkinlik dosyası ve saha operasyon yönetimi."
                   icon="▣"
                   tone="dark"
                   actionLabel="Operasyon girişi"
@@ -170,7 +170,7 @@ function App() {
 
               <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-teal-200">
-                  <div className="text-center">Bize Ulaşın: 0533 846 31 31</div>
+                  <div className="text-center">Bize Ulaşın: 0539 114 90 90</div>
                 </p>
                 
               </div>
