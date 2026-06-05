@@ -6,6 +6,7 @@ from app.models.event import Event
 from app.models.partner import Partner
 from app.models.payment import Collection, PaymentPlan
 from app.models.user import User
+from app.modules.finance_engine.service import record_collection_cancelled, record_collection_created
 from app.modules.event_payments.schemas import (
     CollectionCancel,
     CollectionCreate,
@@ -283,6 +284,12 @@ def create_collection(
     if plan is not None:
         _update_plan_paid_status(db=db, plan=plan)
 
+    record_collection_created(
+        db=db,
+        collection=collection,
+        current_user_id=current_user.id,
+    )
+
     db.commit()
     db.refresh(collection)
 
@@ -294,6 +301,7 @@ def cancel_collection(
     event_id: int,
     collection_id: int,
     payload: CollectionCancel,
+    current_user: User,
 ) -> Collection:
     collection = _get_collection_or_404(
         db=db,
@@ -319,6 +327,12 @@ def cancel_collection(
             payment_plan_id=collection.payment_plan_id,
         )
         _update_plan_paid_status(db=db, plan=plan)
+
+    record_collection_cancelled(
+        db=db,
+        collection=collection,
+        current_user_id=current_user.id,
+    )
 
     db.commit()
     db.refresh(collection)

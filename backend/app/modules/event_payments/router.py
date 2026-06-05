@@ -81,11 +81,12 @@ def cancel_collection(
     collection_id: int,
     payload: CollectionCancel,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     return event_payment_service.cancel_collection(
         db=db,
         event_id=event_id,
         collection_id=collection_id,
         payload=payload,
+        current_user=current_user,
     )
