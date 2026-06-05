@@ -29,6 +29,10 @@ Temel kural:
 
 > Tahsil edilmemiş alacak, ödenmemiş borç veya ortak üzerinde kalan para varken etkinlik finansal olarak kapanmış sayılmaz.
 
+Üçüncü temel kural:
+
+> Müşteriden tahsilat yapılmadan gerçek kârlılık oluşmaz. Gerçek kârlılık oluşmadan ortak hesabı kapanmaz. Ortak hesabı kapanmadan dönem kapanışı sağlıklı olmaz.
+
 ## 2. Kâr türleri
 
 VIA EVENTS içinde kâr üç farklı seviyede izlenmelidir.
@@ -335,7 +339,98 @@ Etkinlik ancak şu şartlarda finansal olarak kapanabilir:
 - Ortak payı hesaplandı.
 - Kapanış onayı verildi.
 
-## 14. Dönem kapanış kontrol listesi
+## 14. Her etkinlik için finansal kapanış onayı
+
+Her etkinlik kendi içinde ayrı bir finansal dosya gibi düşünülmelidir.
+
+Dönem kapanışı ayı kapatır. Etkinlik finansal kapanışı ise o etkinliğin tahsilat, gider, borç, ortak ve kâr hesabını kapatır.
+
+Bu yüzden bir etkinlik finansal kapanış onayı almadan:
+
+- Ortak kârı kesinleşmez.
+- Dağıtılabilir gerçek kâr oluşmaz.
+- Dönem kapanışı tam güvenilir olmaz.
+- Açık alacak, açık borç ve devir kayıtları netleşmez.
+- Ortak hesaplaşması kesin sonuç üretmez.
+
+### 14.1 Etkinlik finansal kapanış ön koşulları
+
+Bir etkinliğin finansal olarak kapanabilmesi için şu kontroller tamamlanmalıdır:
+
+1. Anlaşma tutarı kesinleşmiş olmalıdır.
+2. Ödeme planı anlaşma tutarıyla uyumlu olmalıdır.
+3. Müşteri tahsilatı tamamlanmış olmalıdır veya kalan tutar için yetkili kullanıcı tarafından şu kararlardan biri verilmelidir:
+   - Açık alacak olarak devret
+   - Zarar / tahsil edilemez olarak işaretle
+   - Yönetici onaylı açık takipte bırak
+4. Tüm sanatçı ve hizmet maliyetleri girilmiş olmalıdır.
+5. Tüm etkinlik giderleri işlenmiş olmalıdır.
+6. Sanatçı / hizmet sağlayıcı borçları şu durumlardan birinde olmalıdır:
+   - Ödendi
+   - Sonraki döneme devretti
+   - Yetkili onaylı açık borç olarak kaldı
+7. Ortak üzerinde şirket parası varsa şu durumlardan birinde olmalıdır:
+   - Şirkete teslim edildi
+   - Sonraki döneme açık emanet olarak devretti
+8. Kasa, banka ve ortak üzerindeki para hareketleri kontrol edilmiş olmalıdır.
+9. Net kâr hesaplanmış olmalıdır.
+10. Ortak payları hesaplanmış olmalıdır.
+11. Yetkili kullanıcı etkinlik finansal kapanış onayı vermiş olmalıdır.
+
+### 14.2 Etkinlik finansal kapanış statüleri
+
+Etkinlik finansal kapanış süreci en az şu statülerle izlenmelidir:
+
+- `open`: Etkinlik finansal olarak açık.
+- `ready_for_review`: Muhasebe kontrolleri tamamlandı, onay bekliyor.
+- `closed`: Finansal kapanış onaylandı.
+- `carried_forward`: Etkinlik kapanmadı, açık kalemleriyle sonraki döneme devretti.
+- `reopened`: Daha önce kapatılmış etkinlik yetkili kullanıcı tarafından yeniden açıldı.
+
+### 14.3 Kapanış onayı verildiğinde oluşacak sonuçlar
+
+Etkinlik finansal kapanış onayı verildiğinde sistem şu sonuçları üretmelidir:
+
+- Etkinlik finansal kapanış kaydı oluşur.
+- Kapanış anındaki finansal özet kilitlenir.
+- Net kâr ve ortak payları kayıt altına alınır.
+- Açık alacak / borç varsa gerekçesiyle birlikte görünür.
+- Dağıtılabilir gerçek kâr ancak uygun şartlar sağlandıysa oluşur.
+- Dönem kapanışı bu etkinliği kapalı etkinlik olarak görebilir.
+- Sonradan değişiklik gerekirse normal kullanıcı doğrudan değiştiremez; düzeltme veya yeniden açma yetkili kullanıcı kontrolünde yapılır.
+
+### 14.4 Kapanamayan etkinliklerin dönem devri
+
+Bir etkinlik finansal kapanış onayı alamıyorsa dönem kapanışında silinmez veya sıfırlanmaz.
+
+Bu etkinlik şu bilgilerle sonraki döneme devreder:
+
+- Etkinlik
+- Müşteri
+- Asıl dönem
+- Devir dönemi
+- Kalan müşteri alacağı
+- Kalan sanatçı / hizmet borcu
+- Ortak üzerindeki para
+- Ortağın şirketten alacağı
+- Şirketin ortaktan alacağı
+- Tahsil edilmemiş kâr
+- Devir nedeni
+- Yetkili onay bilgisi
+
+### 14.5 Yetki kuralı
+
+Etkinlik finansal kapanışını herkes yapamaz.
+
+Önerilen yetki kuralı:
+
+- Muhasebe kullanıcısı kapanış hazırlığı yapabilir.
+- Operasyon kullanıcısı gider ve maliyet eksiklerini tamamlayabilir.
+- Partner kullanıcı kendi üzerindeki para ve masraf kayıtlarını görebilir.
+- Sadece yetkili yönetici / super admin finansal kapanış onayı verebilir.
+- Kapanmış etkinliği yeniden açma yetkisi sadece super admin seviyesinde olmalıdır.
+
+## 15. Dönem kapanış kontrol listesi
 
 Dönem kapanışı ekranı kullanıcıya şu bilgileri göstermelidir:
 
@@ -350,10 +445,13 @@ Dönem kapanışı ekranı kullanıcıya şu bilgileri göstermelidir:
 - Tahsilatı geciken etkinlikler
 - Ödemesi geciken borçlar
 - Kapanmamış ortak emanetleri
+- Finansal kapanış onayı almamış etkinlikler
+- Dağıtılabilir gerçek kâr toplamı
+- Henüz dağıtılamayan tahmini / operasyonel kâr toplamı
 
 Kullanıcı ancak bu özeti görüp onayladıktan sonra dönemi kapatmalıdır.
 
-## 15. Dönem kilitleme
+## 16. Dönem kilitleme
 
 Dönem kapandıktan sonra geçmiş dönemdeki finans hareketleri değiştirilememelidir.
 
@@ -363,7 +461,7 @@ Düzeltme gerekiyorsa:
 - Dönem yeniden açılır veya düzeltme fişi yeni dönemde işlenir.
 - Her düzeltme audit log'a yazılır.
 
-## 16. İlk uygulama sırası
+## 17. Finance Center mimari geliştirme sırası
 
 Finans modülü şu sırayla geliştirilmelidir:
 
@@ -371,14 +469,94 @@ Finans modülü şu sırayla geliştirilmelidir:
 2. Finans hareket motoru veri modeli
 3. Dönem modeli
 4. Açık kalem devir modeli
-5. Müşteri cari ekranı
-6. Etkinlik finans kapanış kontrolü
+5. Etkinlik finansal kapanış modeli
+6. Müşteri cari ekranı
 7. Kasa / banka / ortak üzerindeki para ekranı
 8. Sanatçı / hizmet borç ekranı
 9. Ortak hesaplaşması
 10. Dönem kapanışı ve devir oluşturma
 
-## 17. Nihai hedef
+Bu sıra önemlidir. Çünkü ekranlardan önce para hareketlerinin doğru veri modeline oturması gerekir. Önce motor, sonra ekran. Yoksa uygulama güzel görünür ama muhasebe tarafında freni patlamış minibüse döner.
+
+## 18. Finance Center veri modeli için ilk taslak kararlar
+
+İlk kodlama adımına geçmeden önce aşağıdaki veri modeli kararları korunmalıdır.
+
+### 18.1 Finans hareket motoru
+
+Her para etkileyen işlem merkezi bir finans hareket kaydı üretmelidir.
+
+Örnek işlem kaynakları:
+
+- Teklifin anlaşmaya dönüşmesi
+- Tahsilat girişi
+- Tahsilatın ortağın üzerinde kalması
+- Ortağın parayı şirkete teslim etmesi
+- Etkinlik gideri
+- Ortak cebinden gider ödemesi
+- Sanatçı / hizmet borcu oluşması
+- Borç ödemesi
+- Devir kaydı
+- Düzeltme fişi
+
+### 18.2 Dönem modeli
+
+Dönem modeli sadece ay bilgisini tutmamalıdır.
+
+Dönem şunları bilmelidir:
+
+- Dönem ayı
+- Durum
+- Açılış bakiyeleri
+- Kapanış bakiyeleri
+- Devreden alacaklar
+- Devreden borçlar
+- Devreden ortak bakiyeleri
+- Dönem net kârı
+- Dağıtılabilir gerçek kâr
+- Kapanış onayı
+- Kilit durumu
+
+### 18.3 Açık kalem devir modeli
+
+Açık kalem devir modeli, dönem kapanışında sıfırlanmayan her kalemi kaynak ilişkisiyle taşımalıdır.
+
+Her devir kaydında en az şu bilgiler olmalıdır:
+
+- Devir türü
+- Kaynak dönem
+- Hedef dönem
+- Müşteri / etkinlik / ortak / sanatçı / hizmet ilişkisi
+- Tutar
+- Para birimi
+- Ana para birimi karşılığı
+- Açık kalan neden
+- Yetkili onay bilgisi
+- Kapanıp kapanmadığı
+
+### 18.4 Etkinlik finansal kapanış modeli
+
+Etkinlik finansal kapanış modeli, kapanış anındaki sonucu dondurmalıdır.
+
+Bu modelde en az şu bilgiler olmalıdır:
+
+- Etkinlik
+- Kapanış durumu
+- Anlaşma tutarı
+- Tahsil edilen tutar
+- Kalan müşteri alacağı
+- Toplam gider
+- Kalan sanatçı / hizmet borcu
+- Ortak üzerindeki para
+- Net kâr
+- Dağıtılabilir gerçek kâr
+- Ortak payları
+- Kapanış onayı veren kullanıcı
+- Kapanış tarihi
+- Notlar
+- Yeniden açıldıysa yeniden açma nedeni
+
+## 19. Nihai hedef
 
 Finance Center sadece rapor ekranı değildir.
 
