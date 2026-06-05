@@ -8,6 +8,7 @@ type DashboardPageProps = {
   onOpenOffers: () => void;
   onOpenEvents: () => void;
   onOpenPartners: () => void;
+  onOpenFinanceCenter: () => void;
   onOpenUsers: () => void;
 };
 
@@ -38,6 +39,11 @@ const dashboardCards = [
     action: "partners",
   },
   {
+    value: "Finans Merkezi",
+    description: "Tahsilat, gider, cari, devir ve dönem kapanışı.",
+    action: "finance",
+  },
+  {
     value: "Kullanıcı Yönetimi",
     description: "Sistem kullanıcısı oluşturma, roller ve şifre sıfırlama.",
     action: "users",
@@ -53,6 +59,7 @@ export function DashboardPage({
   onOpenOffers,
   onOpenEvents,
   onOpenPartners,
+  onOpenFinanceCenter,
   onOpenUsers,
 }: DashboardPageProps) {
   const visibleDashboardCards = dashboardCards.filter(
@@ -106,9 +113,11 @@ export function DashboardPage({
                       ? onOpenOffers
                       : card.action === "partners"
                         ? onOpenPartners
-                        : card.action === "users"
-                          ? onOpenUsers
-                          : onOpenEvents
+                        : card.action === "finance"
+                          ? onOpenFinanceCenter
+                          : card.action === "users"
+                            ? onOpenUsers
+                            : onOpenEvents
               }
               className="rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition hover:-translate-y-1 hover:shadow-xl"
             >

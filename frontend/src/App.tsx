@@ -6,6 +6,7 @@ import { OffersPage } from "./features/offers/pages/OffersPage";
 import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
 import { UserManagementPage } from "./features/userManagement/pages/UserManagementPage";
 import { PartnersPage } from "./features/partners/pages/PartnersPage";
+import { FinanceCenterPage } from "./features/financeCenter/pages/FinanceCenterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
@@ -20,6 +21,7 @@ type AppScreen =
   | "offers"
   | "events"
   | "partners"
+  | "finance"
   | "users";
 
 function App() {
@@ -29,10 +31,16 @@ function App() {
   const [screen, setScreen] = useState<AppScreen>(() =>
     getStoredUser() ? "dashboard" : "landing"
   );
+  const [postLoginScreen, setPostLoginScreen] = useState<AppScreen>("dashboard");
+
+  function openLoginFor(targetScreen: AppScreen) {
+    setPostLoginScreen(targetScreen);
+    setScreen("login");
+  }
 
   function handleLoginSuccess(user: AuthUser) {
     setCurrentUser(user);
-    setScreen("dashboard");
+    setScreen(postLoginScreen);
   }
 
   function handleLogout() {
@@ -60,6 +68,7 @@ function App() {
         onOpenOffers={() => setScreen("offers")}
         onOpenEvents={() => setScreen("events")}
         onOpenPartners={() => setScreen("partners")}
+        onOpenFinanceCenter={() => setScreen("finance")}
         onOpenUsers={() => setScreen("users")}
       />
     );
@@ -85,6 +94,10 @@ function App() {
 
   if (screen === "partners" && currentUser) {
     return <PartnersPage onBackToDashboard={() => setScreen("dashboard")} />;
+  }
+
+  if (screen === "finance" && currentUser) {
+    return <FinanceCenterPage onBackToDashboard={() => setScreen("dashboard")} />;
   }
 
   if (screen === "users" && currentUser) {
@@ -153,7 +166,7 @@ function App() {
                   icon="▣"
                   tone="dark"
                   actionLabel="Operasyon girişi"
-                  onClick={() => setScreen("login")}
+                  onClick={() => openLoginFor("dashboard")}
                 />
 
                 <LandingCenterCard
@@ -164,7 +177,7 @@ function App() {
                   icon="₺"
                   tone="teal"
                   actionLabel="Muhasebe girişi"
-                  onClick={() => setScreen("login")}
+                  onClick={() => openLoginFor("finance")}
                 />
               </div>
 
