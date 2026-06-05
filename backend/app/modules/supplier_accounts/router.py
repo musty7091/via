@@ -6,10 +6,30 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
+from app.modules.supplier_accounts.schemas import SupplierAccountBalancesResponse
 from app.modules.supplier_accounts.schemas import SupplierAccountStatementResponse
+from app.modules.supplier_accounts.services import get_supplier_account_balances
 from app.modules.supplier_accounts.services import get_supplier_account_statement
 
 router = APIRouter(prefix="/supplier-accounts", tags=["Supplier Accounts"])
+
+
+@router.get("/balances", response_model=SupplierAccountBalancesResponse)
+def get_supplier_balances(
+    kind: str = Query(default="all"),
+    event_id: int | None = None,
+    only_with_balance: bool = False,
+    include_inactive: bool = False,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    return get_supplier_account_balances(
+        db=db,
+        kind=kind,
+        event_id=event_id,
+        only_with_balance=only_with_balance,
+        include_inactive=include_inactive,
+    )
 
 
 @router.get("/artists/{artist_id}/statement", response_model=SupplierAccountStatementResponse)

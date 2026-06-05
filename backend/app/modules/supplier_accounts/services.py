@@ -11,6 +11,11 @@ from app.modules.supplier_accounts.schemas import (
     SupplierAccountStatementResponse,
     SupplierAccountStatementSummary,
 )
+from app.modules.supplier_accounts.schemas import (
+    SupplierAccountBalanceItem,
+    SupplierAccountBalancesResponse,
+    SupplierAccountBalancesSummary,
+)
 
 
 def _to_float(value) -> float:
@@ -317,6 +322,179 @@ def get_supplier_account_statement(
     )
 
     return SupplierAccountStatementResponse(
+        summary=summary,
+        items=items,
+    )
+
+def _get_supplier_balance_payables(
+    db: Session,
+    *,
+    supplier_kind: str,
+    supplier_id: int,
+    event_id: int | None,
+) -> list[EventSupplierPayable]:
+    query = db.query(EventSupplierPayable)
+
+    if supplier_kind == "artist":
+        query = query.filter(EventSupplierPayable.artist_id == supplier_id)
+    else:
+        query = query.filter(EventSupplierPayable.service_item_id == supplier_id)
+
+    if event_id is not None:
+        query = query.filter(EventSupplierPayable.event_id == event_id)
+
+    return query.order_by(EventSupplierPayable.id.asc()).all()
+
+
+def _get_supplier_balance_candidates(
+    db: Session,
+    *,
+    kind: str,
+    include_inactive: bool,
+) -> list[dict]:
+    candidates: list[dict] = []
+
+    if kind in ("all", "artist"):
+        artist_query = db.query(Artist)
+
+        if not include_inactive:
+            artist_query = artist_query.filter(Artist.is_active == True)  # noqa: E712
+
+        artists = artist_query.order_by(Artist.name.asc()).all()
+
+        for artist in artists:
+            candidates.append(
+                {
+                    "supplier_kind": "artist",
+                    "supplier_id": artist.id,
+                    "supplier_name": artist.name,
+                    "is_active": bool(artist.is_active),
+                }
+            )
+
+    if kind in ("all", "service"):
+        service_query = db.query(ServiceItem)
+
+        if not include_inactive:
+            service_query = service_query.filter(ServiceItem.is_active == True)  # noqa: E712
+
+        service_items = service_query.order_by(ServiceItem.name.asc()).all()
+
+        for service_item in service_items:
+            candidates.append(
+                {
+                    "supplier_kind": "service",
+                    "supplier_id": service_item.id,
+                    "supplier_name": service_item.name,
+                    "is_active": bool(service_item.is_active),
+                }
+            )
+
+    return candidates
+
+
+def get_supplier_account_balances(
+    db: Session,
+    *,
+    kind: str = "all",
+    event_id: int | None = None,
+    only_with_balance: bool = False,
+    include_inactive: bool = False,
+) -> SupplierAccountBalancesResponse:
+    kind = (kind or "all").strip().lower()
+
+    if kind not in ("all", "artist", "service"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz cari türü. all, artist veya service kullanılmalıdır.",
+        )
+
+    candidates = _get_supplier_balance_candidates(
+        db=db,
+        kind=kind,
+        include_inactive=include_inactive,
+    )
+
+    items: list[SupplierAccountBalanceItem] = []
+
+    for candidate in candidates:
+        payables = _get_supplier_balance_payables(
+            db=db,
+            supplier_kind=candidate["supplier_kind"],
+            supplier_id=candidate["supplier_id"],
+            event_id=event_id,
+        )
+
+        payable_ids = [item.id for item in payables]
+        payments = _get_payments_for_payables(
+            db=db,
+            payable_ids=payable_ids,
+            include_cancelled=False,
+        )
+
+        total_debit = round(sum(_to_float(item.base_amount) for item in payables), 4)
+        total_credit = round(sum(_to_float(item.base_amount) for item in payments), 4)
+        balance = round(total_debit - total_credit, 4)
+
+        if only_with_balance and abs(balance) <= 0.0001:
+            continue
+
+        transaction_dates: list[date] = []
+
+        for payable in payables:
+            if payable.due_date is not None:
+                transaction_dates.append(payable.due_date)
+            elif payable.created_at is not None:
+                transaction_dates.append(payable.created_at.date())
+
+        for payment in payments:
+            transaction_dates.append(payment.payment_date)
+
+        event_ids = {item.event_id for item in payables if item.event_id is not None}
+
+        items.append(
+            SupplierAccountBalanceItem(
+                supplier_kind=candidate["supplier_kind"],
+                supplier_id=candidate["supplier_id"],
+                supplier_name=candidate["supplier_name"],
+                is_active=candidate["is_active"],
+                total_debit_base_amount=total_debit,
+                total_credit_base_amount=total_credit,
+                balance_base_amount=balance,
+                payable_count=len(payables),
+                payment_count=len(payments),
+                open_payable_count=sum(1 for item in payables if item.status == "open"),
+                partial_payable_count=sum(1 for item in payables if item.status == "partial"),
+                paid_payable_count=sum(1 for item in payables if item.status == "paid"),
+                event_count=len(event_ids),
+                last_transaction_date=max(transaction_dates) if transaction_dates else None,
+            )
+        )
+
+    items.sort(
+        key=lambda item: (
+            0 if item.balance_base_amount > 0 else 1,
+            item.supplier_kind,
+            item.supplier_name.lower(),
+        )
+    )
+
+    total_debit = round(sum(item.total_debit_base_amount for item in items), 4)
+    total_credit = round(sum(item.total_credit_base_amount for item in items), 4)
+    total_balance = round(sum(item.balance_base_amount for item in items), 4)
+
+    summary = SupplierAccountBalancesSummary(
+        kind=kind,
+        total_supplier_count=len(items),
+        total_debit_base_amount=total_debit,
+        total_credit_base_amount=total_credit,
+        total_balance_base_amount=total_balance,
+        positive_balance_supplier_count=sum(1 for item in items if item.balance_base_amount > 0.0001),
+        zero_balance_supplier_count=sum(1 for item in items if abs(item.balance_base_amount) <= 0.0001),
+        negative_balance_supplier_count=sum(1 for item in items if item.balance_base_amount < -0.0001),
+    )
+
+    return SupplierAccountBalancesResponse(
         summary=summary,
         items=items,
     )
