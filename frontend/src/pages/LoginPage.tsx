@@ -47,9 +47,7 @@ export function LoginPage({ onLoginSuccess, onBack }: LoginPageProps) {
 
         <section className="rounded-[2rem] border border-white/10 bg-white/10 p-5 shadow-2xl shadow-black/30 backdrop-blur">
           <div className="rounded-[1.5rem] bg-white p-5 text-slate-950">
-            <p className="text-xs font-bold uppercase tracking-[0.35em] text-teal-700">
-              VIA EVENTS
-            </p>
+            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-12 w-auto object-contain" />
             <h1 className="mt-3 text-3xl font-black">Back Office Girişi</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               Etkinlik, tahsilat, gider, operasyon ve ortak hesapları için

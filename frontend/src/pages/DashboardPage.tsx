@@ -64,9 +64,7 @@ export function DashboardPage({
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.35em] text-teal-700">
-              VIA EVENTS
-            </p>
+            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
             <h1 className="mt-1 text-xl font-black sm:text-2xl">
               Back Office
             </h1>
