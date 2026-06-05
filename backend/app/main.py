@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.api_router import api_router
-from app.modules.partners.router import router as partners_router
 from app.core.config import settings
+from app.modules.partners.router import router as partners_router
 
 
 app = FastAPI(
@@ -14,8 +14,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^http://(localhost|127\\.0\\.0\\.1):[0-9]+$",
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1):[0-9]+$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
