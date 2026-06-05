@@ -76,6 +76,10 @@ export type ExpenseAllocation = {
 export type ExpenseRead = {
   id: number;
   expense_type: string;
+  event_id: number | null;
+  artist_id: number | null;
+  paid_by_partner_id: number | null;
+  paid_by_user_id: number | null;
   title: string;
   description: string | null;
   expense_date: string;
@@ -111,4 +115,8 @@ export type CreateExpensePayload = {
   allocation_end_month?: string | null;
   document_no?: string | null;
   notes?: string | null;
+};
+
+export type CancelExpensePayload = {
+  cancellation_reason: string;
 };

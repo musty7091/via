@@ -1,7 +1,11 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 import {
+  cancelExpense,
   createExpense,
+  fetchExpenseDetail,
+  fetchExpenses,
   fetchFinanceSummary,
   fetchOpenCarryForwards,
   fetchPeriodExpenseSummary,
@@ -10,6 +14,8 @@ import {
 import type {
   CarryForwardItem,
   CreateExpensePayload,
+  ExpenseRead,
+  ExpenseWithAllocations,
   FinancialMovement,
   FinancialMovementSummary,
   PeriodExpenseSummary,
@@ -19,7 +25,16 @@ type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
 };
 
+type QuickActionKey =
+  | "collection"
+  | "expense"
+  | "supplierPayment"
+  | "partnerCash"
+  | "carryForward"
+  | "periodClose";
+
 type QuickAction = {
+  key: QuickActionKey;
   title: string;
   description: string;
   helper: string;
@@ -27,6 +42,19 @@ type QuickAction = {
   tone: "dark" | "teal" | "white" | "amber";
   warningTitle: string;
   warningMessage: string;
+};
+
+type ExpenseFormState = {
+  expenseScope: "period" | "season";
+  title: string;
+  expenseDate: string;
+  amount: string;
+  currency: string;
+  exchangeRate: string;
+  allocationEndMonth: string;
+  documentNo: string;
+  description: string;
+  notes: string;
 };
 
 const defaultSummary: FinancialMovementSummary = {
@@ -42,6 +70,7 @@ const defaultSummary: FinancialMovementSummary = {
 
 const quickActions: QuickAction[] = [
   {
+    key: "collection",
     title: "Tahsilat Gir",
     description: "Müşteriden gelen ödemeyi kaydet.",
     helper: "Cari ve kasa hareketi sistem tarafından oluşturulur.",
@@ -52,6 +81,7 @@ const quickActions: QuickAction[] = [
       "Bu işlem müşteri alacağını azaltır ve kasa/banka hareketi oluşturur. Geçmiş dönemden devreden alacak seçilirse eski dönem raporu değişmez, yeni dönem kârı artmaz.",
   },
   {
+    key: "expense",
     title: "Gider Faturası Gir",
     description: "Normal dönem gideri veya sezonluk gider kaydet.",
     helper: "Sezonluk giderler aylara otomatik bölünür.",
@@ -62,6 +92,7 @@ const quickActions: QuickAction[] = [
       "Normal gider ilgili döneme yazılır. Sezonluk gider seçilirse gider başlangıç ayından sezon sonuna kadar aylara bölünür.",
   },
   {
+    key: "supplierPayment",
     title: "Sanatçı / Hizmet Ödemesi",
     description: "Açık sanatçı veya hizmet borcunu öde.",
     helper: "Ödeme gideri tekrar artırmaz; sadece borcu kapatır.",
@@ -72,6 +103,7 @@ const quickActions: QuickAction[] = [
       "Bu işlem sanatçı/hizmet borcunu azaltır ve kasa/banka çıkışı oluşturur. Devreden borç kapatılıyorsa yeni dönem giderini artırmaz.",
   },
   {
+    key: "partnerCash",
     title: "Ortaktan Para Teslim Al",
     description: "Ortak üzerinde kalan şirket parasını kapat.",
     helper: "Ortak cari ve kasa hareketi birlikte işlenir.",
@@ -82,6 +114,7 @@ const quickActions: QuickAction[] = [
       "Bu işlem ortağın üzerindeki şirket parasını azaltır ve şirket kasa/banka girişini oluşturur. Eski dönem raporu değiştirilmez.",
   },
   {
+    key: "carryForward",
     title: "Devreden Kalem Kapat",
     description: "Geçmiş dönemden gelen açık işi tamamla.",
     helper: "Müşteri alacağı, borç veya ortak bakiyesi kapatılır.",
@@ -92,6 +125,7 @@ const quickActions: QuickAction[] = [
       "Bu işlem geçmiş dönemden gelen açık kalemi kapatır. Eski dönem kilidi korunur ve yeni dönem kâr/gider hesabı bozulmaz.",
   },
   {
+    key: "periodClose",
     title: "Dönem Kapanışı",
     description: "Ay sonu kontrolünü yap ve dönemi kilitle.",
     helper: "Açık kalemler sonraki döneme devredilir.",
@@ -103,12 +137,90 @@ const quickActions: QuickAction[] = [
   },
 ];
 
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function getCurrentPeriodMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatMoney(value: number | null | undefined, currency = "TL") {
+function getPeriodMonthFromDate(value: string) {
+  if (!value || value.length < 7) {
+    return getCurrentPeriodMonth();
+  }
+
+  return value.slice(0, 7);
+}
+
+function getYearEndMonth(value: string) {
+  const year = value && value.length >= 4 ? value.slice(0, 4) : String(new Date().getFullYear());
+  return `${year}-12`;
+}
+
+function parsePeriodMonth(periodMonth: string) {
+  const [yearText, monthText] = periodMonth.split("-");
+  return {
+    year: Number(yearText),
+    month: Number(monthText),
+  };
+}
+
+function getMonthCount(startMonth: string, endMonth: string) {
+  const start = parsePeriodMonth(startMonth);
+  const end = parsePeriodMonth(endMonth);
+
+  if (
+    Number.isNaN(start.year) ||
+    Number.isNaN(start.month) ||
+    Number.isNaN(end.year) ||
+    Number.isNaN(end.month)
+  ) {
+    return 0;
+  }
+
+  return (end.year - start.year) * 12 + (end.month - start.month) + 1;
+}
+
+function formatPeriodMonth(periodMonth: string | null | undefined) {
+  if (!periodMonth) {
+    return "-";
+  }
+
+  const [year, month] = periodMonth.split("-");
+
+  const monthNames: Record<string, string> = {
+    "01": "Ocak",
+    "02": "Şubat",
+    "03": "Mart",
+    "04": "Nisan",
+    "05": "Mayıs",
+    "06": "Haziran",
+    "07": "Temmuz",
+    "08": "Ağustos",
+    "09": "Eylül",
+    "10": "Ekim",
+    "11": "Kasım",
+    "12": "Aralık",
+  };
+
+  return `${monthNames[month] ?? month} ${year}`;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatMoney(value: number | string | null | undefined, currency = "TL") {
   const safeValue = Number(value ?? 0);
 
   return (
@@ -150,6 +262,35 @@ function getMovementLabel(movementType: string) {
   return labels[movementType] ?? movementType;
 }
 
+function getExpenseScopeLabel(expense: ExpenseRead) {
+  return expense.is_allocated ? "Sezonluk Gider" : "Normal Dönem Gideri";
+}
+
+function getExpenseStatusLabel(expense: ExpenseRead) {
+  if (expense.is_cancelled || expense.status === "cancelled") {
+    return "İptal Edildi";
+  }
+
+  return "Aktif";
+}
+
+function getDefaultExpenseForm(): ExpenseFormState {
+  const today = todayIsoDate();
+
+  return {
+    expenseScope: "period",
+    title: "",
+    expenseDate: today,
+    amount: "",
+    currency: "TRY",
+    exchangeRate: "1",
+    allocationEndMonth: getYearEndMonth(today),
+    documentNo: "",
+    description: "",
+    notes: "",
+  };
+}
+
 function getToneClasses(tone: QuickAction["tone"]) {
   if (tone === "teal") {
     return "border-teal-200 bg-teal-300 text-slate-950 shadow-teal-100";
@@ -173,53 +314,59 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
     useState<PeriodExpenseSummary | null>(null);
   const [movements, setMovements] = useState<FinancialMovement[]>([]);
   const [carryForwards, setCarryForwards] = useState<CarryForwardItem[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseRead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<ExpenseWithAllocations | null>(null);
+  const [isExpenseDetailLoading, setIsExpenseDetailLoading] = useState(false);
+  const [expenseDetailError, setExpenseDetailError] = useState<string | null>(null);
+  const [cancelExpenseTarget, setCancelExpenseTarget] = useState<ExpenseRead | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  async function loadDashboard() {
+    setIsLoading(true);
+    setLoadError(null);
 
-    async function loadDashboard() {
-      try {
-        setIsLoading(true);
-        setLoadError(null);
+    const results = await Promise.allSettled([
+      fetchFinanceSummary(),
+      fetchRecentFinanceMovements(),
+      fetchOpenCarryForwards(),
+      fetchPeriodExpenseSummary(currentPeriodMonth),
+      fetchExpenses(),
+    ]);
 
-        const [summaryData, movementData, carryForwardData, expenseSummaryData] =
-          await Promise.all([
-            fetchFinanceSummary(),
-            fetchRecentFinanceMovements(),
-            fetchOpenCarryForwards(),
-            fetchPeriodExpenseSummary(currentPeriodMonth),
-          ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setSummary(summaryData);
-        setMovements(movementData.items);
-        setCarryForwards(carryForwardData);
-        setPeriodExpenseSummary(expenseSummaryData);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setLoadError(error instanceof Error ? error.message : "Finans verileri alınamadı.");
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    if (results[0].status === "fulfilled") {
+      setSummary(results[0].value);
     }
 
-    loadDashboard();
+    if (results[1].status === "fulfilled") {
+      setMovements(results[1].value.items);
+    }
 
-    return () => {
-      isMounted = false;
-    };
+    if (results[2].status === "fulfilled") {
+      setCarryForwards(results[2].value);
+    }
+
+    if (results[3].status === "fulfilled") {
+      setPeriodExpenseSummary(results[3].value);
+    }
+
+    if (results[4].status === "fulfilled") {
+      setExpenses(results[4].value);
+    }
+
+    const rejected = results.filter((item) => item.status === "rejected");
+
+    if (rejected.length > 0) {
+      setLoadError("Bazı finans verileri alınamadı. Sayfa çalışmaya devam ediyor.");
+    }
+
+    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    loadDashboard();
   }, [currentPeriodMonth]);
 
   const openCarryForwardTotal = carryForwards.reduce(
@@ -242,12 +389,32 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const cashBalance = summary.company_cash_in_base_amount - summary.company_cash_out_base_amount;
 
   function handleQuickAction(action: QuickAction) {
-    if (action.title === "Gider Faturası Gir") {
+    if (action.key === "expense") {
       setShowExpenseModal(true);
       return;
     }
 
     setSelectedAction(action);
+  }
+
+  async function openExpenseDetail(expenseId: number) {
+    setIsExpenseDetailLoading(true);
+    setExpenseDetailError(null);
+
+    try {
+      const detail = await fetchExpenseDetail(expenseId);
+      setSelectedExpense(detail);
+    } catch (error) {
+      setExpenseDetailError(error instanceof Error ? error.message : "Gider detayı alınamadı.");
+    } finally {
+      setIsExpenseDetailLoading(false);
+    }
+  }
+
+  async function handleExpenseCancelled() {
+    setCancelExpenseTarget(null);
+    setSelectedExpense(null);
+    await loadDashboard();
   }
 
   return (
@@ -301,9 +468,16 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
         </div>
 
         {loadError ? (
-          <div className="mt-5 rounded-[1.5rem] border border-red-200 bg-red-50 p-5 text-red-900">
-            <p className="font-black">Finans verileri alınamadı.</p>
+          <div className="mt-5 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-amber-950">
+            <p className="font-black">Bilgi</p>
             <p className="mt-2 text-sm leading-6">{loadError}</p>
+          </div>
+        ) : null}
+
+        {expenseDetailError ? (
+          <div className="mt-5 rounded-[1.5rem] border border-red-200 bg-red-50 p-5 text-red-950">
+            <p className="font-black">Gider Detayı Açılamadı</p>
+            <p className="mt-2 text-sm leading-6">{expenseDetailError}</p>
           </div>
         ) : null}
 
@@ -431,6 +605,13 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
 
+        <ExpenseRecordsSection
+          expenses={expenses}
+          isDetailLoading={isExpenseDetailLoading}
+          currentPeriodMonth={currentPeriodMonth}
+          onOpenDetail={openExpenseDetail}
+        />
+
         <div className="mt-6 grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
           <section className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
             <div className="flex items-start justify-between gap-3">
@@ -535,10 +716,26 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
       {showExpenseModal ? (
         <ExpenseModal
           onClose={() => setShowExpenseModal(false)}
-          onSaved={() => {
+          onSaved={async () => {
             setShowExpenseModal(false);
-            window.location.reload();
+            await loadDashboard();
           }}
+        />
+      ) : null}
+
+      {selectedExpense ? (
+        <ExpenseDetailModal
+          detail={selectedExpense}
+          onClose={() => setSelectedExpense(null)}
+          onCancelRequest={(expense) => setCancelExpenseTarget(expense)}
+        />
+      ) : null}
+
+      {cancelExpenseTarget ? (
+        <CancelExpenseModal
+          expense={cancelExpenseTarget}
+          onClose={() => setCancelExpenseTarget(null)}
+          onCancelled={handleExpenseCancelled}
         />
       ) : null}
     </main>
@@ -605,6 +802,355 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
+function ExpenseRecordsSection({
+  expenses,
+  isDetailLoading,
+  currentPeriodMonth,
+  onOpenDetail,
+}: {
+  expenses: ExpenseRead[];
+  isDetailLoading: boolean;
+  currentPeriodMonth: string;
+  onOpenDetail: (expenseId: number) => void;
+}) {
+  const [searchText, setSearchText] = useState("");
+  const [periodFilter, setPeriodFilter] = useState(currentPeriodMonth);
+  const [scopeFilter, setScopeFilter] = useState<"all" | "period" | "season">("all");
+  const [statusFilter, setStatusFilter] = useState<"active" | "cancelled" | "all">("active");
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const periodOptions = useMemo(() => {
+    const periods = new Set<string>();
+
+    expenses.forEach((expense) => {
+      periods.add(getPeriodMonthFromDate(expense.expense_date));
+
+      if (expense.allocation_start_month) {
+        periods.add(expense.allocation_start_month);
+      }
+
+      if (expense.allocation_end_month) {
+        periods.add(expense.allocation_end_month);
+      }
+    });
+
+    periods.add(currentPeriodMonth);
+
+    return Array.from(periods).sort().reverse();
+  }, [expenses, currentPeriodMonth]);
+
+  const filteredExpenses = useMemo(() => {
+    const normalizedSearch = searchText.trim().toLocaleLowerCase("tr-TR");
+
+    return expenses.filter((expense) => {
+      const expensePeriod = getPeriodMonthFromDate(expense.expense_date);
+
+      const matchesPeriod =
+        periodFilter === "all" ||
+        expensePeriod === periodFilter ||
+        (expense.is_allocated &&
+          expense.allocation_start_month !== null &&
+          expense.allocation_end_month !== null &&
+          periodFilter >= expense.allocation_start_month &&
+          periodFilter <= expense.allocation_end_month);
+
+      const matchesScope =
+        scopeFilter === "all" ||
+        (scopeFilter === "season" && expense.is_allocated) ||
+        (scopeFilter === "period" && !expense.is_allocated);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && !expense.is_cancelled) ||
+        (statusFilter === "cancelled" && expense.is_cancelled);
+
+      const searchableText = [
+        expense.title,
+        expense.description,
+        expense.document_no,
+        expense.expense_type,
+        expense.currency,
+        expense.cancellation_reason,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("tr-TR");
+
+      const matchesSearch =
+        normalizedSearch.length === 0 || searchableText.includes(normalizedSearch);
+
+      return matchesPeriod && matchesScope && matchesStatus && matchesSearch;
+    });
+  }, [expenses, periodFilter, scopeFilter, statusFilter, searchText]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * pageSize;
+  const visibleExpenses = filteredExpenses.slice(pageStartIndex, pageStartIndex + pageSize);
+
+  const activeExpenses = filteredExpenses.filter((expense) => !expense.is_cancelled);
+  const cancelledExpenses = filteredExpenses.filter((expense) => expense.is_cancelled);
+  const activeTotal = activeExpenses.reduce(
+    (total, expense) => total + Number(expense.base_amount ?? 0),
+    0
+  );
+
+  function resetToFirstPage() {
+    setCurrentPage(1);
+  }
+
+  function changePeriodFilter(value: string) {
+    setPeriodFilter(value);
+    resetToFirstPage();
+  }
+
+  function changeScopeFilter(value: "all" | "period" | "season") {
+    setScopeFilter(value);
+    resetToFirstPage();
+  }
+
+  function changeStatusFilter(value: "active" | "cancelled" | "all") {
+    setStatusFilter(value);
+    resetToFirstPage();
+  }
+
+  function changeSearchText(value: string) {
+    setSearchText(value);
+    resetToFirstPage();
+  }
+
+  function changePageSize(value: number) {
+    setPageSize(value);
+    resetToFirstPage();
+  }
+
+  return (
+    <section className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
+            Gider Kayıtları
+          </p>
+          <h3 className="mt-1 text-2xl font-black">Gider takip ekranı</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Giderler dönem, tür, durum ve arama filtresiyle kontrollü listelenir.
+          </p>
+        </div>
+        <div className="rounded-[1.25rem] bg-slate-950 px-4 py-3 text-right text-white">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-200">
+            Filtrelenmiş Aktif Toplam
+          </p>
+          <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <MiniMetric title="Filtrelenmiş Kayıt" value={String(filteredExpenses.length)} />
+        <MiniMetric
+          title="Aktif / İptal"
+          value={`${activeExpenses.length} / ${cancelledExpenses.length}`}
+        />
+        <MiniMetric
+          title="Sezonluk"
+          value={String(filteredExpenses.filter((expense) => expense.is_allocated).length)}
+        />
+      </div>
+
+      <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1.4fr_0.8fr]">
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Ay
+          </span>
+          <select
+            value={periodFilter}
+            onChange={(event) => changePeriodFilter(event.target.value)}
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+          >
+            <option value="all">Tüm Aylar</option>
+            {periodOptions.map((period) => (
+              <option key={period} value={period}>
+                {formatPeriodMonth(period)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Gider Türü
+          </span>
+          <select
+            value={scopeFilter}
+            onChange={(event) =>
+              changeScopeFilter(event.target.value as "all" | "period" | "season")
+            }
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+          >
+            <option value="all">Tümü</option>
+            <option value="period">Normal Dönem</option>
+            <option value="season">Sezonluk</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Durum
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              changeStatusFilter(event.target.value as "active" | "cancelled" | "all")
+            }
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+          >
+            <option value="active">Aktif</option>
+            <option value="cancelled">İptal Edilen</option>
+            <option value="all">Tümü</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Arama
+          </span>
+          <input
+            value={searchText}
+            onChange={(event) => changeSearchText(event.target.value)}
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            placeholder="Başlık, belge no, açıklama ara"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Sayfa
+          </span>
+          <select
+            value={pageSize}
+            onChange={(event) => changePageSize(Number(event.target.value))}
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+          >
+            <option value={5}>5 kayıt</option>
+            <option value={10}>10 kayıt</option>
+            <option value={20}>20 kayıt</option>
+            <option value={50}>50 kayıt</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {visibleExpenses.length === 0 ? (
+          <EmptyState text="Bu filtrelere uygun gider kaydı bulunmuyor." />
+        ) : (
+          visibleExpenses.map((expense) => (
+            <div
+              key={expense.id}
+              className={`rounded-[1.25rem] border p-4 ${
+                expense.is_cancelled
+                  ? "border-red-100 bg-red-50"
+                  : "border-slate-100 bg-slate-50"
+              }`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-black">{expense.title}</p>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                        expense.is_allocated
+                          ? "bg-teal-100 text-teal-800"
+                          : "bg-slate-200 text-slate-700"
+                      }`}
+                    >
+                      {getExpenseScopeLabel(expense)}
+                    </span>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                        expense.is_cancelled
+                          ? "bg-red-100 text-red-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {getExpenseStatusLabel(expense)}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-xs font-bold text-slate-500">
+                    {formatDate(expense.expense_date)} · Belge: {expense.document_no ?? "-"}
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    {expense.description ?? "Açıklama yok."}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-lg font-black">
+                    {formatMoney(expense.base_amount, expense.currency)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onOpenDetail(expense.id)}
+                    disabled={isDetailLoading}
+                    className="mt-3 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+                  >
+                    Detay Aç
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] bg-slate-50 p-4">
+        <p className="text-sm font-bold text-slate-500">
+          {filteredExpenses.length === 0
+            ? "Kayıt yok"
+            : `${pageStartIndex + 1} - ${Math.min(
+                pageStartIndex + pageSize,
+                filteredExpenses.length
+              )} / ${filteredExpenses.length} kayıt`}
+        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={safeCurrentPage <= 1}
+            className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow disabled:opacity-40"
+          >
+            Önceki
+          </button>
+          <span className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+            {safeCurrentPage} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={safeCurrentPage >= totalPages}
+            className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow disabled:opacity-40"
+          >
+            Sonraki
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MiniMetric({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-[1.25rem] bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+        {title}
+      </p>
+      <p className="mt-2 text-2xl font-black">{value}</p>
+    </div>
+  );
+}
+
 function ActionWarningModal({
   action,
   onClose,
@@ -635,8 +1181,7 @@ function ActionWarningModal({
         </p>
 
         <div className="mt-6 rounded-[1.25rem] bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-          Bu ilk dashboard sürümünde işlem butonları güvenli uyarı akışını gösterir.
-          Bir sonraki adımda ilgili işlem formlarını bu uyarı yapısının arkasına bağlayacağız.
+          Bu işlem formu sonraki adımda bağlanacak. Gider faturası formu ve gider kayıt listesi artık canlı çalışıyor.
         </div>
 
         <div className="mt-6 flex flex-wrap justify-end gap-3">
@@ -658,104 +1203,12 @@ function ActionWarningModal({
   );
 }
 
-type ExpenseFormState = {
-  expenseScope: "period" | "season";
-  title: string;
-  expenseDate: string;
-  amount: string;
-  currency: string;
-  exchangeRate: string;
-  allocationEndMonth: string;
-  documentNo: string;
-  description: string;
-  notes: string;
-};
-
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getPeriodMonthFromDate(value: string) {
-  if (!value || value.length < 7) {
-    return getCurrentPeriodMonth();
-  }
-
-  return value.slice(0, 7);
-}
-
-function getYearEndMonth(value: string) {
-  const year = value && value.length >= 4 ? value.slice(0, 4) : String(new Date().getFullYear());
-  return `${year}-12`;
-}
-
-function parsePeriodMonth(periodMonth: string) {
-  const [yearText, monthText] = periodMonth.split("-");
-  return {
-    year: Number(yearText),
-    month: Number(monthText),
-  };
-}
-
-function getMonthCount(startMonth: string, endMonth: string) {
-  const start = parsePeriodMonth(startMonth);
-  const end = parsePeriodMonth(endMonth);
-
-  if (
-    Number.isNaN(start.year) ||
-    Number.isNaN(start.month) ||
-    Number.isNaN(end.year) ||
-    Number.isNaN(end.month)
-  ) {
-    return 0;
-  }
-
-  return (end.year - start.year) * 12 + (end.month - start.month) + 1;
-}
-
-function formatPeriodMonth(periodMonth: string) {
-  const [year, month] = periodMonth.split("-");
-
-  const monthNames: Record<string, string> = {
-    "01": "Ocak",
-    "02": "Şubat",
-    "03": "Mart",
-    "04": "Nisan",
-    "05": "Mayıs",
-    "06": "Haziran",
-    "07": "Temmuz",
-    "08": "Ağustos",
-    "09": "Eylül",
-    "10": "Ekim",
-    "11": "Kasım",
-    "12": "Aralık",
-  };
-
-  return `${monthNames[month] ?? month} ${year}`;
-}
-
-function getDefaultExpenseForm(): ExpenseFormState {
-  const today = todayIsoDate();
-
-  return {
-    expenseScope: "period",
-    title: "",
-    expenseDate: today,
-    amount: "",
-    currency: "TRY",
-    exchangeRate: "1",
-    allocationEndMonth: getYearEndMonth(today),
-    documentNo: "",
-    description: "",
-    notes: "",
-  };
-}
-
 function ExpenseModal({
   onClose,
   onSaved,
 }: {
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => Promise<void>;
 }) {
   const [form, setForm] = useState<ExpenseFormState>(() => getDefaultExpenseForm());
   const [isConfirming, setIsConfirming] = useState(false);
@@ -841,7 +1294,7 @@ function ExpenseModal({
       };
 
       await createExpense(payload);
-      onSaved();
+      await onSaved();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Gider kaydedilemedi.");
     } finally {
@@ -1065,6 +1518,239 @@ function ExpenseModal({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function ExpenseDetailModal({
+  detail,
+  onClose,
+  onCancelRequest,
+}: {
+  detail: ExpenseWithAllocations;
+  onClose: () => void;
+  onCancelRequest: (expense: ExpenseRead) => void;
+}) {
+  const expense = detail.expense;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+              Gider Detayı
+            </p>
+            <h3 className="mt-2 text-2xl font-black">{expense.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              {getExpenseScopeLabel(expense)} · {formatDate(expense.expense_date)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-4">
+          <DetailMetric title="Tutar" value={formatMoney(expense.amount, expense.currency)} />
+          <DetailMetric title="Kur" value={String(expense.exchange_rate)} />
+          <DetailMetric title="Ana Para Etkisi" value={formatMoney(expense.base_amount)} />
+          <DetailMetric title="Durum" value={getExpenseStatusLabel(expense)} />
+        </div>
+
+        <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4">
+          <p className="text-sm font-black text-slate-700">Açıklama</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {expense.description ?? "Açıklama yok."}
+          </p>
+          <p className="mt-3 text-xs font-bold text-slate-400">
+            Belge No: {expense.document_no ?? "-"}
+          </p>
+        </div>
+
+        {expense.is_allocated ? (
+          <div className="mt-5 rounded-[1.25rem] border border-teal-100 bg-teal-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-teal-900">Sezonluk Gider Dağılımı</p>
+                <p className="mt-1 text-xs font-bold text-teal-700">
+                  {formatPeriodMonth(expense.allocation_start_month)} -{" "}
+                  {formatPeriodMonth(expense.allocation_end_month)}
+                </p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-teal-800">
+                {detail.allocations.length} ay
+              </span>
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-2xl border border-teal-100 bg-white">
+              {detail.allocations.length === 0 ? (
+                <div className="p-4 text-sm font-bold text-slate-500">
+                  Dağılım kaydı bulunmuyor.
+                </div>
+              ) : (
+                detail.allocations.map((allocation) => (
+                  <div
+                    key={allocation.id}
+                    className="flex items-center justify-between border-b border-teal-50 px-4 py-3 last:border-b-0"
+                  >
+                    <span className="text-sm font-black">
+                      {formatPeriodMonth(allocation.period_month)}
+                    </span>
+                    <span className="text-sm font-black text-teal-800">
+                      {formatMoney(allocation.allocated_base_amount)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {expense.is_cancelled ? (
+          <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-red-950">
+            <p className="font-black">Bu gider iptal edilmiş.</p>
+            <p className="mt-2 text-sm leading-6">
+              {expense.cancellation_reason ?? "İptal nedeni girilmemiş."}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          {!expense.is_cancelled ? (
+            <button
+              type="button"
+              onClick={() => onCancelRequest(expense)}
+              className="rounded-full bg-red-100 px-5 py-3 text-sm font-black text-red-800"
+            >
+              Gideri İptal Et
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white"
+          >
+            Tamam
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailMetric({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-[1.25rem] bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+        {title}
+      </p>
+      <p className="mt-2 text-lg font-black">{value}</p>
+    </div>
+  );
+}
+
+function CancelExpenseModal({
+  expense,
+  onClose,
+  onCancelled,
+}: {
+  expense: ExpenseRead;
+  onClose: () => void;
+  onCancelled: () => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCancel() {
+    if (!reason.trim()) {
+      setError("İptal nedeni zorunludur.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      await cancelExpense(expense.id, {
+        cancellation_reason: reason.trim(),
+      });
+      await onCancelled();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Gider iptal edilemedi.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 py-6">
+      <div className="w-full max-w-xl rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-red-700">
+              Gider İptali
+            </p>
+            <h3 className="mt-2 text-2xl font-black">{expense.title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-[1.25rem] bg-red-50 p-4 text-sm leading-6 text-red-950">
+          Bu işlem gider kaydını iptal eder. Sezonluk gider ise dağılım kayıtları da iptal mantığına göre kapatılır.
+          Devam etmek için iptal nedenini yaz.
+        </div>
+
+        <label className="mt-5 block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+            İptal Nedeni
+          </span>
+          <textarea
+            value={reason}
+            onChange={(event) => {
+              setReason(event.target.value);
+              setError(null);
+            }}
+            className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-red-400"
+            placeholder="Örn: Hatalı fatura kaydı girildi."
+          />
+        </label>
+
+        {error ? (
+          <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            disabled={isSaving}
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="rounded-full bg-red-700 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+            disabled={isSaving}
+          >
+            {isSaving ? "İptal ediliyor..." : "Onayla ve İptal Et"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

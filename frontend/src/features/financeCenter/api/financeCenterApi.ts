@@ -1,7 +1,9 @@
 import { getStoredToken } from "../../../services/authStorage";
 import type {
+  CancelExpensePayload,
   CarryForwardItem,
   CreateExpensePayload,
+  ExpenseRead,
   ExpenseWithAllocations,
   FinancialMovementListResponse,
   FinancialMovementSummary,
@@ -88,6 +90,39 @@ export async function createExpense(
   payload: CreateExpensePayload
 ): Promise<ExpenseWithAllocations> {
   return requestJson<ExpenseWithAllocations>("/expenses", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchExpenses(params?: {
+  periodMonth?: string;
+  expenseScope?: "period" | "season" | "";
+}): Promise<ExpenseRead[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.periodMonth) {
+    searchParams.set("period_month", params.periodMonth);
+  }
+
+  if (params?.expenseScope) {
+    searchParams.set("expense_scope", params.expenseScope);
+  }
+
+  const query = searchParams.toString();
+
+  return requestJson<ExpenseRead[]>(`/expenses${query ? `?${query}` : ""}`);
+}
+
+export async function fetchExpenseDetail(expenseId: number): Promise<ExpenseWithAllocations> {
+  return requestJson<ExpenseWithAllocations>(`/expenses/${expenseId}`);
+}
+
+export async function cancelExpense(
+  expenseId: number,
+  payload: CancelExpensePayload
+): Promise<ExpenseRead> {
+  return requestJson<ExpenseRead>(`/expenses/${expenseId}/cancel`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
