@@ -13,39 +13,33 @@ type DashboardPageProps = {
 
 const dashboardCards = [
   {
-    title: "Müşteriler",
-    value: "Kartlar",
+    value: "Müşteriler-Hesaplar",
     description: "Müşteri, yetkili, mekân ve cari hesap hareketleri.",
     action: "customers",
   },
   {
-    title: "Hizmet Kataloğu",
-    value: "Katalog",
+    value: "Hizmet Kataloğu",
     description: "Sanatçı hizmetleri, teknik hizmetler ve program paketleri.",
     action: "serviceCatalog",
   },
   {
-    title: "Teklif ve Anlaşma",
-    value: "Print",
+    value: "Teklif ve Anlaşmalar",
     description: "Müşteriye sunulacak teklif, anlaşma ve yazdırılabilir çıktı.",
     action: "offers",
   },
   {
-    title: "Etkinlikler",
-    value: "Dosya",
+    value: "Etkinlik Dosyaları",
     description: "Anlaşmadan oluşan gerçek etkinlik dosyaları.",
     action: "events",
   },
   {
-    title: "Ortaklar",
-    value: "3 Ortak",
+    value: "Şirket Ortakları",
     description: "Ortak isimleri, pay oranları ve aktiflik durumu.",
     action: "partners",
   },
   {
-    title: "Kullanıcılar",
-    value: "Yetki",
-    description: "Sistem kullanıcıları, roller ve şifre sıfırlama.",
+    value: "Kullanıcı Yönetimi",
+    description: "Sistem kullanıcısı oluşturma, roller ve şifre sıfırlama.",
     action: "users",
     adminOnly: true,
   },
@@ -104,7 +98,7 @@ export function DashboardPage({
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           {visibleDashboardCards.map((card) => (
             <button
-              key={card.title}
+              key={card.action}
               onClick={
                 card.action === "customers"
                   ? onOpenCustomers
@@ -120,7 +114,7 @@ export function DashboardPage({
               }
               className="rounded-[1.5rem] bg-white p-5 text-left shadow-lg shadow-slate-200 transition hover:-translate-y-1 hover:shadow-xl"
             >
-              <p className="text-sm font-bold text-slate-500">{card.title}</p>
+              <p className="text-sm font-bold text-slate-500">VIA EVENTS</p>
               <p className="mt-3 text-3xl font-black">{card.value}</p>
               <p className="mt-3 text-sm leading-6 text-slate-500">
                 {card.description}
