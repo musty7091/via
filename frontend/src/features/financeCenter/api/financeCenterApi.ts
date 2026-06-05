@@ -1,6 +1,8 @@
 import { getStoredToken } from "../../../services/authStorage";
 import type {
   CarryForwardItem,
+  CreateExpensePayload,
+  ExpenseWithAllocations,
   FinancialMovementListResponse,
   FinancialMovementSummary,
   PeriodExpenseSummary,
@@ -80,4 +82,13 @@ export async function fetchPeriodExpenseSummary(
   periodMonth: string
 ): Promise<PeriodExpenseSummary> {
   return requestJson<PeriodExpenseSummary>(`/expenses/period-summary/${periodMonth}`);
+}
+
+export async function createExpense(
+  payload: CreateExpensePayload
+): Promise<ExpenseWithAllocations> {
+  return requestJson<ExpenseWithAllocations>("/expenses", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

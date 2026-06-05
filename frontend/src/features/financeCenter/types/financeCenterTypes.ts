@@ -63,3 +63,52 @@ export type PeriodExpenseSummary = {
   allocation_count: number;
   direct_expense_count: number;
 };
+
+export type ExpenseAllocation = {
+  id: number;
+  expense_id: number;
+  expense_title: string | null;
+  period_month: string;
+  allocated_base_amount: number;
+  notes: string | null;
+};
+
+export type ExpenseRead = {
+  id: number;
+  expense_type: string;
+  title: string;
+  description: string | null;
+  expense_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  is_allocated: boolean;
+  allocation_start_month: string | null;
+  allocation_end_month: string | null;
+  status: string;
+  document_no: string | null;
+  is_cancelled: boolean;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type ExpenseWithAllocations = {
+  expense: ExpenseRead;
+  allocations: ExpenseAllocation[];
+};
+
+export type CreateExpensePayload = {
+  title: string;
+  description?: string | null;
+  expense_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  expense_scope: "period" | "season";
+  expense_type: string;
+  allocation_end_month?: string | null;
+  document_no?: string | null;
+  notes?: string | null;
+};

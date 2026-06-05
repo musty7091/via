@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 import {
+  createExpense,
   fetchFinanceSummary,
   fetchOpenCarryForwards,
   fetchPeriodExpenseSummary,
@@ -8,6 +9,7 @@ import {
 } from "../api/financeCenterApi";
 import type {
   CarryForwardItem,
+  CreateExpensePayload,
   FinancialMovement,
   FinancialMovementSummary,
   PeriodExpenseSummary,
@@ -174,6 +176,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -237,6 +240,15 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
     .reduce((total, item) => total + Number(item.remaining_base_amount ?? 0), 0);
 
   const cashBalance = summary.company_cash_in_base_amount - summary.company_cash_out_base_amount;
+
+  function handleQuickAction(action: QuickAction) {
+    if (action.title === "Gider Faturası Gir") {
+      setShowExpenseModal(true);
+      return;
+    }
+
+    setSelectedAction(action);
+  }
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -398,7 +410,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
             {quickActions.map((action) => (
               <button
                 key={action.title}
-                onClick={() => setSelectedAction(action)}
+                onClick={() => handleQuickAction(action)}
                 className={`rounded-[1.5rem] border p-5 text-left shadow-lg transition hover:-translate-y-1 hover:shadow-xl ${getToneClasses(
                   action.tone
                 )}`}
@@ -519,6 +531,16 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           onClose={() => setSelectedAction(null)}
         />
       ) : null}
+
+      {showExpenseModal ? (
+        <ExpenseModal
+          onClose={() => setShowExpenseModal(false)}
+          onSaved={() => {
+            setShowExpenseModal(false);
+            window.location.reload();
+          }}
+        />
+      ) : null}
     </main>
   );
 }
@@ -633,5 +655,433 @@ function ActionWarningModal({
         </div>
       </div>
     </div>
+  );
+}
+
+type ExpenseFormState = {
+  expenseScope: "period" | "season";
+  title: string;
+  expenseDate: string;
+  amount: string;
+  currency: string;
+  exchangeRate: string;
+  allocationEndMonth: string;
+  documentNo: string;
+  description: string;
+  notes: string;
+};
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getPeriodMonthFromDate(value: string) {
+  if (!value || value.length < 7) {
+    return getCurrentPeriodMonth();
+  }
+
+  return value.slice(0, 7);
+}
+
+function getYearEndMonth(value: string) {
+  const year = value && value.length >= 4 ? value.slice(0, 4) : String(new Date().getFullYear());
+  return `${year}-12`;
+}
+
+function parsePeriodMonth(periodMonth: string) {
+  const [yearText, monthText] = periodMonth.split("-");
+  return {
+    year: Number(yearText),
+    month: Number(monthText),
+  };
+}
+
+function getMonthCount(startMonth: string, endMonth: string) {
+  const start = parsePeriodMonth(startMonth);
+  const end = parsePeriodMonth(endMonth);
+
+  if (
+    Number.isNaN(start.year) ||
+    Number.isNaN(start.month) ||
+    Number.isNaN(end.year) ||
+    Number.isNaN(end.month)
+  ) {
+    return 0;
+  }
+
+  return (end.year - start.year) * 12 + (end.month - start.month) + 1;
+}
+
+function formatPeriodMonth(periodMonth: string) {
+  const [year, month] = periodMonth.split("-");
+
+  const monthNames: Record<string, string> = {
+    "01": "Ocak",
+    "02": "Şubat",
+    "03": "Mart",
+    "04": "Nisan",
+    "05": "Mayıs",
+    "06": "Haziran",
+    "07": "Temmuz",
+    "08": "Ağustos",
+    "09": "Eylül",
+    "10": "Ekim",
+    "11": "Kasım",
+    "12": "Aralık",
+  };
+
+  return `${monthNames[month] ?? month} ${year}`;
+}
+
+function getDefaultExpenseForm(): ExpenseFormState {
+  const today = todayIsoDate();
+
+  return {
+    expenseScope: "period",
+    title: "",
+    expenseDate: today,
+    amount: "",
+    currency: "TRY",
+    exchangeRate: "1",
+    allocationEndMonth: getYearEndMonth(today),
+    documentNo: "",
+    description: "",
+    notes: "",
+  };
+}
+
+function ExpenseModal({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<ExpenseFormState>(() => getDefaultExpenseForm());
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const amount = Number(form.amount || 0);
+  const exchangeRate = Number(form.exchangeRate || 1);
+  const baseAmount = amount * exchangeRate;
+  const startMonth = getPeriodMonthFromDate(form.expenseDate);
+  const endMonth =
+    form.expenseScope === "season" ? form.allocationEndMonth || getYearEndMonth(form.expenseDate) : startMonth;
+  const monthCount = form.expenseScope === "season" ? getMonthCount(startMonth, endMonth) : 1;
+  const monthlyShare = monthCount > 0 ? baseAmount / monthCount : 0;
+
+  function updateForm<K extends keyof ExpenseFormState>(key: K, value: ExpenseFormState[K]) {
+    setForm((previous) => ({
+      ...previous,
+      [key]: value,
+      ...(key === "expenseDate" && previous.expenseScope === "season"
+        ? { allocationEndMonth: getYearEndMonth(String(value)) }
+        : {}),
+    }));
+    setIsConfirming(false);
+    setFormError(null);
+  }
+
+  function validateForm() {
+    if (!form.title.trim()) {
+      return "Gider başlığı zorunludur.";
+    }
+
+    if (!form.expenseDate) {
+      return "Gider tarihi zorunludur.";
+    }
+
+    if (!amount || amount <= 0) {
+      return "Tutar sıfırdan büyük olmalıdır.";
+    }
+
+    if (!exchangeRate || exchangeRate <= 0) {
+      return "Kur sıfırdan büyük olmalıdır.";
+    }
+
+    if (form.expenseScope === "season" && monthCount <= 0) {
+      return "Sezonluk giderde bitiş ayı başlangıç ayından önce olamaz.";
+    }
+
+    return null;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    if (!isConfirming) {
+      setIsConfirming(true);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setFormError(null);
+
+      const payload: CreateExpensePayload = {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        expense_date: form.expenseDate,
+        amount,
+        currency: form.currency,
+        exchange_rate: exchangeRate,
+        expense_scope: form.expenseScope,
+        expense_type: form.expenseScope === "season" ? "seasonal" : "general",
+        allocation_end_month: form.expenseScope === "season" ? endMonth : null,
+        document_no: form.documentNo.trim() || null,
+        notes: form.notes.trim() || null,
+      };
+
+      await createExpense(payload);
+      onSaved();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Gider kaydedilemedi.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
+      <form
+        onSubmit={handleSubmit}
+        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+              Gider İşlemi
+            </p>
+            <h3 className="mt-2 text-2xl font-black">Gider Faturası Gir</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Normal dönem gideri ya da sezonluk gider olarak kaydedebilirsin.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => updateForm("expenseScope", "period")}
+            className={`rounded-[1.25rem] border p-4 text-left ${
+              form.expenseScope === "period"
+                ? "border-slate-950 bg-slate-950 text-white"
+                : "border-slate-200 bg-slate-50 text-slate-950"
+            }`}
+          >
+            <p className="font-black">Normal Dönem Gideri</p>
+            <p className="mt-2 text-sm leading-6 opacity-70">
+              Gider sadece seçilen ayın sonucuna dahil edilir.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => updateForm("expenseScope", "season")}
+            className={`rounded-[1.25rem] border p-4 text-left ${
+              form.expenseScope === "season"
+                ? "border-teal-300 bg-teal-300 text-slate-950"
+                : "border-slate-200 bg-slate-50 text-slate-950"
+            }`}
+          >
+            <p className="font-black">Sezonluk Gider</p>
+            <p className="mt-2 text-sm leading-6 opacity-70">
+              Gider başlangıç ayından sezon sonuna kadar aylara bölünür.
+            </p>
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <FormField label="Gider Başlığı">
+            <input
+              value={form.title}
+              onChange={(event) => updateForm("title", event.target.value)}
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              placeholder="Örn: Sezon reklam gideri"
+            />
+          </FormField>
+
+          <FormField label="Gider Tarihi">
+            <input
+              type="date"
+              value={form.expenseDate}
+              onChange={(event) => updateForm("expenseDate", event.target.value)}
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+            />
+          </FormField>
+
+          <FormField label="Tutar">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.amount}
+              onChange={(event) => updateForm("amount", event.target.value)}
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              placeholder="0.00"
+            />
+          </FormField>
+
+          <div className="grid grid-cols-[1fr_1fr] gap-3">
+            <FormField label="Para Birimi">
+              <select
+                value={form.currency}
+                onChange={(event) => updateForm("currency", event.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              >
+                <option value="TRY">TRY</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+              </select>
+            </FormField>
+
+            <FormField label="Kur">
+              <input
+                type="number"
+                min="0"
+                step="0.000001"
+                value={form.exchangeRate}
+                onChange={(event) => updateForm("exchangeRate", event.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              />
+            </FormField>
+          </div>
+
+          {form.expenseScope === "season" ? (
+            <FormField label="Sezon Bitiş Ayı">
+              <input
+                type="month"
+                value={form.allocationEndMonth}
+                onChange={(event) => updateForm("allocationEndMonth", event.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              />
+            </FormField>
+          ) : null}
+
+          <FormField label="Belge No">
+            <input
+              value={form.documentNo}
+              onChange={(event) => updateForm("documentNo", event.target.value)}
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              placeholder="Fatura / belge no"
+            />
+          </FormField>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FormField label="Açıklama">
+            <textarea
+              value={form.description}
+              onChange={(event) => updateForm("description", event.target.value)}
+              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-teal-400"
+              placeholder="Gider açıklaması"
+            />
+          </FormField>
+
+          <FormField label="Not">
+            <textarea
+              value={form.notes}
+              onChange={(event) => updateForm("notes", event.target.value)}
+              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-teal-400"
+              placeholder="İç not"
+            />
+          </FormField>
+        </div>
+
+        <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4">
+          <p className="text-sm font-black text-slate-700">İşlem Özeti</p>
+          {form.expenseScope === "period" ? (
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Bu gider <strong>{formatPeriodMonth(startMonth)}</strong> dönemine
+              normal gider olarak yazılacak. Toplam etki:{" "}
+              <strong>{formatMoney(baseAmount, form.currency)}</strong>
+            </p>
+          ) : (
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Bu sezonluk gider <strong>{formatPeriodMonth(startMonth)}</strong> -{" "}
+              <strong>{formatPeriodMonth(endMonth)}</strong> arasında{" "}
+              <strong>{Math.max(monthCount, 0)} aya</strong> bölünecek. Her aya düşen
+              yaklaşık pay: <strong>{formatMoney(monthlyShare, form.currency)}</strong>
+            </p>
+          )}
+        </div>
+
+        {isConfirming ? (
+          <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p className="font-black">
+              {form.expenseScope === "season"
+                ? "Sezonluk Gider Aylara Dağıtılacak"
+                : "Normal Dönem Gideri Kaydedilecek"}
+            </p>
+            <p className="mt-2 text-sm leading-6">
+              {form.expenseScope === "season"
+                ? "Bu gider aylara bölünecek ve her dönem sadece kendisine düşen payı alacak."
+                : "Bu gider sadece seçilen dönem sonucuna dahil edilecek."}
+              {" "}Devam etmek istiyor musunuz?
+            </p>
+          </div>
+        ) : null}
+
+        {formError ? (
+          <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+            {formError}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            disabled={isSaving}
+          >
+            Vazgeç
+          </button>
+          <button
+            type="submit"
+            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+            disabled={isSaving}
+          >
+            {isSaving
+              ? "Kaydediliyor..."
+              : isConfirming
+                ? "Onayla ve Kaydet"
+                : "Devam Et"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }
