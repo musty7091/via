@@ -1,5 +1,10 @@
 import { getStoredToken } from "../../../services/authStorage";
 import type {
+  CollectionRead,
+  CreateCollectionPayload,
+  EventPaymentsDetail,
+  EventRead,
+  PartnerRead,
   CancelExpensePayload,
   CarryForwardItem,
   CreateExpensePayload,
@@ -123,6 +128,28 @@ export async function cancelExpense(
   payload: CancelExpensePayload
 ): Promise<ExpenseRead> {
   return requestJson<ExpenseRead>(`/expenses/${expenseId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchEvents(): Promise<EventRead[]> {
+  return requestJson<EventRead[]>("/events?limit=500");
+}
+
+export async function fetchEventPayments(eventId: number): Promise<EventPaymentsDetail> {
+  return requestJson<EventPaymentsDetail>(`/events/${eventId}/payments`);
+}
+
+export async function fetchPartners(): Promise<PartnerRead[]> {
+  return requestJson<PartnerRead[]>("/partners?is_active=true");
+}
+
+export async function createCollection(
+  eventId: number,
+  payload: CreateCollectionPayload
+): Promise<CollectionRead> {
+  return requestJson<CollectionRead>(`/events/${eventId}/payments/collections`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

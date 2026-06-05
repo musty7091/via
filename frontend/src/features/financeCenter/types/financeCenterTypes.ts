@@ -120,3 +120,107 @@ export type CreateExpensePayload = {
 export type CancelExpensePayload = {
   cancellation_reason: string;
 };
+
+export type EventRead = {
+  id: number;
+  event_code: string | null;
+  title: string;
+  customer_id: number;
+  venue_id: number | null;
+  responsible_partner_id: number | null;
+  operation_user_id: number | null;
+  event_date: string;
+  start_datetime: string | null;
+  end_datetime: string | null;
+  status: string;
+  invoice_type: string;
+  vat_rate: number;
+  agreement_amount: number;
+  agreement_currency: string;
+  vat_amount: number;
+  total_customer_amount: number;
+  notes: string | null;
+  is_period_closed: boolean;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type PartnerRead = {
+  id: number;
+  full_name: string;
+  ownership_percent: number;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type PaymentPlanRead = {
+  id: number;
+  event_id: number;
+  title: string;
+  due_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  paid_base_amount: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type CollectionRead = {
+  id: number;
+  event_id: number;
+  payment_plan_id: number | null;
+  customer_id: number;
+  received_by_user_id: number | null;
+  received_by_partner_id: number | null;
+  collection_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  payment_method: string;
+  current_location: string;
+  is_transferred_to_company: boolean;
+  transferred_at: string | null;
+  document_no: string | null;
+  notes: string | null;
+  is_cancelled: boolean;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type EventPaymentSummary = {
+  event_id: number;
+  event_total_amount: number;
+  event_currency: string;
+  event_base_total_amount: number;
+  planned_base_amount: number;
+  collected_base_amount: number;
+  remaining_base_amount: number;
+  unplanned_base_amount: number;
+};
+
+export type EventPaymentsDetail = {
+  summary: EventPaymentSummary;
+  payment_plans: PaymentPlanRead[];
+  collections: CollectionRead[];
+  cash_transfers: unknown[];
+};
+
+export type CreateCollectionPayload = {
+  payment_plan_id?: number | null;
+  received_by_partner_id?: number | null;
+  collection_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  payment_method: string;
+  document_no?: string | null;
+  notes?: string | null;
+};
