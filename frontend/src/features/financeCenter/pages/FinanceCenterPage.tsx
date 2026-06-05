@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
 import {
+  fetchCustomers,
   createCollection,
   fetchEventPayments,
   fetchEvents,
@@ -16,6 +17,7 @@ import {
   fetchRecentFinanceMovements,
 } from "../api/financeCenterApi";
 import type {
+  CustomerListItem,
   CreateCollectionPayload,
   EventPaymentsDetail,
   EventRead,
@@ -1780,6 +1782,7 @@ function CancelExpenseModal({
 }
 
 type CollectionFormState = {
+  customerId: string;
   eventId: string;
   paymentPlanId: string;
   collectionDate: string;
@@ -1795,6 +1798,7 @@ type CollectionFormState = {
 
 function getDefaultCollectionForm(): CollectionFormState {
   return {
+    customerId: "",
     eventId: "",
     paymentPlanId: "",
     collectionDate: todayIsoDate(),
@@ -1829,18 +1833,30 @@ function CollectionModal({
   onSaved: () => Promise<void>;
 }) {
   const [form, setForm] = useState<CollectionFormState>(() => getDefaultCollectionForm());
+  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [events, setEvents] = useState<EventRead[]>([]);
   const [partners, setPartners] = useState<PartnerRead[]>([]);
   const [eventPayments, setEventPayments] = useState<EventPaymentsDetail | null>(null);
+  const [customerReceivableBaseAmount, setCustomerReceivableBaseAmount] = useState(0);
+  const [isLoadingCustomerBalance, setIsLoadingCustomerBalance] = useState(false);
   const [isLoadingBaseData, setIsLoadingBaseData] = useState(true);
   const [isLoadingEventPayments, setIsLoadingEventPayments] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const selectedEvent = events.find((eventItem) => String(eventItem.id) === form.eventId) ?? null;
+  const selectedCustomer =
+    customers.find((customer) => String(customer.id) === form.customerId) ?? null;
+
+  const customerEvents = events.filter(
+    (eventItem) => String(eventItem.customer_id) === form.customerId
+  );
+
+  const selectedEvent = customerEvents.find((eventItem) => String(eventItem.id) === form.eventId) ?? null;
+
   const selectedPaymentPlan =
     eventPayments?.payment_plans.find((plan) => String(plan.id) === form.paymentPlanId) ?? null;
+
   const amount = Number(form.amount || 0);
   const exchangeRate = Number(form.exchangeRate || 1);
   const baseAmount = amount * exchangeRate;
@@ -1851,18 +1867,27 @@ function CollectionModal({
         setIsLoadingBaseData(true);
         setFormError(null);
 
-        const [eventList, partnerList] = await Promise.all([
+        const [customerList, eventList, partnerList] = await Promise.all([
+          fetchCustomers(),
           fetchEvents(),
           fetchPartners(),
         ]);
 
+        setCustomers(customerList);
         setEvents(eventList);
         setPartners(partnerList);
 
-        if (eventList.length > 0) {
+        if (customerList.length > 0) {
+          const firstCustomer = customerList[0];
+          const firstCustomerEvent = eventList.find(
+            (eventItem) => eventItem.customer_id === firstCustomer.id
+          );
+
           setForm((previous) => ({
             ...previous,
-            eventId: String(eventList[0].id),
+            customerId: String(firstCustomer.id),
+            eventId: firstCustomerEvent ? String(firstCustomerEvent.id) : "",
+            currency: firstCustomer.default_currency || previous.currency,
           }));
         }
       } catch (error) {
@@ -1874,6 +1899,36 @@ function CollectionModal({
 
     loadBaseData();
   }, []);
+
+  useEffect(() => {
+    async function loadCustomerBalance() {
+      if (!form.customerId || customerEvents.length === 0) {
+        setCustomerReceivableBaseAmount(0);
+        return;
+      }
+
+      try {
+        setIsLoadingCustomerBalance(true);
+
+        const details = await Promise.all(
+          customerEvents.map((eventItem) => fetchEventPayments(eventItem.id))
+        );
+
+        const totalRemaining = details.reduce(
+          (total, detail) => total + Number(detail.summary.remaining_base_amount ?? 0),
+          0
+        );
+
+        setCustomerReceivableBaseAmount(totalRemaining);
+      } catch {
+        setCustomerReceivableBaseAmount(0);
+      } finally {
+        setIsLoadingCustomerBalance(false);
+      }
+    }
+
+    loadCustomerBalance();
+  }, [form.customerId, events]);
 
   useEffect(() => {
     async function loadEventPaymentDetail() {
@@ -1920,28 +1975,45 @@ function CollectionModal({
   }, [form.eventId]);
 
   function updateForm<K extends keyof CollectionFormState>(key: K, value: CollectionFormState[K]) {
-    setForm((previous) => ({
-      ...previous,
-      [key]: value,
-      ...(key === "eventId"
-        ? {
-            paymentPlanId: "",
-            amount: "",
-          }
-        : {}),
-      ...(key === "receivedLocation" && value === "company"
-        ? {
-            receivedByPartnerId: "",
-          }
-        : {}),
-    }));
+    setForm((previous) => {
+      const nextForm: CollectionFormState = {
+        ...previous,
+        [key]: value,
+      };
+
+      if (key === "customerId") {
+        const matchingEvents = events.filter((eventItem) => String(eventItem.customer_id) === String(value));
+        const selectedCustomerForCurrency = customers.find((customer) => String(customer.id) === String(value));
+
+        nextForm.eventId = matchingEvents.length > 0 ? String(matchingEvents[0].id) : "";
+        nextForm.paymentPlanId = "";
+        nextForm.amount = "";
+        nextForm.currency = selectedCustomerForCurrency?.default_currency || previous.currency;
+      }
+
+      if (key === "eventId") {
+        nextForm.paymentPlanId = "";
+        nextForm.amount = "";
+      }
+
+      if (key === "receivedLocation" && value === "company") {
+        nextForm.receivedByPartnerId = "";
+      }
+
+      return nextForm;
+    });
+
     setIsConfirming(false);
     setFormError(null);
   }
 
   function validateForm() {
+    if (!form.customerId) {
+      return "Müşteri seçimi zorunludur.";
+    }
+
     if (!form.eventId) {
-      return "Etkinlik seçimi zorunludur.";
+      return "Seçilen müşteriye ait etkinlik bulunmalı ve seçilmelidir.";
     }
 
     if (!form.collectionDate) {
@@ -2019,7 +2091,7 @@ function CollectionModal({
             </p>
             <h3 className="mt-2 text-2xl font-black">Tahsilat Gir</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Müşteriden gelen ödemeyi kaydet. Şirket kasasına mı yoksa ortağın üzerine mi alındığını seç.
+              Önce müşteri seç, sonra o müşteriye ait etkinliği ve ödeme planını belirle.
             </p>
           </div>
           <button
@@ -2037,17 +2109,58 @@ function CollectionModal({
           </div>
         ) : null}
 
+        <div className="mt-5 rounded-[1.75rem] border border-red-100 bg-red-50 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-red-700">
+                Bu Müşteriden Toplam Alacağınız
+              </p>
+              <p className="mt-2 text-sm font-bold text-red-900">
+                {selectedCustomer ? selectedCustomer.name : "Müşteri seçilmedi"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-4xl font-black tracking-tight text-red-700 sm:text-5xl">
+                {isLoadingCustomerBalance ? "..." : formatMoney(customerReceivableBaseAmount)}
+              </p>
+              <p className="mt-1 text-xs font-bold text-red-600">
+                Açık etkinlik ve ödeme planı bakiyeleri toplamı
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <FormField label="Müşteri">
+            <select
+              value={form.customerId}
+              onChange={(event) => updateForm("customerId", event.target.value)}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            >
+              {customers.length === 0 ? (
+                <option value="">Müşteri bulunamadı</option>
+              ) : (
+                customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                    {customer.short_name ? ` · ${customer.short_name}` : ""}
+                  </option>
+                ))
+              )}
+            </select>
+          </FormField>
+
           <FormField label="Etkinlik">
             <select
               value={form.eventId}
               onChange={(event) => updateForm("eventId", event.target.value)}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              disabled={!form.customerId || customerEvents.length === 0}
             >
-              {events.length === 0 ? (
-                <option value="">Etkinlik bulunamadı</option>
+              {customerEvents.length === 0 ? (
+                <option value="">Bu müşteriye ait etkinlik bulunamadı</option>
               ) : (
-                events.map((eventItem) => (
+                customerEvents.map((eventItem) => (
                   <option key={eventItem.id} value={eventItem.id}>
                     {eventItem.title} · {formatDate(eventItem.event_date)}
                   </option>
@@ -2066,7 +2179,11 @@ function CollectionModal({
               <option value="">Plana bağlama / serbest tahsilat</option>
               {eventPayments?.payment_plans.map((plan) => (
                 <option key={plan.id} value={plan.id}>
-                  {plan.title} · Kalan {formatMoney(Math.max(0, Number(plan.base_amount ?? 0) - Number(plan.paid_base_amount ?? 0)), plan.currency)}
+                  {plan.title} · Kalan{" "}
+                  {formatMoney(
+                    Math.max(0, Number(plan.base_amount ?? 0) - Number(plan.paid_base_amount ?? 0)),
+                    plan.currency
+                  )}
                 </option>
               ))}
             </select>
@@ -2135,7 +2252,9 @@ function CollectionModal({
           <FormField label="Tahsilat Yeri">
             <select
               value={form.receivedLocation}
-              onChange={(event) => updateForm("receivedLocation", event.target.value as "company" | "partner")}
+              onChange={(event) =>
+                updateForm("receivedLocation", event.target.value as "company" | "partner")
+              }
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
             >
               <option value="company">Şirket Kasası / Bankası</option>
@@ -2184,7 +2303,14 @@ function CollectionModal({
         <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4">
           <p className="text-sm font-black text-slate-700">İşlem Özeti</p>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            {selectedEvent ? <strong>{selectedEvent.title}</strong> : "Seçili etkinlik"} için <strong>{formatMoney(baseAmount, form.currency)}</strong> tahsilat kaydı oluşturulacak. Tahsilat yeri: <strong>{form.receivedLocation === "partner" ? "Ortak üzerinde" : "Şirket kasası / bankası"}</strong>. Ödeme yöntemi: <strong>{getPaymentMethodLabel(form.paymentMethod)}</strong>.
+            {selectedCustomer ? <strong>{selectedCustomer.name}</strong> : "Seçili müşteri"} /{" "}
+            {selectedEvent ? <strong>{selectedEvent.title}</strong> : "seçili etkinlik"} için{" "}
+            <strong>{formatMoney(baseAmount, form.currency)}</strong> tahsilat kaydı oluşturulacak.
+            Tahsilat yeri:{" "}
+            <strong>
+              {form.receivedLocation === "partner" ? "Ortak üzerinde" : "Şirket kasası / bankası"}
+            </strong>
+            . Ödeme yöntemi: <strong>{getPaymentMethodLabel(form.paymentMethod)}</strong>.
           </p>
           {selectedPaymentPlan ? (
             <p className="mt-2 text-xs font-bold text-slate-500">
@@ -2197,7 +2323,9 @@ function CollectionModal({
           <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-amber-950">
             <p className="font-black">Tahsilat Kaydedilecek</p>
             <p className="mt-2 text-sm leading-6">
-              Bu işlem müşteri alacağını azaltır. Şirket kasasına alındıysa şirket nakdi artar; ortak üzerinde kaldıysa ortak üzerindeki şirket parası olarak takip edilir. Devam etmek istiyor musunuz?
+              Bu işlem seçilen müşterinin seçilen etkinlik alacağını azaltır. Şirket kasasına alındıysa şirket nakdi artar;
+              ortak üzerinde kaldıysa ortak üzerindeki şirket parası olarak takip edilir.
+              Devam etmek istiyor musunuz?
             </p>
           </div>
         ) : null}
@@ -2209,11 +2337,24 @@ function CollectionModal({
         ) : null}
 
         <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700" disabled={isSaving}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            disabled={isSaving}
+          >
             Vazgeç
           </button>
-          <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-50" disabled={isSaving || isLoadingBaseData}>
-            {isSaving ? "Kaydediliyor..." : isConfirming ? "Onayla ve Kaydet" : "Devam Et"}
+          <button
+            type="submit"
+            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+            disabled={isSaving || isLoadingBaseData}
+          >
+            {isSaving
+              ? "Kaydediliyor..."
+              : isConfirming
+                ? "Onayla ve Kaydet"
+                : "Devam Et"}
           </button>
         </div>
       </form>

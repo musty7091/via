@@ -1,5 +1,6 @@
 import { getStoredToken } from "../../../services/authStorage";
 import type {
+  CustomerListItem,
   CollectionRead,
   CreateCollectionPayload,
   EventPaymentsDetail,
@@ -153,4 +154,8 @@ export async function createCollection(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchCustomers(): Promise<CustomerListItem[]> {
+  return requestJson<CustomerListItem[]>("/customers?is_active=true&limit=500");
 }

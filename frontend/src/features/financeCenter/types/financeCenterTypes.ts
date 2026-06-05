@@ -224,3 +224,18 @@ export type CreateCollectionPayload = {
   document_no?: string | null;
   notes?: string | null;
 };
+
+export type CustomerListItem = {
+  id: number;
+  customer_type: string;
+  customer_status: string;
+  name: string;
+  short_name: string | null;
+  phone: string | null;
+  email: string | null;
+  city: string | null;
+  default_currency: string;
+  risk_level: string;
+  is_active: boolean;
+  created_at: string;
+};
