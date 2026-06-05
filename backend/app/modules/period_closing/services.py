@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
-from app.models.expense import Expense
+from app.models.expense import Expense, ExpenseAllocation
 from app.models.finance import CarryForwardItem, EventFinancialClosure, EventSupplierPayable, FinancialMovement
 from app.models.payment import Collection, PaymentPlan
 from app.models.period import MonthlyPeriod
@@ -57,7 +57,7 @@ def _parse_period_month(period_month: str) -> tuple[date, date]:
 
 
 def _next_period_month(period_month: str) -> str:
-    start_date, end_date = _parse_period_month(period_month)
+    _start_date, end_date = _parse_period_month(period_month)
     return end_date.strftime("%Y-%m")
 
 
@@ -139,6 +139,38 @@ def _sum_event_expenses(db: Session, *, event_id: int) -> float:
         db.query(func.coalesce(func.sum(Expense.base_amount), 0))
         .filter(
             Expense.event_id == event_id,
+            Expense.is_cancelled == False,  # noqa: E712
+        )
+        .scalar()
+    )
+
+    return _round_money(value)
+
+
+def _sum_general_expenses_for_period(db: Session, *, period_month: str) -> float:
+    start_date, end_date = _parse_period_month(period_month)
+
+    value = (
+        db.query(func.coalesce(func.sum(Expense.base_amount), 0))
+        .filter(
+            Expense.event_id.is_(None),
+            Expense.is_allocated == False,  # noqa: E712
+            Expense.is_cancelled == False,  # noqa: E712
+            Expense.expense_date >= start_date,
+            Expense.expense_date < end_date,
+        )
+        .scalar()
+    )
+
+    return _round_money(value)
+
+
+def _sum_allocated_expenses_for_period(db: Session, *, period_month: str) -> float:
+    value = (
+        db.query(func.coalesce(func.sum(ExpenseAllocation.allocated_base_amount), 0))
+        .join(Expense, Expense.id == ExpenseAllocation.expense_id)
+        .filter(
+            ExpenseAllocation.period_month == period_month,
             Expense.is_cancelled == False,  # noqa: E712
         )
         .scalar()
@@ -256,6 +288,8 @@ def build_period_closing_preview(
     total_revenue = 0.0
     total_event_cost = 0.0
     total_event_expense = 0.0
+    total_general_expense = _sum_general_expenses_for_period(db=db, period_month=period_month)
+    total_allocated_expense = _sum_allocated_expenses_for_period(db=db, period_month=period_month)
 
     customer_receivable_total = 0.0
     supplier_payable_total = 0.0
@@ -380,7 +414,7 @@ def build_period_closing_preview(
                     )
                 )
 
-    net_profit = _round_money(total_revenue - total_event_cost - total_event_expense)
+    net_profit = _round_money(total_revenue - total_event_cost - total_event_expense - total_general_expense - total_allocated_expense)
     blocking_issue_count = sum(1 for item in issues if item.blocking)
     warning_count = sum(1 for item in issues if item.severity == "warning")
 
@@ -394,6 +428,8 @@ def build_period_closing_preview(
         total_revenue_base_amount=_round_money(total_revenue),
         total_event_cost_base_amount=_round_money(total_event_cost),
         total_event_expense_base_amount=_round_money(total_event_expense),
+        total_general_expense_base_amount=_round_money(total_general_expense),
+        total_allocated_expense_base_amount=_round_money(total_allocated_expense),
         net_profit_base_amount=net_profit,
         customer_receivable_base_amount=_round_money(customer_receivable_total),
         supplier_payable_base_amount=_round_money(supplier_payable_total),
@@ -488,6 +524,8 @@ def close_period(
     source_period.total_revenue_base_amount = preview.summary.total_revenue_base_amount
     source_period.total_event_cost_base_amount = preview.summary.total_event_cost_base_amount
     source_period.total_event_expense_base_amount = preview.summary.total_event_expense_base_amount
+    source_period.total_general_expense_base_amount = preview.summary.total_general_expense_base_amount
+    source_period.total_allocated_expense_base_amount = preview.summary.total_allocated_expense_base_amount
     source_period.net_profit_base_amount = preview.summary.net_profit_base_amount
 
     db.commit()
@@ -508,6 +546,8 @@ def close_period(
         total_revenue_base_amount=preview.summary.total_revenue_base_amount,
         total_event_cost_base_amount=preview.summary.total_event_cost_base_amount,
         total_event_expense_base_amount=preview.summary.total_event_expense_base_amount,
+        total_general_expense_base_amount=preview.summary.total_general_expense_base_amount,
+        total_allocated_expense_base_amount=preview.summary.total_allocated_expense_base_amount,
         net_profit_base_amount=preview.summary.net_profit_base_amount,
         message="Dönem kapatıldı. Açık kalemler sonraki döneme devredildi.",
     )

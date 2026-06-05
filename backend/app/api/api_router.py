@@ -16,6 +16,7 @@ from app.modules.partner_accounts.router import router as partner_accounts_route
 from app.modules.event_financial_closure.router import router as event_financial_closure_router
 from app.modules.period_closing.router import router as period_closing_router
 from app.modules.carry_forward_settlement.router import router as carry_forward_settlement_router
+from app.modules.expenses.router import router as expenses_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -32,4 +33,5 @@ api_router.include_router(partner_accounts_router)
 api_router.include_router(event_financial_closure_router)
 api_router.include_router(period_closing_router)
 api_router.include_router(carry_forward_settlement_router)
+api_router.include_router(expenses_router)
 api_router.include_router(events_router)

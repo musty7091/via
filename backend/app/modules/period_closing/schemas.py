@@ -32,6 +32,8 @@ class PeriodClosingPreviewSummary(BaseModel):
     total_revenue_base_amount: float
     total_event_cost_base_amount: float
     total_event_expense_base_amount: float
+    total_general_expense_base_amount: float
+    total_allocated_expense_base_amount: float
     net_profit_base_amount: float
 
     customer_receivable_base_amount: float
@@ -79,6 +81,8 @@ class PeriodCloseResponse(BaseModel):
     total_revenue_base_amount: float
     total_event_cost_base_amount: float
     total_event_expense_base_amount: float
+    total_general_expense_base_amount: float
+    total_allocated_expense_base_amount: float
     net_profit_base_amount: float
 
     message: str
