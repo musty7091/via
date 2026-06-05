@@ -14,6 +14,7 @@ from app.modules.supplier_payables.router import router as supplier_payables_rou
 from app.modules.supplier_accounts.router import router as supplier_accounts_router
 from app.modules.partner_accounts.router import router as partner_accounts_router
 from app.modules.event_financial_closure.router import router as event_financial_closure_router
+from app.modules.period_closing.router import router as period_closing_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -28,4 +29,5 @@ api_router.include_router(supplier_payables_router)
 api_router.include_router(supplier_accounts_router)
 api_router.include_router(partner_accounts_router)
 api_router.include_router(event_financial_closure_router)
+api_router.include_router(period_closing_router)
 api_router.include_router(events_router)
