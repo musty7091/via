@@ -1,10 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
-import { fetchArtists, fetchEvents, fetchServiceItems, fetchSupplierPayables } from "../api/financeCenterApi";
-import type { ArtistRead, EventRead, ServiceItemRead, SupplierPayableRead } from "../types/financeCenterTypes";
+import {
+  fetchArtists,
+  fetchCashAccounts,
+  fetchEvents,
+  fetchPartners,
+  fetchServiceItems,
+  fetchSupplierPayables,
+} from "../api/financeCenterApi";
+import type {
+  ArtistRead,
+  CashAccountRead,
+  EventRead,
+  PartnerRead,
+  ServiceItemRead,
+  SupplierPayableRead,
+  SupplierPaymentRead,
+} from "../types/financeCenterTypes";
 
 type SupplierPayableRow = {
   payable: SupplierPayableRead;
+  payments: SupplierPaymentRead[];
   event: EventRead;
   supplierName: string;
   supplierTypeLabel: string;
@@ -23,6 +40,7 @@ function getPeriodMonthFromDate(value: string | null | undefined) {
   if (!value || value.length < 7) {
     return getCurrentPeriodMonth();
   }
+
   return value.slice(0, 7);
 }
 
@@ -31,7 +49,8 @@ function formatPeriodMonth(periodMonth: string | null | undefined) {
     return "-";
   }
 
-  const [year, month] = periodMonth.split("-");
+  const [year, month] = periodMonth.split("");
+
   const monthNames: Record<string, string> = {
     "01": "Ocak",
     "02": "Şubat",
@@ -47,7 +66,8 @@ function formatPeriodMonth(periodMonth: string | null | undefined) {
     "12": "Aralık",
   };
 
-  return `${monthNames[month] ?? month} ${year}`;
+  const [fullYear, fullMonth] = periodMonth.split("-");
+  return `${monthNames[fullMonth] ?? fullMonth} ${fullYear}`;
 }
 
 function formatDate(value: string | null | undefined) {
@@ -64,6 +84,7 @@ function formatDate(value: string | null | undefined) {
 
 function formatMoney(value: number | string | null | undefined, currency = "TL") {
   const safeValue = Number(value ?? 0);
+
   return (
     new Intl.NumberFormat("tr-TR", {
       minimumFractionDigits: 2,
@@ -88,6 +109,7 @@ function getPayableStatusLabel(status: string) {
     paid: "Ödendi",
     cancelled: "İptal",
   };
+
   return labels[status] ?? status;
 }
 
@@ -95,38 +117,136 @@ function getPayableStatusClass(status: string) {
   if (status === "paid") {
     return "bg-emerald-100 text-emerald-800";
   }
+
   if (status === "partial") {
     return "bg-amber-100 text-amber-800";
   }
+
   if (status === "cancelled") {
     return "bg-red-100 text-red-800";
   }
+
   return "bg-slate-100 text-slate-700";
+}
+
+function getPaymentMethodLabel(method: string) {
+  const labels: Record<string, string> = {
+    cash: "Nakit",
+    bank: "Banka",
+    transfer: "Havale / EFT",
+    card: "Kart",
+    cheque: "Çek",
+  };
+
+  return labels[method] ?? method;
+}
+
+function Badge({ children, className }: { children: ReactNode; className: string }) {
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-black ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+function Metric({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+        {title}
+      </p>
+      <p className="mt-2 text-lg font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-rose-300"
+      >
+        {children}
+      </select>
+    </label>
+  );
 }
 
 export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSectionProps) {
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [rows, setRows] = useState<SupplierPayableRow[]>([]);
+  const [partners, setPartners] = useState<PartnerRead[]>([]);
+  const [cashAccounts, setCashAccounts] = useState<CashAccountRead[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [openPayableId, setOpenPayableId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
   const [periodFilter, setPeriodFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState<"all" | "artist" | "service">("all");
-  const [statusFilter, setStatusFilter] = useState<"open" | "partial" | "paid" | "all">("open");
+  const [statusFilter, setStatusFilter] = useState<"open" | "partial" | "paid" | "all">(
+    "open"
+  );
   const [searchText, setSearchText] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const partnerMap = useMemo(() => {
+    const map = new Map<number, PartnerRead>();
+    partners.forEach((partner) => map.set(partner.id, partner));
+    return map;
+  }, [partners]);
+
+  const cashAccountMap = useMemo(() => {
+    const map = new Map<number, CashAccountRead>();
+    cashAccounts.forEach((account) => map.set(account.id, account));
+    return map;
+  }, [cashAccounts]);
+
+  function getPaymentSourceLabel(payment: SupplierPaymentRead) {
+    if (payment.cash_account_id !== null && payment.cash_account_id !== undefined) {
+      const account = cashAccountMap.get(payment.cash_account_id);
+      return account ? `${account.name} (${account.account_type === "bank" ? "Banka" : "Kasa"})` : "Şirket kasa/banka";
+    }
+
+    if (payment.paid_by_partner_id !== null && payment.paid_by_partner_id !== undefined) {
+      const partner = partnerMap.get(payment.paid_by_partner_id);
+      return partner ? `${partner.full_name} ödedi` : `Ortak #${payment.paid_by_partner_id} ödedi`;
+    }
+
+    return "Kaynak belirtilmemiş";
+  }
 
   async function loadPayables() {
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const [events, artists, services] = await Promise.all([
+      const [events, artists, services, partnerList, cashAccountList] = await Promise.all([
         fetchEvents(),
         fetchArtists(),
         fetchServiceItems(),
+        fetchPartners(),
+        fetchCashAccounts(),
       ]);
+
+      setPartners(partnerList);
+      setCashAccounts(cashAccountList);
 
       const artistMap = new Map<number, ArtistRead>();
       artists.forEach((artist) => artistMap.set(artist.id, artist));
@@ -150,15 +270,30 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
 
         const { eventItem, detail } = result.value;
 
+        const paymentsByPayableId = new Map<number, SupplierPaymentRead[]>();
+
+        detail.payments.forEach((payment) => {
+          const currentPayments = paymentsByPayableId.get(payment.payable_id) ?? [];
+          currentPayments.push(payment);
+          paymentsByPayableId.set(payment.payable_id, currentPayments);
+        });
+
         detail.payables.forEach((payable) => {
-          const isArtist = payable.artist_id !== null;
+          const isArtist = payable.artist_id !== null && payable.artist_id !== undefined;
           const supplierName = isArtist
             ? artistMap.get(payable.artist_id ?? 0)?.name ?? `Sanatçı #${payable.artist_id}`
             : serviceMap.get(payable.service_item_id ?? 0)?.name ??
               `Hizmet #${payable.service_item_id}`;
 
+          const payments = paymentsByPayableId.get(payable.id) ?? [];
+          payments.sort((left, right) => {
+            const dateCompare = right.payment_date.localeCompare(left.payment_date);
+            return dateCompare !== 0 ? dateCompare : right.id - left.id;
+          });
+
           loadedRows.push({
             payable,
+            payments,
             event: eventItem,
             supplierName,
             supplierTypeLabel: isArtist ? "Sanatçı" : "Hizmet",
@@ -198,14 +333,18 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
     return rows.filter((row) => {
       const period = getPeriodMonthFromDate(row.payable.due_date ?? row.event.event_date);
       const matchesPeriod = periodFilter === "all" || period === periodFilter;
+
       const matchesSupplierType =
         supplierFilter === "all" ||
         (supplierFilter === "artist" && row.payable.artist_id !== null) ||
         (supplierFilter === "service" && row.payable.service_item_id !== null);
+
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "open" && (row.payable.status === "open" || row.payable.status === "partial")) ||
+        (statusFilter === "open" &&
+          (row.payable.status === "open" || row.payable.status === "partial")) ||
         row.payable.status === statusFilter;
+
       const searchableText = [
         row.supplierName,
         row.supplierTypeLabel,
@@ -214,11 +353,14 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
         row.payable.title,
         row.payable.description,
         row.payable.notes,
+        ...row.payments.map((payment) => payment.document_no ?? ""),
       ]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("tr-TR");
-      const matchesSearch = normalizedSearch.length === 0 || searchableText.includes(normalizedSearch);
+
+      const matchesSearch =
+        normalizedSearch.length === 0 || searchableText.includes(normalizedSearch);
 
       return matchesPeriod && matchesSupplierType && matchesStatus && matchesSearch;
     });
@@ -227,17 +369,29 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const visibleRows = filteredRows.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
-  const openRows = filteredRows.filter((row) => row.payable.status === "open" || row.payable.status === "partial");
+
+  const openRows = filteredRows.filter(
+    (row) => row.payable.status === "open" || row.payable.status === "partial"
+  );
   const paidRows = filteredRows.filter((row) => row.payable.status === "paid");
-  const remainingTotal = openRows.reduce((total, row) => total + Number(row.payable.remaining_base_amount ?? 0), 0);
-  const paidTotal = filteredRows.reduce((total, row) => total + Number(row.payable.paid_base_amount ?? 0), 0);
+  const remainingTotal = openRows.reduce(
+    (total, row) => total + Number(row.payable.remaining_base_amount ?? 0),
+    0
+  );
+  const paidTotal = filteredRows.reduce(
+    (total, row) => total + Number(row.payable.paid_base_amount ?? 0),
+    0
+  );
 
   function resetToFirstPage() {
     setCurrentPage(1);
   }
 
   return (
-    <section id="finance-supplier-payables-section" className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+    <section
+      id="finance-supplier-payables-section"
+      className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -246,7 +400,7 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
           <h3 className="mt-1 text-2xl font-black">Borç takip ekranı</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Bu bölüm ödeme yapmak için değil, sanatçı ve hizmet borçlarının güncel durumunu
-            takip etmek için kullanılır. Ödeme işlemi üstteki Hızlı İşlemler alanından başlatılır.
+            ve yapılan ödeme kayıtlarını izlemek için kullanılır.
           </p>
         </div>
         <div className="ml-auto flex shrink-0 flex-wrap items-start justify-end gap-3">
@@ -263,6 +417,7 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
             onClick={() => {
               const nextIsOpen = !isOpen;
               setIsOpen(nextIsOpen);
+
               if (nextIsOpen) {
                 scrollToElementById("finance-supplier-payables-section");
               }
@@ -283,20 +438,43 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
           </div>
 
           <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1.4fr_0.8fr]">
-            <SelectField label="Ay" value={periodFilter} onChange={(value) => { setPeriodFilter(value); resetToFirstPage(); }}>
+            <SelectField
+              label="Ay"
+              value={periodFilter}
+              onChange={(value) => {
+                setPeriodFilter(value);
+                resetToFirstPage();
+              }}
+            >
               <option value="all">Tüm Aylar</option>
               {periodOptions.map((period) => (
-                <option key={period} value={period}>{formatPeriodMonth(period)}</option>
+                <option key={period} value={period}>
+                  {formatPeriodMonth(period)}
+                </option>
               ))}
             </SelectField>
 
-            <SelectField label="Tür" value={supplierFilter} onChange={(value) => { setSupplierFilter(value as "all" | "artist" | "service"); resetToFirstPage(); }}>
+            <SelectField
+              label="Tür"
+              value={supplierFilter}
+              onChange={(value) => {
+                setSupplierFilter(value as "all" | "artist" | "service");
+                resetToFirstPage();
+              }}
+            >
               <option value="all">Tümü</option>
               <option value="artist">Sanatçı</option>
               <option value="service">Hizmet</option>
             </SelectField>
 
-            <SelectField label="Durum" value={statusFilter} onChange={(value) => { setStatusFilter(value as "open" | "partial" | "paid" | "all"); resetToFirstPage(); }}>
+            <SelectField
+              label="Durum"
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value as "open" | "partial" | "paid" | "all");
+                resetToFirstPage();
+              }}
+            >
               <option value="open">Açık + Kısmi</option>
               <option value="partial">Kısmi Ödendi</option>
               <option value="paid">Ödendi</option>
@@ -309,13 +487,23 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
               </span>
               <input
                 value={searchText}
-                onChange={(event) => { setSearchText(event.target.value); resetToFirstPage(); }}
+                onChange={(event) => {
+                  setSearchText(event.target.value);
+                  resetToFirstPage();
+                }}
                 className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-rose-300"
-                placeholder="Sanatçı, hizmet, etkinlik ara"
+                placeholder="Sanatçı, hizmet, etkinlik, belge no ara"
               />
             </label>
 
-            <SelectField label="Sayfa" value={String(pageSize)} onChange={(value) => { setPageSize(Number(value)); resetToFirstPage(); }}>
+            <SelectField
+              label="Sayfa"
+              value={String(pageSize)}
+              onChange={(value) => {
+                setPageSize(Number(value));
+                resetToFirstPage();
+              }}
+            >
               <option value={5}>5 kayıt</option>
               <option value={10}>10 kayıt</option>
               <option value={20}>20 kayıt</option>
@@ -342,45 +530,134 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
               </div>
             ) : null}
 
-            {visibleRows.map((row) => (
-              <div key={row.payable.id} className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-black">{row.supplierName}</p>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
-                        {row.supplierTypeLabel}
-                      </span>
-                      <span className={`rounded-full px-3 py-1 text-xs font-black ${getPayableStatusClass(row.payable.status)}`}>
-                        {getPayableStatusLabel(row.payable.status)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm font-bold text-slate-600">{row.event.title}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-500">
-                      {row.payable.title}
-                      {row.payable.due_date ? ` · Vade: ${formatDate(row.payable.due_date)}` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black">
-                      {formatMoney(row.payable.remaining_base_amount, row.payable.currency)}
-                    </p>
-                    <p className="text-xs font-bold text-slate-500">
-                      Toplam: {formatMoney(row.payable.base_amount, row.payable.currency)} · Ödenen:{" "}
-                      {formatMoney(row.payable.paid_base_amount, row.payable.currency)}
-                    </p>
-                  </div>
-                </div>
+            {visibleRows.map((row) => {
+              const isRowOpen = openPayableId === row.payable.id;
+              const activePayments = row.payments.filter((payment) => !payment.is_cancelled);
+              const cancelledPayments = row.payments.filter((payment) => payment.is_cancelled);
 
-                {row.payable.description ? (
-                  <p className="mt-3 text-sm leading-6 text-slate-500">{row.payable.description}</p>
-                ) : null}
-              </div>
-            ))}
+              return (
+                <div
+                  key={row.payable.id}
+                  className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-black">{row.supplierName}</p>
+                        <Badge className="bg-white text-slate-700">{row.supplierTypeLabel}</Badge>
+                        <Badge className={getPayableStatusClass(row.payable.status)}>
+                          {getPayableStatusLabel(row.payable.status)}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm font-bold text-slate-600">{row.event.title}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {row.payable.title}
+                        {row.payable.due_date ? ` · Vade: ${formatDate(row.payable.due_date)}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black">
+                        {formatMoney(row.payable.remaining_base_amount, row.payable.currency)}
+                      </p>
+                      <p className="text-xs font-bold text-slate-500">
+                        Toplam: {formatMoney(row.payable.base_amount, row.payable.currency)} · Ödenen:{" "}
+                        {formatMoney(row.payable.paid_base_amount, row.payable.currency)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setOpenPayableId(isRowOpen ? null : row.payable.id)}
+                        className="mt-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                      >
+                        {isRowOpen ? "Ödeme Detayını Kapat ▲" : "Ödeme Detayları ▼"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {row.payable.description ? (
+                    <p className="mt-3 text-sm leading-6 text-slate-500">{row.payable.description}</p>
+                  ) : null}
+
+                  {isRowOpen ? (
+                    <div className="mt-4 rounded-[1.25rem] border border-white bg-white p-4">
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Metric title="Aktif Ödeme" value={String(activePayments.length)} />
+                        <Metric title="İptal Ödeme" value={String(cancelledPayments.length)} />
+                        <Metric
+                          title="Aktif Ödenen"
+                          value={formatMoney(
+                            activePayments.reduce(
+                              (total, payment) => total + Number(payment.base_amount ?? 0),
+                              0
+                            )
+                          )}
+                        />
+                      </div>
+
+                      <div className="mt-4 space-y-3">
+                        {row.payments.length === 0 ? (
+                          <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-500">
+                            Bu borç için henüz ödeme kaydı yok.
+                          </div>
+                        ) : null}
+
+                        {row.payments.map((payment) => (
+                          <div
+                            key={payment.id}
+                            className={`rounded-[1rem] border p-4 ${
+                              payment.is_cancelled
+                                ? "border-red-100 bg-red-50"
+                                : "border-slate-100 bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-black">{getPaymentSourceLabel(payment)}</p>
+                                  <Badge
+                                    className={
+                                      payment.is_cancelled
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-emerald-100 text-emerald-800"
+                                    }
+                                  >
+                                    {payment.is_cancelled ? "İptal" : "Aktif"}
+                                  </Badge>
+                                  <Badge className="bg-white text-slate-700">
+                                    {getPaymentMethodLabel(payment.payment_method)}
+                                  </Badge>
+                                </div>
+                                <p className="mt-1 text-xs font-bold text-slate-500">
+                                  {formatDate(payment.payment_date)} · Belge: {payment.document_no ?? "-"}
+                                </p>
+                              </div>
+                              <p className="text-lg font-black">
+                                {formatMoney(payment.base_amount, payment.currency)}
+                              </p>
+                            </div>
+
+                            {payment.notes ? (
+                              <p className="mt-3 text-sm leading-6 text-slate-500">{payment.notes}</p>
+                            ) : null}
+
+                            {payment.is_cancelled && payment.cancellation_reason ? (
+                              <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-red-800">
+                                İptal nedeni: {payment.cancellation_reason}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-bold text-slate-500">Sayfa {safeCurrentPage} / {totalPages}</p>
+            <p className="text-sm font-bold text-slate-500">
+              Sayfa {safeCurrentPage} / {totalPages}
+            </p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -403,41 +680,5 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
         </>
       ) : null}
     </section>
-  );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{title}</p>
-      <p className="mt-2 text-lg font-black text-slate-950">{value}</p>
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-        {label}
-      </span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-rose-300"
-      >
-        {children}
-      </select>
-    </label>
   );
 }
