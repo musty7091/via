@@ -30,6 +30,7 @@ import type {
   FinancialMovementSummary,
   PeriodExpenseSummary,
 } from "../types/financeCenterTypes";
+import { CollectionRecordsSection } from "../components/CollectionRecordsSection";
 
 type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
@@ -241,6 +242,15 @@ function formatMoney(value: number | string | null | undefined, currency = "TL")
   );
 }
 
+function scrollToElementById(elementId: string) {
+  window.setTimeout(() => {
+    document.getElementById(elementId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 80);
+}
+
 function getCarryTypeLabel(carryType: string) {
   const labels: Record<string, string> = {
     customer_receivable: "Müşteri Alacağı",
@@ -338,6 +348,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [isExpenseDetailLoading, setIsExpenseDetailLoading] = useState(false);
   const [expenseDetailError, setExpenseDetailError] = useState<string | null>(null);
   const [cancelExpenseTarget, setCancelExpenseTarget] = useState<ExpenseRead | null>(null);
+  const [isCarryForwardsOpen, setIsCarryForwardsOpen] = useState(false);
+  const [isMovementsOpen, setIsMovementsOpen] = useState(false);
 
   async function loadDashboard() {
     setIsLoading(true);
@@ -546,7 +558,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           />
         </div>
 
-        <section className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+        <section id="finance-expense-records-section" className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -625,6 +637,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
 
+        <CollectionRecordsSection />
+
         <ExpenseRecordsSection
           expenses={expenses}
           isDetailLoading={isExpenseDetailLoading}
@@ -632,8 +646,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           onOpenDetail={openExpenseDetail}
         />
 
-        <div className="mt-6 grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+        <div className="mt-6 space-y-4">
+          <section id="finance-carry-forwards-section" className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -641,41 +655,59 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
                 </p>
                 <h3 className="mt-1 text-2xl font-black">Açık işler</h3>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                {carryForwards.length} kayıt
-              </span>
+              <div className="flex flex-col items-end gap-2">
+                <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                  {carryForwards.length} kayıt
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                  const nextIsOpen = !isCarryForwardsOpen;
+                  setIsCarryForwardsOpen(nextIsOpen);
+
+                  if (nextIsOpen) {
+                    scrollToElementById("finance-carry-forwards-section");
+                  }
+                }}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                >
+                  {isCarryForwardsOpen ? "Kapat ▲" : "Detayı Aç ▼"}
+                </button>
+              </div>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {carryForwards.length === 0 ? (
-                <EmptyState text="Açık devreden kalem bulunmuyor." />
-              ) : (
-                carryForwards.slice(0, 5).map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-black">{getCarryTypeLabel(item.carry_type)}</p>
-                        <p className="mt-1 text-xs font-bold text-slate-500">
-                          {item.source_period_month ?? "-"} → {item.target_period_month ?? "-"}
-                        </p>
+            {isCarryForwardsOpen ? (
+              <div className="mt-5 space-y-3">
+                {carryForwards.length === 0 ? (
+                  <EmptyState text="Açık devreden kalem bulunmuyor." />
+                ) : (
+                  carryForwards.slice(0, 5).map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black">{getCarryTypeLabel(item.carry_type)}</p>
+                          <p className="mt-1 text-xs font-bold text-slate-500">
+                            {item.source_period_month ?? "-"} → {item.target_period_month ?? "-"}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
+                          {formatMoney(item.remaining_base_amount, item.currency)}
+                        </span>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
-                        {formatMoney(item.remaining_base_amount, item.currency)}
-                      </span>
+                      <p className="mt-3 text-sm leading-6 text-slate-500">
+                        {item.carry_reason}
+                      </p>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-500">
-                      {item.carry_reason}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+            ) : null}
           </section>
 
-          <section className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+          <section id="finance-movements-section" className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -683,45 +715,63 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
                 </p>
                 <h3 className="mt-1 text-2xl font-black">Denetim izi</h3>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                {summary.total_count} toplam
-              </span>
+              <div className="flex flex-col items-end gap-2">
+                <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                  {summary.total_count} toplam
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                  const nextIsOpen = !isMovementsOpen;
+                  setIsMovementsOpen(nextIsOpen);
+
+                  if (nextIsOpen) {
+                    scrollToElementById("finance-movements-section");
+                  }
+                }}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                >
+                  {isMovementsOpen ? "Kapat ▲" : "Detayı Aç ▼"}
+                </button>
+              </div>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {movements.length === 0 ? (
-                <EmptyState text="Henüz finans hareketi bulunmuyor." />
-              ) : (
-                movements.map((movement) => (
-                  <div
-                    key={movement.id}
-                    className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-black">{movement.title}</p>
-                        <p className="mt-1 text-xs font-bold text-slate-500">
-                          {getMovementLabel(movement.movement_type)} · {movement.movement_date}
-                        </p>
+            {isMovementsOpen ? (
+              <div className="mt-5 space-y-3">
+                {movements.length === 0 ? (
+                  <EmptyState text="Henüz finans hareketi bulunmuyor." />
+                ) : (
+                  movements.map((movement) => (
+                    <div
+                      key={movement.id}
+                      className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black">{movement.title}</p>
+                          <p className="mt-1 text-xs font-bold text-slate-500">
+                            {getMovementLabel(movement.movement_type)} · {movement.movement_date}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            movement.direction === "in"
+                              ? "bg-teal-100 text-teal-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {movement.direction === "in" ? "+" : "-"}
+                          {formatMoney(movement.base_amount, movement.currency)}
+                        </span>
                       </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-black ${
-                          movement.direction === "in"
-                            ? "bg-teal-100 text-teal-800"
-                            : "bg-rose-100 text-rose-800"
-                        }`}
-                      >
-                        {movement.direction === "in" ? "+" : "-"}
-                        {formatMoney(movement.base_amount, movement.currency)}
-                      </span>
+                      <p className="mt-3 text-sm leading-6 text-slate-500">
+                        {movement.description ?? "Açıklama yok."}
+                      </p>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-500">
-                      {movement.description ?? "Açıklama yok."}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+            ) : null}
           </section>
         </div>
       </section>
@@ -850,6 +900,7 @@ function ExpenseRecordsSection({
   const [statusFilter, setStatusFilter] = useState<"active" | "cancelled" | "all">("active");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isOpen, setIsOpen] = useState(false);
 
   const periodOptions = useMemo(() => {
     const periods = new Set<string>();
@@ -979,14 +1030,30 @@ function ExpenseRecordsSection({
             Bu liste genel dönem ve sezonluk gider kayıtları içindir. Etkinliğe özel giderler etkinlik finans/kârlılık ekranında yönetilir.
           </p>
         </div>
-        <div className="rounded-[1.25rem] bg-slate-950 px-4 py-3 text-right text-white">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-200">
+        <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
             Filtrelenmiş Aktif Toplam
           </p>
           <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+          const nextIsOpen = !isOpen;
+          setIsOpen(nextIsOpen);
+
+          if (nextIsOpen) {
+            scrollToElementById("finance-expense-records-section");
+          }
+        }}
+          className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+        >
+          {isOpen ? "Kapat ▲" : "Detayı Aç ▼"}
+        </button>
       </div>
 
+      {isOpen ? (
+        <>
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         <MiniMetric title="Filtrelenmiş Kayıt" value={String(filteredExpenses.length)} />
         <MiniMetric
@@ -1182,7 +1249,7 @@ function ExpenseRecordsSection({
           >
             Önceki
           </button>
-          <span className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+          <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700">
             {safeCurrentPage} / {totalPages}
           </span>
           <button
@@ -1195,6 +1262,8 @@ function ExpenseRecordsSection({
           </button>
         </div>
       </div>
+        </>
+      ) : null}
     </section>
   );
 }
