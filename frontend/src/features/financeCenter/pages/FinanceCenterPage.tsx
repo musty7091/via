@@ -378,6 +378,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showSupplierPaymentModal, setShowSupplierPaymentModal] = useState(false);
   const [supplierPayablesRefreshKey, setSupplierPayablesRefreshKey] = useState(0);
+  const [collectionQuickOpenKey, setCollectionQuickOpenKey] = useState(0);
+  const [collectionQuickOpenMode, setCollectionQuickOpenMode] = useState<"partner-cash" | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseWithAllocations | null>(null);
   const [isExpenseDetailLoading, setIsExpenseDetailLoading] = useState(false);
   const [expenseDetailError, setExpenseDetailError] = useState<string | null>(null);
@@ -465,6 +467,12 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
     if (action.key === "supplierPayment") {
       setShowSupplierPaymentModal(true);
+      return;
+    }
+
+    if (action.key === "partnerCash") {
+      setCollectionQuickOpenMode("partner-cash");
+      setCollectionQuickOpenKey((previous) => previous + 1);
       return;
     }
 
@@ -679,7 +687,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
 
-        <CollectionRecordsSection onChanged={loadDashboard} />
+        <CollectionRecordsSection
+          onChanged={loadDashboard}
+          quickOpenMode={collectionQuickOpenMode}
+          quickOpenKey={collectionQuickOpenKey}
+        />
 
         <SupplierPayablesSection refreshKey={supplierPayablesRefreshKey} onChanged={loadDashboard} />
 

@@ -26,8 +26,12 @@ type CollectionRow = {
   paymentPlan: PaymentPlanRead | null;
 };
 
+type CollectionQuickOpenMode = "partner-cash";
+
 type CollectionRecordsSectionProps = {
   onChanged?: () => Promise<void> | void;
+  quickOpenMode?: CollectionQuickOpenMode | null;
+  quickOpenKey?: number;
 };
 
 function getCurrentPeriodMonth() {
@@ -176,7 +180,11 @@ function MiniMetric({ title, value }: { title: string; value: string }) {
   );
 }
 
-export function CollectionRecordsSection({ onChanged }: CollectionRecordsSectionProps) {
+export function CollectionRecordsSection({
+  onChanged,
+  quickOpenMode = null,
+  quickOpenKey = 0,
+}: CollectionRecordsSectionProps) {
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [rows, setRows] = useState<CollectionRow[]>([]);
   const [selectedRow, setSelectedRow] = useState<CollectionRow | null>(null);
@@ -281,6 +289,24 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
   useEffect(() => {
     loadCollections();
   }, []);
+
+  useEffect(() => {
+    if (quickOpenKey <= 0) {
+      return;
+    }
+
+    setIsOpen(true);
+
+    if (quickOpenMode === "partner-cash") {
+      setPeriodFilter("all");
+      setLocationFilter("partner");
+      setStatusFilter("active");
+      setSearchText("");
+      setCurrentPage(1);
+    }
+
+    scrollToElementById("finance-collection-records-section");
+  }, [quickOpenKey, quickOpenMode]);
 
   const periodOptions = useMemo(() => {
     const periods = new Set<string>();
