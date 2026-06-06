@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
 import { EventsPage } from "./features/events/pages/EventsPage";
@@ -24,36 +24,136 @@ type AppScreen =
   | "finance"
   | "users";
 
+const protectedScreens = new Set<AppScreen>([
+  "dashboard",
+  "customers",
+  "serviceCatalog",
+  "offers",
+  "events",
+  "partners",
+  "finance",
+  "users",
+]);
+
+function isAppScreen(value: unknown): value is AppScreen {
+  return (
+    value === "landing" ||
+    value === "login" ||
+    value === "dashboard" ||
+    value === "customers" ||
+    value === "serviceCatalog" ||
+    value === "offers" ||
+    value === "events" ||
+    value === "partners" ||
+    value === "finance" ||
+    value === "users"
+  );
+}
+
+function isProtectedScreen(screen: AppScreen) {
+  return protectedScreens.has(screen);
+}
+
+function screenToUrl(screen: AppScreen) {
+  return `${window.location.pathname}${window.location.search}#${screen}`;
+}
+
+function screenFromHash() {
+  const hashScreen = window.location.hash.replace("#", "");
+  return isAppScreen(hashScreen) ? hashScreen : null;
+}
+
+function getInitialScreenFromUrl(user: AuthUser | null): AppScreen {
+  const hashScreen = screenFromHash();
+
+  if (hashScreen && hashScreen !== "login") {
+    if (isProtectedScreen(hashScreen) && !user) {
+      return "landing";
+    }
+
+    return hashScreen;
+  }
+
+  return user ? "dashboard" : "landing";
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
     getStoredUser()
   );
   const [screen, setScreen] = useState<AppScreen>(() =>
-    getStoredUser() ? "dashboard" : "landing"
+    getInitialScreenFromUrl(getStoredUser())
   );
   const [postLoginScreen, setPostLoginScreen] = useState<AppScreen>("dashboard");
 
+  function navigate(nextScreen: AppScreen, options?: { replace?: boolean }) {
+    setScreen(nextScreen);
+
+    const nextUrl = screenToUrl(nextScreen);
+
+    if (options?.replace) {
+      window.history.replaceState({ screen: nextScreen }, "", nextUrl);
+      return;
+    }
+
+    window.history.pushState({ screen: nextScreen }, "", nextUrl);
+  }
+
+  useEffect(() => {
+    if (!isAppScreen(window.history.state?.screen)) {
+      window.history.replaceState({ screen }, "", screenToUrl(screen));
+    }
+
+    function handleBrowserBack(event: PopStateEvent) {
+      const stateScreen = event.state?.screen;
+      const hashScreen = screenFromHash();
+      const nextScreen = isAppScreen(stateScreen) ? stateScreen : hashScreen;
+
+      if (!nextScreen) {
+        const fallbackScreen: AppScreen = currentUser ? "dashboard" : "landing";
+        setScreen(fallbackScreen);
+        window.history.replaceState({ screen: fallbackScreen }, "", screenToUrl(fallbackScreen));
+        return;
+      }
+
+      if (isProtectedScreen(nextScreen) && !currentUser) {
+        setScreen("landing");
+        window.history.replaceState({ screen: "landing" }, "", screenToUrl("landing"));
+        return;
+      }
+
+      setScreen(nextScreen);
+    }
+
+    window.addEventListener("popstate", handleBrowserBack);
+
+    return () => {
+      window.removeEventListener("popstate", handleBrowserBack);
+    };
+  }, [currentUser]);
+
+
   function openLoginFor(targetScreen: AppScreen) {
     setPostLoginScreen(targetScreen);
-    setScreen("login");
+    navigate("login");
   }
 
   function handleLoginSuccess(user: AuthUser) {
     setCurrentUser(user);
-    setScreen(postLoginScreen);
+    navigate(postLoginScreen, { replace: true });
   }
 
   function handleLogout() {
     clearAuthSession();
     setCurrentUser(null);
-    setScreen("landing");
+    navigate("landing", { replace: true });
   }
 
   if (screen === "login") {
     return (
       <LoginPage
         onLoginSuccess={handleLoginSuccess}
-        onBack={() => setScreen("landing")}
+        onBack={() => navigate("landing")}
       />
     );
   }
@@ -63,48 +163,48 @@ function App() {
       <DashboardPage
         user={currentUser}
         onLogout={handleLogout}
-        onOpenCustomers={() => setScreen("customers")}
-        onOpenServiceCatalog={() => setScreen("serviceCatalog")}
-        onOpenOffers={() => setScreen("offers")}
-        onOpenEvents={() => setScreen("events")}
-        onOpenPartners={() => setScreen("partners")}
-        onOpenFinanceCenter={() => setScreen("finance")}
-        onOpenUsers={() => setScreen("users")}
+        onOpenCustomers={() => navigate("customers")}
+        onOpenServiceCatalog={() => navigate("serviceCatalog")}
+        onOpenOffers={() => navigate("offers")}
+        onOpenEvents={() => navigate("events")}
+        onOpenPartners={() => navigate("partners")}
+        onOpenFinanceCenter={() => navigate("finance")}
+        onOpenUsers={() => navigate("users")}
       />
     );
   }
 
   if (screen === "customers" && currentUser) {
-    return <CustomersPage onBackToDashboard={() => setScreen("dashboard")} />;
+    return <CustomersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "serviceCatalog" && currentUser) {
     return (
-      <ServiceCatalogPage onBackToDashboard={() => setScreen("dashboard")} />
+      <ServiceCatalogPage onBackToDashboard={() => navigate("dashboard")} />
     );
   }
 
   if (screen === "offers" && currentUser) {
-    return <OffersPage onBackToDashboard={() => setScreen("dashboard")} />;
+    return <OffersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "events" && currentUser) {
-    return <EventsPage onBackToDashboard={() => setScreen("dashboard")} />;
+    return <EventsPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "partners" && currentUser) {
-    return <PartnersPage onBackToDashboard={() => setScreen("dashboard")} />;
+    return <PartnersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "finance" && currentUser) {
-    return <FinanceCenterPage onBackToDashboard={() => setScreen("dashboard")} />;
+    return <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "users" && currentUser) {
     return (
       <UserManagementPage
         currentUser={currentUser}
-        onBackToDashboard={() => setScreen("dashboard")}
+        onBackToDashboard={() => navigate("dashboard")}
       />
     );
   }
@@ -117,7 +217,7 @@ function App() {
         <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
           <header className="flex items-center justify-between gap-4">
             <button
-              onClick={() => setScreen("landing")}
+              onClick={() => navigate("landing")}
               className="group flex flex-col items-start"
               aria-label="VIA EVENTS ana sayfa"
             >
