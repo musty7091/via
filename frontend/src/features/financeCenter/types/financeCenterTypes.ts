@@ -384,3 +384,7 @@ export type SupplierPaymentCreatePayload = {
   document_no?: string | null;
   notes?: string | null;
 };
+
+export type SupplierPaymentCancelPayload = {
+  cancellation_reason: string;
+};

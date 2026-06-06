@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 import {
+  cancelSupplierPayment,
   fetchArtists,
   fetchCashAccounts,
   fetchEvents,
@@ -27,8 +28,14 @@ type SupplierPayableRow = {
   supplierTypeLabel: string;
 };
 
+type CancelPaymentTarget = {
+  row: SupplierPayableRow;
+  payment: SupplierPaymentRead;
+};
+
 type SupplierPayablesSectionProps = {
   refreshKey?: number;
+  onChanged?: () => Promise<void> | void;
 };
 
 function getCurrentPeriodMonth() {
@@ -187,7 +194,10 @@ function SelectField({
   );
 }
 
-export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSectionProps) {
+export function SupplierPayablesSection({
+  refreshKey = 0,
+  onChanged = undefined,
+}: SupplierPayablesSectionProps) {
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [rows, setRows] = useState<SupplierPayableRow[]>([]);
   const [partners, setPartners] = useState<PartnerRead[]>([]);
@@ -196,6 +206,10 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
   const [openPayableId, setOpenPayableId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [cancelPaymentTarget, setCancelPaymentTarget] = useState<CancelPaymentTarget | null>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const [periodFilter, setPeriodFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState<"all" | "artist" | "service">("all");
@@ -319,6 +333,58 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
   useEffect(() => {
     loadPayables();
   }, [refreshKey]);
+
+  function openCancelPaymentModal(row: SupplierPayableRow, payment: SupplierPaymentRead) {
+    setCancelPaymentTarget({ row, payment });
+    setCancellationReason("");
+    setCancelError(null);
+  }
+
+  function closeCancelPaymentModal() {
+    if (isCancelling) {
+      return;
+    }
+
+    setCancelPaymentTarget(null);
+    setCancellationReason("");
+    setCancelError(null);
+  }
+
+  async function handleCancelPaymentSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!cancelPaymentTarget) {
+      return;
+    }
+
+    const trimmedReason = cancellationReason.trim();
+
+    if (!trimmedReason) {
+      setCancelError("İptal nedeni zorunludur.");
+      return;
+    }
+
+    setIsCancelling(true);
+    setCancelError(null);
+
+    try {
+      await cancelSupplierPayment(
+        cancelPaymentTarget.row.event.id,
+        cancelPaymentTarget.row.payable.id,
+        cancelPaymentTarget.payment.id,
+        { cancellation_reason: trimmedReason }
+      );
+
+      setCancelPaymentTarget(null);
+      setCancellationReason("");
+      await loadPayables();
+      await onChanged?.();
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "Ödeme iptal edilemedi.");
+    } finally {
+      setIsCancelling(false);
+    }
+  }
 
   const periodOptions = useMemo(() => {
     const periods = new Set<string>();
@@ -630,9 +696,20 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
                                   {formatDate(payment.payment_date)} · Belge: {payment.document_no ?? "-"}
                                 </p>
                               </div>
-                              <p className="text-lg font-black">
-                                {formatMoney(payment.base_amount, payment.currency)}
-                              </p>
+                              <div className="flex flex-col items-end gap-2 text-right">
+                                <p className="text-lg font-black">
+                                  {formatMoney(payment.base_amount, payment.currency)}
+                                </p>
+                                {!payment.is_cancelled ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openCancelPaymentModal(row, payment)}
+                                    className="rounded-full border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 shadow-sm transition hover:bg-red-50"
+                                  >
+                                    Ödemeyi İptal Et
+                                  </button>
+                                ) : null}
+                              </div>
                             </div>
 
                             {payment.notes ? (
@@ -679,6 +756,89 @@ export function SupplierPayablesSection({ refreshKey = 0 }: SupplierPayablesSect
           </div>
         </>
       ) : null}
+
+      {cancelPaymentTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="w-full max-w-xl rounded-[1.75rem] bg-white p-6 shadow-2xl shadow-slate-950/30">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-red-500">
+                  Ödeme İptali
+                </p>
+                <h3 className="mt-2 text-2xl font-black text-slate-950">
+                  Sanatçı / hizmet ödemesi iptal edilecek
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Bu işlem ödeme kaydını silmez. Sistem ters kayıt mantığıyla borç bakiyesini,
+                  kasa/banka veya ortak cari etkisini geri alır.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCancelPaymentModal}
+                disabled={isCancelling}
+                className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-50"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4">
+              <p className="font-black text-slate-950">{cancelPaymentTarget.row.supplierName}</p>
+              <p className="mt-1 text-sm font-bold text-slate-600">
+                {cancelPaymentTarget.row.event.title}
+              </p>
+              <p className="mt-2 text-sm font-black text-red-700">
+                İptal edilecek ödeme: {formatMoney(
+                  cancelPaymentTarget.payment.base_amount,
+                  cancelPaymentTarget.payment.currency
+                )}
+              </p>
+            </div>
+
+            <form onSubmit={handleCancelPaymentSubmit} className="mt-5 space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  İptal Nedeni
+                </span>
+                <textarea
+                  value={cancellationReason}
+                  onChange={(event) => setCancellationReason(event.target.value)}
+                  disabled={isCancelling}
+                  rows={4}
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-red-300 disabled:bg-slate-100"
+                  placeholder="Örnek: Yanlış ödeme tutarı girildi."
+                />
+              </label>
+
+              {cancelError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
+                  {cancelError}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeCancelPaymentModal}
+                  disabled={isCancelling}
+                  className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 disabled:opacity-50"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCancelling}
+                  className="rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-red-100 disabled:opacity-50"
+                >
+                  {isCancelling ? "İptal ediliyor..." : "Ödemeyi İptal Et"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
     </section>
   );
 }

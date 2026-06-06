@@ -681,7 +681,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
         <CollectionRecordsSection onChanged={loadDashboard} />
 
-        <SupplierPayablesSection refreshKey={supplierPayablesRefreshKey} />
+        <SupplierPayablesSection refreshKey={supplierPayablesRefreshKey} onChanged={loadDashboard} />
 
         <ExpenseRecordsSection
           expenses={expenses}

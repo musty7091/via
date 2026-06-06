@@ -21,6 +21,7 @@ import type {
   ArtistRead,
   ServiceItemRead,
   EventSupplierPayablesDetail,
+  SupplierPaymentCancelPayload,
   SupplierPaymentCreatePayload,
   SupplierPaymentRead,
 } from "../types/financeCenterTypes";
@@ -222,6 +223,21 @@ export async function createSupplierPayment(
 ): Promise<SupplierPaymentRead> {
   return requestJson<SupplierPaymentRead>(
     `/events/${eventId}/supplier-payables/${payableId}/payments`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function cancelSupplierPayment(
+  eventId: number,
+  payableId: number,
+  paymentId: number,
+  payload: SupplierPaymentCancelPayload
+): Promise<SupplierPaymentRead> {
+  return requestJson<SupplierPaymentRead>(
+    `/events/${eventId}/supplier-payables/${payableId}/payments/${paymentId}/cancel`,
     {
       method: "POST",
       body: JSON.stringify(payload),
