@@ -4,6 +4,9 @@ import type {
   CollectionRead,
   CreateCollectionPayload,
   CancelCollectionPayload,
+  CashAccountRead,
+  CashTransferCreatePayload,
+  CashTransferRead,
   EventPaymentsDetail,
   EventRead,
   PartnerRead,
@@ -173,4 +176,22 @@ export async function cancelCollection(
 
 export async function fetchCustomers(): Promise<CustomerListItem[]> {
   return requestJson<CustomerListItem[]>("/customers?is_active=true&limit=500");
+}
+
+export async function fetchCashAccounts(): Promise<CashAccountRead[]> {
+  return requestJson<CashAccountRead[]>("/finance/cash-accounts?is_active=true");
+}
+
+export async function transferCollectionToCompany(
+  eventId: number,
+  collectionId: number,
+  payload: CashTransferCreatePayload
+): Promise<CashTransferRead> {
+  return requestJson<CashTransferRead>(
+    `/events/${eventId}/payments/collections/${collectionId}/transfer-to-company`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }

@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   cancelCollection,
+  fetchCashAccounts,
   fetchCustomers,
   fetchEventPayments,
   fetchEvents,
   fetchPartners,
+  transferCollectionToCompany,
 } from "../api/financeCenterApi";
 import type {
+  CashAccountRead,
   CollectionRead,
   CustomerListItem,
   EventRead,
@@ -30,6 +33,10 @@ type CollectionRecordsSectionProps = {
 function getCurrentPeriodMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function getPeriodMonthFromDate(value: string | null | undefined) {
@@ -141,6 +148,15 @@ function getPaymentMethodLabel(method: string) {
   return labels[method] ?? method;
 }
 
+function canTransferCollection(row: CollectionRow) {
+  return (
+    !row.collection.is_cancelled &&
+    row.collection.received_by_partner_id !== null &&
+    row.collection.current_location !== "company" &&
+    !row.collection.is_transferred_to_company
+  );
+}
+
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-bold text-slate-500">
@@ -164,10 +180,22 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [rows, setRows] = useState<CollectionRow[]>([]);
   const [selectedRow, setSelectedRow] = useState<CollectionRow | null>(null);
+
   const [cancelTarget, setCancelTarget] = useState<CollectionRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  const [transferTarget, setTransferTarget] = useState<CollectionRow | null>(null);
+  const [cashAccounts, setCashAccounts] = useState<CashAccountRead[]>([]);
+  const [selectedCashAccountId, setSelectedCashAccountId] = useState("");
+  const [transferDate, setTransferDate] = useState(getTodayDate());
+  const [transferMethod, setTransferMethod] = useState("cash");
+  const [transferDocumentNo, setTransferDocumentNo] = useState("");
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [isLoadingCashAccounts, setIsLoadingCashAccounts] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -192,23 +220,15 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
       ]);
 
       const customerMap = new Map<number, CustomerListItem>();
-      customers.forEach((customer) => {
-        customerMap.set(customer.id, customer);
-      });
+      customers.forEach((customer) => customerMap.set(customer.id, customer));
 
       const partnerMap = new Map<number, PartnerRead>();
-      partners.forEach((partner) => {
-        partnerMap.set(partner.id, partner);
-      });
+      partners.forEach((partner) => partnerMap.set(partner.id, partner));
 
       const paymentResults = await Promise.allSettled(
         events.map(async (eventItem) => {
           const detail = await fetchEventPayments(eventItem.id);
-
-          return {
-            eventItem,
-            detail,
-          };
+          return { eventItem, detail };
         })
       );
 
@@ -221,10 +241,7 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
 
         const { eventItem, detail } = result.value;
         const planMap = new Map<number, PaymentPlanRead>();
-
-        detail.payment_plans.forEach((plan) => {
-          planMap.set(plan.id, plan);
-        });
+        detail.payment_plans.forEach((plan) => planMap.set(plan.id, plan));
 
         detail.collections.forEach((collection) => {
           loadedRows.push({
@@ -267,13 +284,8 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
 
   const periodOptions = useMemo(() => {
     const periods = new Set<string>();
-
-    rows.forEach((row) => {
-      periods.add(getPeriodMonthFromDate(row.collection.collection_date));
-    });
-
+    rows.forEach((row) => periods.add(getPeriodMonthFromDate(row.collection.collection_date)));
     periods.add(currentPeriodMonth);
-
     return Array.from(periods).sort().reverse();
   }, [rows, currentPeriodMonth]);
 
@@ -282,7 +294,6 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
 
     return rows.filter((row) => {
       const collectionPeriod = getPeriodMonthFromDate(row.collection.collection_date);
-
       const matchesPeriod = periodFilter === "all" || collectionPeriod === periodFilter;
 
       const matchesLocation =
@@ -373,6 +384,32 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
     setCancelError(null);
   }
 
+  async function openTransferModal(row: CollectionRow) {
+    setTransferTarget(row);
+    setSelectedCashAccountId("");
+    setTransferDate(getTodayDate());
+    setTransferMethod("cash");
+    setTransferDocumentNo("");
+    setTransferNotes("");
+    setTransferError(null);
+
+    try {
+      setIsLoadingCashAccounts(true);
+      const accounts = await fetchCashAccounts();
+      setCashAccounts(accounts);
+      const firstActiveAccount = accounts.find((account) => account.is_active);
+      if (firstActiveAccount) {
+        setSelectedCashAccountId(String(firstActiveAccount.id));
+      }
+    } catch (error) {
+      setTransferError(
+        error instanceof Error ? error.message : "Kasa/banka hesapları alınamadı."
+      );
+    } finally {
+      setIsLoadingCashAccounts(false);
+    }
+  }
+
   async function handleCancelCollection() {
     if (!cancelTarget) {
       return;
@@ -402,6 +439,50 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
       setCancelError(error instanceof Error ? error.message : "Tahsilat iptal edilemedi.");
     } finally {
       setIsCancelling(false);
+    }
+  }
+
+  async function handleTransferCollection() {
+    if (!transferTarget) {
+      return;
+    }
+
+    const cashAccountId = Number(selectedCashAccountId);
+
+    if (!cashAccountId) {
+      setTransferError("Teslim alınacak kasa/banka hesabı seçilmelidir.");
+      return;
+    }
+
+    if (!transferDate) {
+      setTransferError("Teslim tarihi zorunludur.");
+      return;
+    }
+
+    try {
+      setIsTransferring(true);
+      setTransferError(null);
+
+      await transferCollectionToCompany(transferTarget.event.id, transferTarget.collection.id, {
+        to_cash_account_id: cashAccountId,
+        transfer_date: transferDate,
+        transfer_method: transferMethod,
+        document_no: transferDocumentNo.trim() || null,
+        notes: transferNotes.trim() || null,
+      });
+
+      setTransferTarget(null);
+      setSelectedRow(null);
+      await loadCollections();
+      await onChanged?.();
+    } catch (error) {
+      setTransferError(
+        error instanceof Error
+          ? error.message
+          : "Ortak üzerindeki tahsilat şirkete teslim alınamadı."
+      );
+    } finally {
+      setIsTransferring(false);
     }
   }
 
@@ -600,6 +681,15 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
                       >
                         Detay Aç
                       </button>
+                      {canTransferCollection(row) ? (
+                        <button
+                          type="button"
+                          onClick={() => openTransferModal(row)}
+                          className="rounded-full border border-amber-100 bg-amber-50 px-4 py-2 text-xs font-black text-amber-800 shadow-sm"
+                        >
+                          Şirkete Teslim Al
+                        </button>
+                      ) : null}
                       {!row.collection.is_cancelled ? (
                         <button
                           type="button"
@@ -659,6 +749,7 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
           row={selectedRow}
           onClose={() => setSelectedRow(null)}
           onCancelRequest={openCancelModal}
+          onTransferRequest={openTransferModal}
         />
       ) : null}
 
@@ -682,6 +773,42 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
           onConfirm={handleCancelCollection}
         />
       ) : null}
+
+      {transferTarget ? (
+        <TransferCollectionModal
+          row={transferTarget}
+          cashAccounts={cashAccounts}
+          selectedCashAccountId={selectedCashAccountId}
+          transferDate={transferDate}
+          transferMethod={transferMethod}
+          transferDocumentNo={transferDocumentNo}
+          transferNotes={transferNotes}
+          error={transferError}
+          isLoadingCashAccounts={isLoadingCashAccounts}
+          isTransferring={isTransferring}
+          onCashAccountChange={(value) => {
+            setSelectedCashAccountId(value);
+            setTransferError(null);
+          }}
+          onTransferDateChange={(value) => {
+            setTransferDate(value);
+            setTransferError(null);
+          }}
+          onTransferMethodChange={(value) => {
+            setTransferMethod(value);
+            setTransferError(null);
+          }}
+          onDocumentNoChange={setTransferDocumentNo}
+          onNotesChange={setTransferNotes}
+          onClose={() => {
+            if (!isTransferring) {
+              setTransferTarget(null);
+              setTransferError(null);
+            }
+          }}
+          onConfirm={handleTransferCollection}
+        />
+      ) : null}
     </section>
   );
 }
@@ -690,10 +817,12 @@ function CollectionDetailModal({
   row,
   onClose,
   onCancelRequest,
+  onTransferRequest,
 }: {
   row: CollectionRow;
   onClose: () => void;
   onCancelRequest: (row: CollectionRow) => void;
+  onTransferRequest: (row: CollectionRow) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
@@ -754,7 +883,16 @@ function CollectionDetailModal({
             </p>
           </div>
         ) : (
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            {canTransferCollection(row) ? (
+              <button
+                type="button"
+                onClick={() => onTransferRequest(row)}
+                className="rounded-full border border-amber-100 bg-amber-50 px-5 py-3 text-sm font-black text-amber-800 shadow-sm"
+              >
+                Şirkete Teslim Al
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => onCancelRequest(row)}
@@ -852,6 +990,202 @@ function CancelCollectionModal({
             className="rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
           >
             {isCancelling ? "İptal Ediliyor..." : "Tahsilatı İptal Et"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TransferCollectionModal({
+  row,
+  cashAccounts,
+  selectedCashAccountId,
+  transferDate,
+  transferMethod,
+  transferDocumentNo,
+  transferNotes,
+  error,
+  isLoadingCashAccounts,
+  isTransferring,
+  onCashAccountChange,
+  onTransferDateChange,
+  onTransferMethodChange,
+  onDocumentNoChange,
+  onNotesChange,
+  onClose,
+  onConfirm,
+}: {
+  row: CollectionRow;
+  cashAccounts: CashAccountRead[];
+  selectedCashAccountId: string;
+  transferDate: string;
+  transferMethod: string;
+  transferDocumentNo: string;
+  transferNotes: string;
+  error: string | null;
+  isLoadingCashAccounts: boolean;
+  isTransferring: boolean;
+  onCashAccountChange: (value: string) => void;
+  onTransferDateChange: (value: string) => void;
+  onTransferMethodChange: (value: string) => void;
+  onDocumentNoChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-700">
+              Para Teslim İşlemi
+            </p>
+            <h3 className="mt-2 text-2xl font-black">Ortak Üzerindeki Tahsilat Şirkete Alınacak</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Bu işlem ortak üzerindeki parayı düşürür ve seçilen şirket kasa/banka hesabına giriş
+              kaydı oluşturur.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isTransferring}
+            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600 disabled:opacity-50"
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <div className="rounded-[1.25rem] border border-amber-100 bg-amber-50 p-4 text-amber-950">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+              Ortak Üzerindeki Para
+            </p>
+            <p className="mt-2 text-2xl font-black">
+              {formatMoney(row.collection.base_amount, row.collection.currency)}
+            </p>
+            <p className="mt-2 text-sm font-bold">
+              {row.partner?.full_name ?? "Ortak bulunamadı"}
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+              Müşteri / Etkinlik
+            </p>
+            <p className="mt-2 font-black">{row.customer?.name ?? "Müşteri bulunamadı"}</p>
+            <p className="mt-1 text-sm font-bold text-slate-500">{row.event.title}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Teslim Alınacak Kasa/Banka
+            </span>
+            <select
+              value={selectedCashAccountId}
+              onChange={(event) => onCashAccountChange(event.target.value)}
+              disabled={isLoadingCashAccounts || isTransferring}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-amber-300 disabled:opacity-60"
+            >
+              <option value="">
+                {isLoadingCashAccounts ? "Hesaplar yükleniyor..." : "Kasa/banka seçin"}
+              </option>
+              {cashAccounts
+                .filter((account) => account.is_active)
+                .map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.account_type === "bank" ? "Banka" : "Kasa"})
+                  </option>
+                ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Teslim Tarihi
+            </span>
+            <input
+              type="date"
+              value={transferDate}
+              onChange={(event) => onTransferDateChange(event.target.value)}
+              disabled={isTransferring}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-amber-300 disabled:opacity-60"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Teslim Şekli
+            </span>
+            <select
+              value={transferMethod}
+              onChange={(event) => onTransferMethodChange(event.target.value)}
+              disabled={isTransferring}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-amber-300 disabled:opacity-60"
+            >
+              <option value="cash">Nakit</option>
+              <option value="bank">Banka</option>
+              <option value="transfer">Havale / EFT</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Belge No
+            </span>
+            <input
+              value={transferDocumentNo}
+              onChange={(event) => onDocumentNoChange(event.target.value)}
+              disabled={isTransferring}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-amber-300 disabled:opacity-60"
+              placeholder="Opsiyonel"
+            />
+          </label>
+        </div>
+
+        <label className="mt-4 block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Not
+          </span>
+          <textarea
+            value={transferNotes}
+            onChange={(event) => onNotesChange(event.target.value)}
+            disabled={isTransferring}
+            className="min-h-24 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-amber-300 disabled:opacity-60"
+            placeholder="Opsiyonel"
+          />
+        </label>
+
+        <div className="mt-5 rounded-[1.25rem] border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+          <strong>Muhasebe etkisi:</strong> Ortak üzerindeki para azalır, şirket kasa/banka
+          hesabı artar. Denetim izi ve özetler işlem sonrası otomatik yenilenir.
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isTransferring}
+            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700 disabled:opacity-50"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isTransferring || isLoadingCashAccounts}
+            className="rounded-full bg-amber-500 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+          >
+            {isTransferring ? "Teslim Alınıyor..." : "Şirkete Teslim Al"}
           </button>
         </div>
       </div>

@@ -70,3 +70,17 @@ class FinancialMovementSummaryResponse(BaseModel):
     company_cash_out_base_amount: float
     partner_cash_in_base_amount: float
     partner_cash_out_base_amount: float
+
+class CashAccountRead(BaseModel):
+    id: int
+    account_type: str
+    name: str
+    currency: str
+    is_active: bool
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = {
+        "from_attributes": True
+    }

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.finance import FinancialMovement
+from app.models.payment import CashAccount
 
 
 def _to_float(value) -> float:
@@ -165,3 +166,23 @@ def get_financial_movements_summary(
         "partner_cash_in_base_amount": round(partner_cash_in_base_amount, 4),
         "partner_cash_out_base_amount": round(partner_cash_out_base_amount, 4),
     }
+
+def list_cash_accounts(
+    db: Session,
+    *,
+    is_active: bool | None = True,
+):
+    query = db.query(CashAccount)
+
+    if is_active is not None:
+        query = query.filter(CashAccount.is_active == is_active)
+
+    return (
+        query
+        .order_by(
+            CashAccount.account_type.asc(),
+            CashAccount.name.asc(),
+            CashAccount.id.asc(),
+        )
+        .all()
+    )

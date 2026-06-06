@@ -5,16 +5,32 @@ from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
 from app.modules.finance_center.schemas import (
+    CashAccountRead,
     FinancialMovementListResponse,
     FinancialMovementRead,
     FinancialMovementSummaryResponse,
 )
 from app.modules.finance_center.services import (
     get_financial_movements_summary,
+    list_cash_accounts,
     list_financial_movements,
 )
 
 router = APIRouter(prefix="/finance", tags=["Finance Center"])
+
+@router.get("/cash-accounts", response_model=list[CashAccountRead])
+def get_cash_accounts(
+    is_active: bool | None = True,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    return [
+        CashAccountRead.model_validate(item)
+        for item in list_cash_accounts(
+            db=db,
+            is_active=is_active,
+        )
+    ]
 
 
 @router.get("/movements", response_model=FinancialMovementListResponse)

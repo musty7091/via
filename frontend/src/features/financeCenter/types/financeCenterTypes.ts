@@ -243,3 +243,43 @@ export type CustomerListItem = {
   is_active: boolean;
   created_at: string;
 };
+
+export type CashAccountRead = {
+  id: number;
+  account_type: string;
+  name: string;
+  currency: string;
+  is_active: boolean;
+  notes?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type CashTransferCreatePayload = {
+  to_cash_account_id: number;
+  transfer_date: string;
+  transfer_method: string;
+  document_no?: string | null;
+  notes?: string | null;
+};
+
+export type CashTransferRead = {
+  id: number;
+  collection_id?: number | null;
+  from_partner_id?: number | null;
+  from_user_id?: number | null;
+  to_cash_account_id: number;
+  approved_by_user_id?: number | null;
+  transfer_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  transfer_method: string;
+  document_no?: string | null;
+  status: string;
+  print_count: number;
+  notes?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+};
