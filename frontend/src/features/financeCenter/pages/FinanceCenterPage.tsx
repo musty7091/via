@@ -15,6 +15,7 @@ import {
   fetchOpenCarryForwards,
   fetchPeriodExpenseSummary,
   fetchRecentFinanceMovements,
+  fetchSupplierPayables,
 } from "../api/financeCenterApi";
 import type {
   CustomerListItem,
@@ -31,6 +32,8 @@ import type {
   PeriodExpenseSummary,
 } from "../types/financeCenterTypes";
 import { CollectionRecordsSection } from "../components/CollectionRecordsSection";
+import { SupplierPayablesSection } from "../components/SupplierPayablesSection";
+import { SupplierPaymentQuickActionModal } from "../components/SupplierPaymentQuickActionModal";
 
 type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
@@ -251,6 +254,34 @@ function scrollToElementById(elementId: string) {
   }, 80);
 }
 
+async function fetchLiveSupplierPayableTotal() {
+  const events = await fetchEvents();
+  const results = await Promise.allSettled(
+    events.map((eventItem) => fetchSupplierPayables(eventItem.id))
+  );
+
+  return results.reduce((total, result) => {
+    if (result.status !== "fulfilled") {
+      return total;
+    }
+
+    return (
+      total +
+      result.value.payables
+        .filter(
+          (payable) =>
+            (payable.status === "open" || payable.status === "partial") &&
+            Number(payable.remaining_base_amount ?? 0) > 0
+        )
+        .reduce(
+          (payableTotal, payable) =>
+            payableTotal + Number(payable.remaining_base_amount ?? 0),
+          0
+        )
+    );
+  }, 0);
+}
+
 function getCarryTypeLabel(carryType: string) {
   const labels: Record<string, string> = {
     customer_receivable: "Müşteri Alacağı",
@@ -339,11 +370,14 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [movements, setMovements] = useState<FinancialMovement[]>([]);
   const [carryForwards, setCarryForwards] = useState<CarryForwardItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRead[]>([]);
+  const [liveSupplierPayableTotal, setLiveSupplierPayableTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [showSupplierPaymentModal, setShowSupplierPaymentModal] = useState(false);
+  const [supplierPayablesRefreshKey, setSupplierPayablesRefreshKey] = useState(0);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseWithAllocations | null>(null);
   const [isExpenseDetailLoading, setIsExpenseDetailLoading] = useState(false);
   const [expenseDetailError, setExpenseDetailError] = useState<string | null>(null);
@@ -361,6 +395,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
       fetchOpenCarryForwards(),
       fetchPeriodExpenseSummary(currentPeriodMonth),
       fetchExpenses(),
+      fetchLiveSupplierPayableTotal(),
     ]);
 
     if (results[0].status === "fulfilled") {
@@ -381,6 +416,10 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
     if (results[4].status === "fulfilled") {
       setExpenses(results[4].value);
+    }
+
+    if (results[5].status === "fulfilled") {
+      setLiveSupplierPayableTotal(results[5].value);
     }
 
     const rejected = results.filter((item) => item.status === "rejected");
@@ -405,9 +444,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
     .filter((item) => item.carry_type === "partner_cash_on_hand")
     .reduce((total, item) => total + Number(item.remaining_base_amount ?? 0), 0);
 
-  const supplierPayableTotal = carryForwards
-    .filter((item) => item.carry_type === "supplier_payable")
-    .reduce((total, item) => total + Number(item.remaining_base_amount ?? 0), 0);
+  const supplierPayableTotal = liveSupplierPayableTotal;
 
   const customerReceivableTotal = carryForwards
     .filter((item) => item.carry_type === "customer_receivable")
@@ -423,6 +460,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
     if (action.key === "expense") {
       setShowExpenseModal(true);
+      return;
+    }
+
+    if (action.key === "supplierPayment") {
+      setShowSupplierPaymentModal(true);
       return;
     }
 
@@ -639,6 +681,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
         <CollectionRecordsSection onChanged={loadDashboard} />
 
+        <SupplierPayablesSection refreshKey={supplierPayablesRefreshKey} />
+
         <ExpenseRecordsSection
           expenses={expenses}
           isDetailLoading={isExpenseDetailLoading}
@@ -656,9 +700,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
                 <h3 className="mt-1 text-2xl font-black">Açık işler</h3>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                  {carryForwards.length} kayıt
-                </span>
+                {isCarryForwardsOpen ? (
+                  <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                    {carryForwards.length} kayıt
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -716,9 +762,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
                 <h3 className="mt-1 text-2xl font-black">Denetim izi</h3>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                  {summary.total_count} toplam
-                </span>
+                {isMovementsOpen ? (
+                  <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                    {summary.total_count} toplam
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -788,6 +836,17 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           onClose={() => setShowCollectionModal(false)}
           onSaved={async () => {
             setShowCollectionModal(false);
+            await loadDashboard();
+          }}
+        />
+      ) : null}
+
+            {showSupplierPaymentModal ? (
+        <SupplierPaymentQuickActionModal
+          onClose={() => setShowSupplierPaymentModal(false)}
+          onSaved={async () => {
+            setShowSupplierPaymentModal(false);
+            setSupplierPayablesRefreshKey((previous) => previous + 1);
             await loadDashboard();
           }}
         />
@@ -1030,12 +1089,14 @@ function ExpenseRecordsSection({
             Bu liste genel dönem ve sezonluk gider kayıtları içindir. Etkinliğe özel giderler etkinlik finans/kârlılık ekranında yönetilir.
           </p>
         </div>
-        <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
-            Filtrelenmiş Aktif Toplam
-          </p>
-          <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
-        </div>
+        {isOpen ? (
+          <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
+              Filtrelenmiş Aktif Toplam
+            </p>
+            <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={() => {

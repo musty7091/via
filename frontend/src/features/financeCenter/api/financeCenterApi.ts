@@ -18,6 +18,11 @@ import type {
   FinancialMovementListResponse,
   FinancialMovementSummary,
   PeriodExpenseSummary,
+  ArtistRead,
+  ServiceItemRead,
+  EventSupplierPayablesDetail,
+  SupplierPaymentCreatePayload,
+  SupplierPaymentRead,
 } from "../types/financeCenterTypes";
 
 const API_BASE_URL =
@@ -189,6 +194,34 @@ export async function transferCollectionToCompany(
 ): Promise<CashTransferRead> {
   return requestJson<CashTransferRead>(
     `/events/${eventId}/payments/collections/${collectionId}/transfer-to-company`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function fetchArtists(): Promise<ArtistRead[]> {
+  return requestJson<ArtistRead[]>("/service-catalog/artists?is_active=true&limit=500");
+}
+
+export async function fetchServiceItems(): Promise<ServiceItemRead[]> {
+  return requestJson<ServiceItemRead[]>("/service-catalog/services?is_active=true&limit=500");
+}
+
+export async function fetchSupplierPayables(
+  eventId: number
+): Promise<EventSupplierPayablesDetail> {
+  return requestJson<EventSupplierPayablesDetail>(`/events/${eventId}/supplier-payables`);
+}
+
+export async function createSupplierPayment(
+  eventId: number,
+  payableId: number,
+  payload: SupplierPaymentCreatePayload
+): Promise<SupplierPaymentRead> {
+  return requestJson<SupplierPaymentRead>(
+    `/events/${eventId}/supplier-payables/${payableId}/payments`,
     {
       method: "POST",
       body: JSON.stringify(payload),

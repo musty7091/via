@@ -503,12 +503,14 @@ export function CollectionRecordsSection({ onChanged }: CollectionRecordsSection
           </p>
         </div>
         <div className="flex flex-wrap items-start justify-end gap-3">
-          <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
-              Filtrelenmiş Aktif Toplam
-            </p>
-            <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
-          </div>
+          {isOpen ? (
+            <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
+                Filtrelenmiş Aktif Toplam
+              </p>
+              <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={() => {

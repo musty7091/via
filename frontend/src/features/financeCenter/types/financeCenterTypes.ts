@@ -283,3 +283,104 @@ export type CashTransferRead = {
   created_at: string;
   updated_at?: string | null;
 };
+
+export type ArtistRead = {
+  id: number;
+  artist_type: string;
+  name: string;
+  manager_partner_id?: number | null;
+  default_cost_amount: number;
+  default_cost_currency: string;
+  default_sale_amount: number;
+  default_sale_currency: string;
+  notes?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type ServiceItemRead = {
+  id: number;
+  service_type: string;
+  name: string;
+  default_cost_amount: number;
+  default_cost_currency: string;
+  default_sale_amount: number;
+  default_sale_currency: string;
+  notes?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type SupplierPayableRead = {
+  id: number;
+  event_id: number;
+  artist_id?: number | null;
+  service_item_id?: number | null;
+  payable_type: string;
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  paid_base_amount: number;
+  remaining_base_amount: number;
+  status: string;
+  is_carried_forward: boolean;
+  carry_forward_item_id?: number | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type SupplierPaymentRead = {
+  id: number;
+  payable_id: number;
+  event_id: number;
+  paid_by_partner_id?: number | null;
+  paid_by_user_id?: number | null;
+  cash_account_id?: number | null;
+  payment_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  payment_method: string;
+  document_no?: string | null;
+  notes?: string | null;
+  is_cancelled: boolean;
+  cancellation_reason?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type SupplierPayablesSummary = {
+  event_id: number;
+  total_payable_base_amount: number;
+  total_paid_base_amount: number;
+  total_remaining_base_amount: number;
+  open_payable_count: number;
+  partial_payable_count: number;
+  paid_payable_count: number;
+};
+
+export type EventSupplierPayablesDetail = {
+  summary: SupplierPayablesSummary;
+  payables: SupplierPayableRead[];
+  payments: SupplierPaymentRead[];
+};
+
+export type SupplierPaymentCreatePayload = {
+  paid_by_partner_id?: number | null;
+  cash_account_id?: number | null;
+  payment_date: string;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  payment_method: string;
+  document_no?: string | null;
+  notes?: string | null;
+};
