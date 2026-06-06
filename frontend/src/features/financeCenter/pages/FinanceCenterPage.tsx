@@ -273,7 +273,11 @@ function getMovementLabel(movementType: string) {
 }
 
 function getExpenseScopeLabel(expense: ExpenseRead) {
-  return expense.is_allocated ? "Sezonluk Gider" : "Normal Dönem Gideri";
+  if (expense.event_id !== null) {
+    return "Etkinliğe Özel Gider";
+  }
+
+  return expense.is_allocated ? "Sezonluk Gider" : "Genel Dönem Gideri";
 }
 
 function getExpenseStatusLabel(expense: ExpenseRead) {
@@ -535,9 +539,9 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
             tone="white"
           />
           <SummaryCard
-            title="Bu Ay Gider Payı"
+            title="Bu Ay Genel Gider"
             value={formatMoney(periodExpenseSummary?.total_period_expense_base_amount ?? 0)}
-            description="Normal + sezonluk gider payı"
+            description="Genel dönem gideri + sezonluk gider payı"
             tone="dark"
           />
         </div>
@@ -840,6 +844,7 @@ function ExpenseRecordsSection({
   onOpenDetail: (expenseId: number) => void;
 }) {
   const [searchText, setSearchText] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<"general" | "event" | "all">("general");
   const [periodFilter, setPeriodFilter] = useState(currentPeriodMonth);
   const [scopeFilter, setScopeFilter] = useState<"all" | "period" | "season">("all");
   const [statusFilter, setStatusFilter] = useState<"active" | "cancelled" | "all">("active");
@@ -871,6 +876,12 @@ function ExpenseRecordsSection({
 
     return expenses.filter((expense) => {
       const expensePeriod = getPeriodMonthFromDate(expense.expense_date);
+      const isEventSpecificExpense = expense.event_id !== null;
+
+      const matchesSource =
+        sourceFilter === "all" ||
+        (sourceFilter === "general" && !isEventSpecificExpense) ||
+        (sourceFilter === "event" && isEventSpecificExpense);
 
       const matchesPeriod =
         periodFilter === "all" ||
@@ -906,9 +917,9 @@ function ExpenseRecordsSection({
       const matchesSearch =
         normalizedSearch.length === 0 || searchableText.includes(normalizedSearch);
 
-      return matchesPeriod && matchesScope && matchesStatus && matchesSearch;
+      return matchesPeriod && matchesScope && matchesStatus && matchesSource && matchesSearch;
     });
-  }, [expenses, periodFilter, scopeFilter, statusFilter, searchText]);
+  }, [expenses, periodFilter, scopeFilter, statusFilter, sourceFilter, searchText]);
 
   const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -928,6 +939,11 @@ function ExpenseRecordsSection({
 
   function changePeriodFilter(value: string) {
     setPeriodFilter(value);
+    resetToFirstPage();
+  }
+
+  function changeSourceFilter(value: "general" | "event" | "all") {
+    setSourceFilter(value);
     resetToFirstPage();
   }
 
@@ -956,11 +972,11 @@ function ExpenseRecordsSection({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-            Gider Kayıtları
+            Genel Gider Kayıtları
           </p>
-          <h3 className="mt-1 text-2xl font-black">Gider takip ekranı</h3>
+          <h3 className="mt-1 text-2xl font-black">Genel gider takip ekranı</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Giderler dönem, tür, durum ve arama filtresiyle kontrollü listelenir.
+            Bu liste genel dönem ve sezonluk gider kayıtları içindir. Etkinliğe özel giderler etkinlik finans/kârlılık ekranında yönetilir.
           </p>
         </div>
         <div className="rounded-[1.25rem] bg-slate-950 px-4 py-3 text-right text-white">
@@ -983,7 +999,7 @@ function ExpenseRecordsSection({
         />
       </div>
 
-      <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1.4fr_0.8fr]">
+      <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1fr_1.4fr_0.8fr]">
         <label className="block">
           <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
             Ay
@@ -999,6 +1015,23 @@ function ExpenseRecordsSection({
                 {formatPeriodMonth(period)}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            Gider Kaynağı
+          </span>
+          <select
+            value={sourceFilter}
+            onChange={(event) =>
+              changeSourceFilter(event.target.value as "general" | "event" | "all")
+            }
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+          >
+            <option value="general">Genel + Sezonluk</option>
+            <option value="event">Etkinliğe Özel</option>
+            <option value="all">Tümü</option>
           </select>
         </label>
 
@@ -1363,7 +1396,7 @@ function ExpenseModal({
                 : "border-slate-200 bg-slate-50 text-slate-950"
             }`}
           >
-            <p className="font-black">Normal Dönem Gideri</p>
+            <p className="font-black">Genel Dönem Gideri</p>
             <p className="mt-2 text-sm leading-6 opacity-70">
               Gider sadece seçilen ayın sonucuna dahil edilir.
             </p>
@@ -1505,7 +1538,7 @@ function ExpenseModal({
             <p className="font-black">
               {form.expenseScope === "season"
                 ? "Sezonluk Gider Aylara Dağıtılacak"
-                : "Normal Dönem Gideri Kaydedilecek"}
+                : "Genel Dönem Gideri Kaydedilecek"}
             </p>
             <p className="mt-2 text-sm leading-6">
               {form.expenseScope === "season"
