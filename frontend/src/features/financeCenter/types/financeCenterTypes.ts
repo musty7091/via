@@ -225,6 +225,10 @@ export type CreateCollectionPayload = {
   notes?: string | null;
 };
 
+export type CancelCollectionPayload = {
+  cancellation_reason: string;
+};
+
 export type CustomerListItem = {
   id: number;
   customer_type: string;

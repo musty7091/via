@@ -637,7 +637,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
 
-        <CollectionRecordsSection />
+        <CollectionRecordsSection onChanged={loadDashboard} />
 
         <ExpenseRecordsSection
           expenses={expenses}

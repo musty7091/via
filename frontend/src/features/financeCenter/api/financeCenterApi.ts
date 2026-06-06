@@ -3,6 +3,7 @@ import type {
   CustomerListItem,
   CollectionRead,
   CreateCollectionPayload,
+  CancelCollectionPayload,
   EventPaymentsDetail,
   EventRead,
   PartnerRead,
@@ -154,6 +155,20 @@ export async function createCollection(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function cancelCollection(
+  eventId: number,
+  collectionId: number,
+  payload: CancelCollectionPayload
+): Promise<CollectionRead> {
+  return requestJson<CollectionRead>(
+    `/events/${eventId}/payments/collections/${collectionId}/cancel`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export async function fetchCustomers(): Promise<CustomerListItem[]> {

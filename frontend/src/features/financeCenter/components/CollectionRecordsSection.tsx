@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  cancelCollection,
   fetchCustomers,
   fetchEventPayments,
   fetchEvents,
@@ -20,6 +21,10 @@ type CollectionRow = {
   customer: CustomerListItem | null;
   partner: PartnerRead | null;
   paymentPlan: PaymentPlanRead | null;
+};
+
+type CollectionRecordsSectionProps = {
+  onChanged?: () => Promise<void> | void;
 };
 
 function getCurrentPeriodMonth() {
@@ -155,10 +160,15 @@ function MiniMetric({ title, value }: { title: string; value: string }) {
   );
 }
 
-export function CollectionRecordsSection() {
+export function CollectionRecordsSection({ onChanged }: CollectionRecordsSectionProps) {
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [rows, setRows] = useState<CollectionRow[]>([]);
   const [selectedRow, setSelectedRow] = useState<CollectionRow | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<CollectionRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -357,8 +367,49 @@ export function CollectionRecordsSection() {
     resetToFirstPage();
   }
 
+  function openCancelModal(row: CollectionRow) {
+    setCancelTarget(row);
+    setCancelReason("");
+    setCancelError(null);
+  }
+
+  async function handleCancelCollection() {
+    if (!cancelTarget) {
+      return;
+    }
+
+    const reason = cancelReason.trim();
+
+    if (!reason) {
+      setCancelError("İptal nedeni zorunludur.");
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+      setCancelError(null);
+
+      await cancelCollection(cancelTarget.event.id, cancelTarget.collection.id, {
+        cancellation_reason: reason,
+      });
+
+      setCancelTarget(null);
+      setSelectedRow(null);
+      setCancelReason("");
+      await loadCollections();
+      await onChanged?.();
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "Tahsilat iptal edilemedi.");
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   return (
-    <section id="finance-collection-records-section" className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+    <section
+      id="finance-collection-records-section"
+      className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -370,229 +421,266 @@ export function CollectionRecordsSection() {
             durumu ile izlenir.
           </p>
         </div>
-        <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
-            Filtrelenmiş Aktif Toplam
-          </p>
-          <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            const nextIsOpen = !isOpen;
-            setIsOpen(nextIsOpen);
+        <div className="flex flex-wrap items-start justify-end gap-3">
+          <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
+              Filtrelenmiş Aktif Toplam
+            </p>
+            <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const nextIsOpen = !isOpen;
+              setIsOpen(nextIsOpen);
 
-            if (nextIsOpen) {
-              scrollToElementById("finance-collection-records-section");
-            }
-          }}
-          className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
-        >
-          {isOpen ? "Kapat ▲" : "Detayı Aç ▼"}
-        </button>
+              if (nextIsOpen) {
+                scrollToElementById("finance-collection-records-section");
+              }
+            }}
+            className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+          >
+            {isOpen ? "Kapat ▲" : "Detayı Aç ▼"}
+          </button>
+        </div>
       </div>
 
       {isOpen ? (
         <>
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <MiniMetric title="Filtrelenmiş Kayıt" value={String(filteredRows.length)} />
-        <MiniMetric
-          title="Aktif / İptal"
-          value={`${activeRows.length} / ${cancelledRows.length}`}
-        />
-        <MiniMetric title="Ortakta Bekleyen" value={formatMoney(partnerTotal)} />
-      </div>
-
-      <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1.4fr_0.8fr]">
-        <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-            Ay
-          </span>
-          <select
-            value={periodFilter}
-            onChange={(event) => changePeriodFilter(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
-          >
-            <option value="all">Tüm Aylar</option>
-            {periodOptions.map((period) => (
-              <option key={period} value={period}>
-                {formatPeriodMonth(period)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-            Para Durumu
-          </span>
-          <select
-            value={locationFilter}
-            onChange={(event) =>
-              changeLocationFilter(event.target.value as "all" | "company" | "partner")
-            }
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
-          >
-            <option value="all">Tümü</option>
-            <option value="company">Şirkette</option>
-            <option value="partner">Ortak Üzerinde</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-            Durum
-          </span>
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              changeStatusFilter(event.target.value as "active" | "cancelled" | "all")
-            }
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
-          >
-            <option value="active">Aktif</option>
-            <option value="cancelled">İptal Edilen</option>
-            <option value="all">Tümü</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-            Arama
-          </span>
-          <input
-            value={searchText}
-            onChange={(event) => changeSearchText(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
-            placeholder="Müşteri, etkinlik, belge no ara"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-            Sayfa
-          </span>
-          <select
-            value={pageSize}
-            onChange={(event) => changePageSize(Number(event.target.value))}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
-          >
-            <option value={5}>5 kayıt</option>
-            <option value={10}>10 kayıt</option>
-            <option value={20}>20 kayıt</option>
-            <option value={50}>50 kayıt</option>
-          </select>
-        </label>
-      </div>
-
-      {loadError ? (
-        <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
-          {loadError}
-        </div>
-      ) : null}
-
-      {isLoading ? (
-        <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-5 text-sm font-bold text-slate-500">
-          Tahsilat kayıtları yükleniyor...
-        </div>
-      ) : null}
-
-      <div className="mt-5 space-y-3">
-        {!isLoading && visibleRows.length === 0 ? (
-          <EmptyState text="Bu filtrelere uygun tahsilat kaydı bulunmuyor." />
-        ) : null}
-
-        {visibleRows.map((row) => (
-          <div
-            key={row.collection.id}
-            className={`rounded-[1.25rem] border p-4 ${
-              row.collection.is_cancelled
-                ? "border-red-100 bg-red-50"
-                : "border-slate-100 bg-slate-50"
-            }`}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-black">{row.customer?.name ?? "Müşteri bulunamadı"}</p>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${getCollectionLocationClasses(
-                      row.collection
-                    )}`}
-                  >
-                    {getCollectionLocationLabel(row.collection)}
-                  </span>
-                  {row.partner ? (
-                    <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">
-                      {row.partner.full_name}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm font-bold text-slate-600">{row.event.title}</p>
-                <p className="mt-1 text-xs font-bold text-slate-500">
-                  {formatDate(row.collection.collection_date)} ·{" "}
-                  {getPaymentMethodLabel(row.collection.payment_method)}
-                  {row.collection.document_no ? ` · Belge: ${row.collection.document_no}` : ""}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-black">
-                  {formatMoney(row.collection.base_amount, row.collection.currency)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRow(row)}
-                  className="mt-2 rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm"
-                >
-                  Detay Aç
-                </button>
-              </div>
-            </div>
-
-            {row.paymentPlan ? (
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Ödeme planı: <strong>{row.paymentPlan.title}</strong>
-              </p>
-            ) : null}
-
-            {row.collection.is_cancelled ? (
-              <p className="mt-3 text-sm leading-6 text-red-700">
-                İptal nedeni: {row.collection.cancellation_reason ?? "Belirtilmemiş"}
-              </p>
-            ) : null}
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <MiniMetric title="Filtrelenmiş Kayıt" value={String(filteredRows.length)} />
+            <MiniMetric
+              title="Aktif / İptal"
+              value={`${activeRows.length} / ${cancelledRows.length}`}
+            />
+            <MiniMetric title="Ortakta Bekleyen" value={formatMoney(partnerTotal)} />
           </div>
-        ))}
-      </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-bold text-slate-500">
-          Sayfa {safeCurrentPage} / {totalPages}
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
-            disabled={safeCurrentPage <= 1}
-            className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-40"
-          >
-            Önceki
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentPage((previous) => Math.min(totalPages, previous + 1))}
-            disabled={safeCurrentPage >= totalPages}
-            className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-40"
-          >
-            Sonraki
-          </button>
-        </div>
-      </div>
+          <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1.4fr_0.8fr]">
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                Ay
+              </span>
+              <select
+                value={periodFilter}
+                onChange={(event) => changePeriodFilter(event.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              >
+                <option value="all">Tüm Aylar</option>
+                {periodOptions.map((period) => (
+                  <option key={period} value={period}>
+                    {formatPeriodMonth(period)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                Para Durumu
+              </span>
+              <select
+                value={locationFilter}
+                onChange={(event) =>
+                  changeLocationFilter(event.target.value as "all" | "company" | "partner")
+                }
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              >
+                <option value="all">Tümü</option>
+                <option value="company">Şirkette</option>
+                <option value="partner">Ortak Üzerinde</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                Durum
+              </span>
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  changeStatusFilter(event.target.value as "active" | "cancelled" | "all")
+                }
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              >
+                <option value="active">Aktif</option>
+                <option value="cancelled">İptal Edilen</option>
+                <option value="all">Tümü</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                Arama
+              </span>
+              <input
+                value={searchText}
+                onChange={(event) => changeSearchText(event.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+                placeholder="Müşteri, etkinlik, belge no ara"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                Sayfa
+              </span>
+              <select
+                value={pageSize}
+                onChange={(event) => changePageSize(Number(event.target.value))}
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              >
+                <option value={5}>5 kayıt</option>
+                <option value={10}>10 kayıt</option>
+                <option value={20}>20 kayıt</option>
+                <option value={50}>50 kayıt</option>
+              </select>
+            </label>
+          </div>
+
+          {loadError ? (
+            <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+              {loadError}
+            </div>
+          ) : null}
+
+          {isLoading ? (
+            <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-5 text-sm font-bold text-slate-500">
+              Tahsilat kayıtları yükleniyor...
+            </div>
+          ) : null}
+
+          <div className="mt-5 space-y-3">
+            {!isLoading && visibleRows.length === 0 ? (
+              <EmptyState text="Bu filtrelere uygun tahsilat kaydı bulunmuyor." />
+            ) : null}
+
+            {visibleRows.map((row) => (
+              <div
+                key={row.collection.id}
+                className={`rounded-[1.25rem] border p-4 ${
+                  row.collection.is_cancelled
+                    ? "border-red-100 bg-red-50"
+                    : "border-slate-100 bg-slate-50"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-black">{row.customer?.name ?? "Müşteri bulunamadı"}</p>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black ${getCollectionLocationClasses(
+                          row.collection
+                        )}`}
+                      >
+                        {getCollectionLocationLabel(row.collection)}
+                      </span>
+                      {row.partner ? (
+                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">
+                          {row.partner.full_name}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-sm font-bold text-slate-600">{row.event.title}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      {formatDate(row.collection.collection_date)} ·{" "}
+                      {getPaymentMethodLabel(row.collection.payment_method)}
+                      {row.collection.document_no ? ` · Belge: ${row.collection.document_no}` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black">
+                      {formatMoney(row.collection.base_amount, row.collection.currency)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRow(row)}
+                        className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm"
+                      >
+                        Detay Aç
+                      </button>
+                      {!row.collection.is_cancelled ? (
+                        <button
+                          type="button"
+                          onClick={() => openCancelModal(row)}
+                          className="rounded-full border border-red-100 bg-red-50 px-4 py-2 text-xs font-black text-red-700 shadow-sm"
+                        >
+                          İptal Et
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {row.paymentPlan ? (
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    Ödeme planı: <strong>{row.paymentPlan.title}</strong>
+                  </p>
+                ) : null}
+
+                {row.collection.is_cancelled ? (
+                  <p className="mt-3 text-sm leading-6 text-red-700">
+                    İptal nedeni: {row.collection.cancellation_reason ?? "Belirtilmemiş"}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-bold text-slate-500">
+              Sayfa {safeCurrentPage} / {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
+                disabled={safeCurrentPage <= 1}
+                className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-40"
+              >
+                Önceki
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((previous) => Math.min(totalPages, previous + 1))}
+                disabled={safeCurrentPage >= totalPages}
+                className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-40"
+              >
+                Sonraki
+              </button>
+            </div>
+          </div>
         </>
       ) : null}
 
       {selectedRow ? (
-        <CollectionDetailModal row={selectedRow} onClose={() => setSelectedRow(null)} />
+        <CollectionDetailModal
+          row={selectedRow}
+          onClose={() => setSelectedRow(null)}
+          onCancelRequest={openCancelModal}
+        />
+      ) : null}
+
+      {cancelTarget ? (
+        <CancelCollectionModal
+          row={cancelTarget}
+          reason={cancelReason}
+          error={cancelError}
+          isCancelling={isCancelling}
+          onReasonChange={(value) => {
+            setCancelReason(value);
+            setCancelError(null);
+          }}
+          onClose={() => {
+            if (!isCancelling) {
+              setCancelTarget(null);
+              setCancelReason("");
+              setCancelError(null);
+            }
+          }}
+          onConfirm={handleCancelCollection}
+        />
       ) : null}
     </section>
   );
@@ -601,9 +689,11 @@ export function CollectionRecordsSection() {
 function CollectionDetailModal({
   row,
   onClose,
+  onCancelRequest,
 }: {
   row: CollectionRow;
   onClose: () => void;
+  onCancelRequest: (row: CollectionRow) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
@@ -663,7 +753,107 @@ function CollectionDetailModal({
               {row.collection.cancellation_reason ?? "İptal nedeni belirtilmemiş."}
             </p>
           </div>
+        ) : (
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={() => onCancelRequest(row)}
+              className="rounded-full border border-red-100 bg-red-50 px-5 py-3 text-sm font-black text-red-700 shadow-sm"
+            >
+              Tahsilatı İptal Et
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CancelCollectionModal({
+  row,
+  reason,
+  error,
+  isCancelling,
+  onReasonChange,
+  onClose,
+  onConfirm,
+}: {
+  row: CollectionRow;
+  reason: string;
+  error: string | null;
+  isCancelling: boolean;
+  onReasonChange: (value: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 py-6">
+      <div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-red-700">
+              Kritik İşlem
+            </p>
+            <h3 className="mt-2 text-2xl font-black">Tahsilat İptal Edilecek</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Bu işlem tahsilatı silmez. Sistem ters kayıt oluşturur, müşteri alacağı ve
+              kasa/ortak hareketi muhasebe mantığıyla geri alınır.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isCancelling}
+            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600 disabled:opacity-50"
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-[1.25rem] border border-red-100 bg-red-50 p-4 text-red-950">
+          <p className="font-black">{row.customer?.name ?? "Müşteri bulunamadı"}</p>
+          <p className="mt-1 text-sm leading-6">
+            {row.event.title} · {formatMoney(row.collection.base_amount, row.collection.currency)}
+          </p>
+        </div>
+
+        <label className="mt-5 block">
+          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            İptal Nedeni
+          </span>
+          <textarea
+            value={reason}
+            onChange={(event) => onReasonChange(event.target.value)}
+            className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-red-300"
+            placeholder="Örn: Yanlış müşteriye tahsilat işlendi."
+            disabled={isCancelling}
+          />
+        </label>
+
+        {error ? (
+          <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+            {error}
+          </div>
         ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isCancelling}
+            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700 disabled:opacity-50"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isCancelling}
+            className="rounded-full bg-red-600 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+          >
+            {isCancelling ? "İptal Ediliyor..." : "Tahsilatı İptal Et"}
+          </button>
+        </div>
       </div>
     </div>
   );
