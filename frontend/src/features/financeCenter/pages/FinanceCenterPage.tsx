@@ -34,6 +34,7 @@ import type {
 import { CollectionRecordsSection } from "../components/CollectionRecordsSection";
 import { SupplierPayablesSection } from "../components/SupplierPayablesSection";
 import { SupplierPaymentQuickActionModal } from "../components/SupplierPaymentQuickActionModal";
+import { CarryForwardSettlementSection } from "../components/CarryForwardSettlementSection";
 
 type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
@@ -378,13 +379,13 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showSupplierPaymentModal, setShowSupplierPaymentModal] = useState(false);
   const [supplierPayablesRefreshKey, setSupplierPayablesRefreshKey] = useState(0);
+  const [carryForwardFocusKey, setCarryForwardFocusKey] = useState(0);
   const [collectionQuickOpenKey, setCollectionQuickOpenKey] = useState(0);
   const [collectionQuickOpenMode, setCollectionQuickOpenMode] = useState<"partner-cash" | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseWithAllocations | null>(null);
   const [isExpenseDetailLoading, setIsExpenseDetailLoading] = useState(false);
   const [expenseDetailError, setExpenseDetailError] = useState<string | null>(null);
   const [cancelExpenseTarget, setCancelExpenseTarget] = useState<ExpenseRead | null>(null);
-  const [isCarryForwardsOpen, setIsCarryForwardsOpen] = useState(false);
   const [isMovementsOpen, setIsMovementsOpen] = useState(false);
 
   async function loadDashboard() {
@@ -473,6 +474,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
     if (action.key === "partnerCash") {
       setCollectionQuickOpenMode("partner-cash");
       setCollectionQuickOpenKey((previous) => previous + 1);
+      return;
+    }
+
+    if (action.key === "carryForward") {
+      setCarryForwardFocusKey((previous) => previous + 1);
       return;
     }
 
@@ -703,67 +709,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
         />
 
         <div className="mt-6 space-y-4">
-          <section id="finance-carry-forwards-section" className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                  Devreden Kalemler
-                </p>
-                <h3 className="mt-1 text-2xl font-black">Açık işler</h3>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {isCarryForwardsOpen ? (
-                  <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                    {carryForwards.length} kayıt
-                  </span>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                  const nextIsOpen = !isCarryForwardsOpen;
-                  setIsCarryForwardsOpen(nextIsOpen);
-
-                  if (nextIsOpen) {
-                    scrollToElementById("finance-carry-forwards-section");
-                  }
-                }}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
-                >
-                  {isCarryForwardsOpen ? "Kapat ▲" : "Detayı Aç ▼"}
-                </button>
-              </div>
-            </div>
-
-            {isCarryForwardsOpen ? (
-              <div className="mt-5 space-y-3">
-                {carryForwards.length === 0 ? (
-                  <EmptyState text="Açık devreden kalem bulunmuyor." />
-                ) : (
-                  carryForwards.slice(0, 5).map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-black">{getCarryTypeLabel(item.carry_type)}</p>
-                          <p className="mt-1 text-xs font-bold text-slate-500">
-                            {item.source_period_month ?? "-"} → {item.target_period_month ?? "-"}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700">
-                          {formatMoney(item.remaining_base_amount, item.currency)}
-                        </span>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-500">
-                        {item.carry_reason}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            ) : null}
-          </section>
+          <CarryForwardSettlementSection
+            carryForwards={carryForwards}
+            focusKey={carryForwardFocusKey}
+            onChanged={loadDashboard}
+          />
 
           <section id="finance-movements-section" className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
             <div className="flex items-start justify-between gap-3">

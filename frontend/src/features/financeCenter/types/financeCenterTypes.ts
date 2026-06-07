@@ -55,6 +55,35 @@ export type CarryForwardItem = {
   notes: string | null;
 };
 
+export type CarryForwardSettlementPayload = {
+  settlement_date: string;
+  amount: number;
+  cash_account_id?: number | null;
+  payment_method: string;
+  document_no?: string | null;
+  notes?: string | null;
+};
+
+export type CarryForwardSettlementResponse = {
+  carry_forward_item_id: number;
+  carry_type: string;
+  status: string;
+  source_period_month?: string | null;
+  target_period_month?: string | null;
+  event_id?: number | null;
+  customer_id?: number | null;
+  partner_id?: number | null;
+  artist_id?: number | null;
+  service_item_id?: number | null;
+  settled_base_amount: number;
+  remaining_base_amount: number;
+  settlement_date: string;
+  movement_ids: number[];
+  created_supplier_payment_id?: number | null;
+  message: string;
+};
+
+
 export type PeriodExpenseSummary = {
   period_month: string;
   direct_general_expense_base_amount: number;

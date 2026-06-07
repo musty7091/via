@@ -12,6 +12,8 @@ import type {
   PartnerRead,
   CancelExpensePayload,
   CarryForwardItem,
+  CarryForwardSettlementPayload,
+  CarryForwardSettlementResponse,
   CreateExpensePayload,
   ExpenseRead,
   ExpenseWithAllocations,
@@ -94,6 +96,16 @@ export async function fetchRecentFinanceMovements(): Promise<FinancialMovementLi
 
 export async function fetchOpenCarryForwards(): Promise<CarryForwardItem[]> {
   return requestJson<CarryForwardItem[]>("/carry-forwards/open");
+}
+
+export async function settleCarryForwardItem(
+  itemId: number,
+  payload: CarryForwardSettlementPayload
+): Promise<CarryForwardSettlementResponse> {
+  return requestJson<CarryForwardSettlementResponse>(`/carry-forwards/${itemId}/settle`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchPeriodExpenseSummary(
