@@ -106,7 +106,7 @@ function getCarryTypeHelp(carryType: string) {
     company_payable_to_partner:
       "Geçmiş dönemden şirketin ortağa olan borcu ödenir.",
     open_event:
-      "Açık etkinlik devri bu ekrandan para işlemiyle kapanmaz. Etkinlik finans kapanışı ayrıca tamamlanmalıdır.",
+      "Bu kalem açık bir etkinliktir. Etkinlik; gelir, tahsilat, maliyet, ödeme ve kâr/zarar hesabı birlikte kontrol edilerek ayrı Etkinlik Finans Kapanışı ekranında kapatılacaktır.",
   };
 
   return labels[carryType] ?? "Devreden açık kalem takip edilir.";
@@ -436,9 +436,9 @@ export function CarryForwardSettlementSection({
 
           {openEventCount > 0 ? (
             <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-              <p className="font-black">Bilgi</p>
+              <p className="font-black">Açık etkinlik notu</p>
               <p className="mt-1">
-                Açık etkinlik devirleri bu ekrandan para işlemiyle kapatılmaz. Onlar için etkinlik finans kapanışı ayrı tamamlanacak.
+                Açık etkinlikler tek bir tahsilat veya ödeme hareketiyle kapatılmaz. Bu kalemler için gelir, tahsilat, maliyet, ödeme ve kâr/zarar hesabı ayrı bir Etkinlik Finans Kapanışı ekranında tamamlanacaktır.
               </p>
             </div>
           ) : null}

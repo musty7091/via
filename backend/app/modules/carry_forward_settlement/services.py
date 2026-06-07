@@ -387,7 +387,7 @@ def settle_carry_forward_item(
     if item.carry_type == "open_event":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Açık etkinlik devir kalemi ödeme/tahsilat ile kapatılamaz. Etkinlik finans kapanışı ayrıca tamamlanmalıdır.",
+            detail="Açık etkinlikler tek bir tahsilat veya ödeme hareketiyle kapatılamaz. Bu kalemler için gelir, tahsilat, maliyet, ödeme ve kâr/zarar hesabı ayrı bir Etkinlik Finans Kapanışı ekranında tamamlanmalıdır.",
         )
 
     amount = _validate_settlement_amount(item=item, amount=payload.amount)
