@@ -35,6 +35,7 @@ import { CollectionRecordsSection } from "../components/CollectionRecordsSection
 import { SupplierPayablesSection } from "../components/SupplierPayablesSection";
 import { SupplierPaymentQuickActionModal } from "../components/SupplierPaymentQuickActionModal";
 import { CarryForwardSettlementSection } from "../components/CarryForwardSettlementSection";
+import { EventFinancialClosureSection } from "../components/EventFinancialClosureSection";
 
 type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
@@ -46,6 +47,7 @@ type QuickActionKey =
   | "supplierPayment"
   | "partnerCash"
   | "carryForward"
+  | "eventClosure"
   | "periodClose";
 
 type QuickAction = {
@@ -138,6 +140,17 @@ const quickActions: QuickAction[] = [
     warningTitle: "Devreden Kalem İşlenecek",
     warningMessage:
       "Bu işlem geçmiş dönemden gelen açık kalemi kapatır. Eski dönem kilidi korunur ve yeni dönem kâr/gider hesabı bozulmaz.",
+  },
+  {
+    key: "eventClosure",
+    title: "Etkinlik Finans Kapanışı",
+    description: "Tek etkinliğin gelir, maliyet ve kâr/zarar hesabını kapat.",
+    helper: "Açık alacak, borç ve ortak bakiyesi kontrol edilir.",
+    icon: "◇",
+    tone: "teal",
+    warningTitle: "Etkinlik Finans Kapanışı Açılacak",
+    warningMessage:
+      "Bu işlem seçilen etkinlik için anlaşma, tahsilat, sanatçı/hizmet borçları, etkinlik giderleri ve kâr/zarar kontrolünü açar. Hazır olmayan etkinlik onaylanamaz.",
   },
   {
     key: "periodClose",
@@ -380,6 +393,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [showSupplierPaymentModal, setShowSupplierPaymentModal] = useState(false);
   const [supplierPayablesRefreshKey, setSupplierPayablesRefreshKey] = useState(0);
   const [carryForwardFocusKey, setCarryForwardFocusKey] = useState(0);
+  const [eventClosureFocusKey, setEventClosureFocusKey] = useState(0);
   const [collectionQuickOpenKey, setCollectionQuickOpenKey] = useState(0);
   const [collectionQuickOpenMode, setCollectionQuickOpenMode] = useState<"partner-cash" | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseWithAllocations | null>(null);
@@ -479,6 +493,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
     if (action.key === "carryForward") {
       setCarryForwardFocusKey((previous) => previous + 1);
+      return;
+    }
+
+    if (action.key === "eventClosure") {
+      setEventClosureFocusKey((previous) => previous + 1);
       return;
     }
 
@@ -709,6 +728,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
         />
 
         <div className="mt-6 space-y-4">
+          <EventFinancialClosureSection
+            focusKey={eventClosureFocusKey}
+            onChanged={loadDashboard}
+          />
+
           <CarryForwardSettlementSection
             carryForwards={carryForwards}
             focusKey={carryForwardFocusKey}

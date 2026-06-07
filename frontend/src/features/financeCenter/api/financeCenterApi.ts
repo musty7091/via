@@ -9,6 +9,11 @@ import type {
   CashTransferRead,
   EventPaymentsDetail,
   EventRead,
+  EventFinancialClosureReopenPayload,
+  EventFinancialClosureRead,
+  EventFinancialClosurePreparePayload,
+  EventFinancialClosureChecklistResponse,
+  EventFinancialClosureApprovePayload,
   PartnerRead,
   CancelExpensePayload,
   CarryForwardItem,
@@ -162,6 +167,61 @@ export async function fetchEvents(): Promise<EventRead[]> {
 
 export async function fetchEventPayments(eventId: number): Promise<EventPaymentsDetail> {
   return requestJson<EventPaymentsDetail>(`/events/${eventId}/payments`);
+}
+
+export async function fetchEventFinancialClosureChecklist(
+  eventId: number
+): Promise<EventFinancialClosureChecklistResponse> {
+  return requestJson<EventFinancialClosureChecklistResponse>(
+    `/events/${eventId}/financial-closure/checklist`
+  );
+}
+
+export async function fetchLatestEventFinancialClosure(
+  eventId: number
+): Promise<EventFinancialClosureRead | null> {
+  return requestJson<EventFinancialClosureRead | null>(
+    `/events/${eventId}/financial-closure/latest`
+  );
+}
+
+export async function prepareEventFinancialClosure(
+  eventId: number,
+  payload: EventFinancialClosurePreparePayload
+): Promise<EventFinancialClosureRead> {
+  return requestJson<EventFinancialClosureRead>(
+    `/events/${eventId}/financial-closure/prepare`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function approveEventFinancialClosure(
+  eventId: number,
+  payload: EventFinancialClosureApprovePayload
+): Promise<EventFinancialClosureRead> {
+  return requestJson<EventFinancialClosureRead>(
+    `/events/${eventId}/financial-closure/approve`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function reopenEventFinancialClosure(
+  eventId: number,
+  payload: EventFinancialClosureReopenPayload
+): Promise<EventFinancialClosureRead> {
+  return requestJson<EventFinancialClosureRead>(
+    `/events/${eventId}/financial-closure/reopen`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export async function fetchPartners(): Promise<PartnerRead[]> {

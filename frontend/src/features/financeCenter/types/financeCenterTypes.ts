@@ -83,6 +83,102 @@ export type CarryForwardSettlementResponse = {
   message: string;
 };
 
+export type FinancialClosureChecklistItem = {
+  key: string;
+  title: string;
+  is_ok: boolean;
+  blocking: boolean;
+  severity: string;
+  message: string;
+};
+
+export type EventFinancialClosureChecklistResponse = {
+  event_id: number;
+  event_title: string;
+  event_status: string;
+  period_month: string | null;
+  closure_ready: boolean;
+  blocking_issue_count: number;
+  warning_count: number;
+  agreement_base_amount: number;
+  planned_base_amount: number;
+  collected_base_amount: number;
+  remaining_customer_receivable_base_amount: number;
+  total_event_cost_base_amount: number;
+  total_expense_base_amount: number;
+  remaining_supplier_payable_base_amount: number;
+  partner_cash_on_hand_base_amount: number;
+  company_receivable_from_partner_base_amount: number;
+  company_payable_to_partner_base_amount: number;
+  operational_profit_base_amount: number;
+  distributable_profit_base_amount: number;
+  partner_share_base_amount: number;
+  is_agreement_confirmed: boolean;
+  is_payment_plan_matched: boolean;
+  is_collection_completed: boolean;
+  are_costs_completed: boolean;
+  are_expenses_completed: boolean;
+  are_supplier_debts_closed_or_carried: boolean;
+  are_partner_cash_items_closed_or_carried: boolean;
+  is_profit_calculated: boolean;
+  is_partner_share_calculated: boolean;
+  checklist: FinancialClosureChecklistItem[];
+};
+
+export type EventFinancialClosureRead = {
+  id: number;
+  event_id: number;
+  monthly_period_id: number | null;
+  period_month: string | null;
+  closure_version: number;
+  status: string;
+  agreement_base_amount: number;
+  planned_base_amount: number;
+  collected_base_amount: number;
+  remaining_customer_receivable_base_amount: number;
+  total_event_cost_base_amount: number;
+  total_expense_base_amount: number;
+  remaining_supplier_payable_base_amount: number;
+  partner_cash_on_hand_base_amount: number;
+  company_receivable_from_partner_base_amount: number;
+  company_payable_to_partner_base_amount: number;
+  operational_profit_base_amount: number;
+  distributable_profit_base_amount: number;
+  partner_share_base_amount: number;
+  is_agreement_confirmed: boolean;
+  is_payment_plan_matched: boolean;
+  is_collection_completed: boolean;
+  are_costs_completed: boolean;
+  are_expenses_completed: boolean;
+  are_supplier_debts_closed_or_carried: boolean;
+  are_partner_cash_items_closed_or_carried: boolean;
+  is_profit_calculated: boolean;
+  is_partner_share_calculated: boolean;
+  prepared_by_user_id: number | null;
+  prepared_at: string | null;
+  approved_by_user_id: number | null;
+  approved_at: string | null;
+  reopened_by_user_id: number | null;
+  reopened_at: string | null;
+  reopen_reason: string | null;
+  closing_note: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type EventFinancialClosurePreparePayload = {
+  closing_note?: string | null;
+};
+
+export type EventFinancialClosureApprovePayload = {
+  approval_note?: string | null;
+};
+
+export type EventFinancialClosureReopenPayload = {
+  reopen_reason: string;
+};
+
 
 export type PeriodExpenseSummary = {
   period_month: string;
