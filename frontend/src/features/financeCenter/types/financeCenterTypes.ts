@@ -102,6 +102,8 @@ export type EventFinancialClosureChecklistResponse = {
   warning_count: number;
   agreement_base_amount: number;
   planned_base_amount: number;
+  period_collected_base_amount: number;
+  carried_customer_collection_base_amount: number;
   collected_base_amount: number;
   remaining_customer_receivable_base_amount: number;
   total_event_cost_base_amount: number;

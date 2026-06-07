@@ -24,6 +24,8 @@ class EventFinancialClosureChecklistResponse(BaseModel):
 
     agreement_base_amount: float
     planned_base_amount: float
+    period_collected_base_amount: float
+    carried_customer_collection_base_amount: float
     collected_base_amount: float
     remaining_customer_receivable_base_amount: float
 

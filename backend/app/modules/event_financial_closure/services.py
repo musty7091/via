@@ -419,6 +419,8 @@ def calculate_event_financial_closure_snapshot(
         warning_count=warning_count,
         agreement_base_amount=agreement_base_amount,
         planned_base_amount=planned_base_amount,
+        period_collected_base_amount=period_collected_base_amount,
+        carried_customer_collection_base_amount=carried_customer_collection_base_amount,
         collected_base_amount=collected_base_amount,
         remaining_customer_receivable_base_amount=remaining_customer_receivable_base_amount,
         total_event_cost_base_amount=total_event_cost_base_amount,

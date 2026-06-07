@@ -567,9 +567,9 @@ export function EventFinancialClosureSection({
 
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <MiniMetric
-                  title="Tahsilat Durumu"
+                  title="Toplam Tahsilat"
                   value={formatMoney(checklist.collected_base_amount)}
-                  subtitle={`Plan: ${formatMoney(checklist.planned_base_amount)} · Anlaşma: ${formatMoney(checklist.agreement_base_amount)}`}
+                  subtitle={`Normal: ${formatMoney(checklist.period_collected_base_amount)} · Devreden: ${formatMoney(checklist.carried_customer_collection_base_amount)}`}
                 />
                 <MiniMetric
                   title="Kalan Müşteri Alacağı"
@@ -587,6 +587,15 @@ export function EventFinancialClosureSection({
                   strong
                 />
               </div>
+
+              {checklist.carried_customer_collection_base_amount > 0 ? (
+                <div className="rounded-[1.5rem] border border-teal-100 bg-teal-50 p-4 text-sm font-bold leading-6 text-teal-950">
+                  <p className="font-black">Devreden tahsilat dahil edildi</p>
+                  <p className="mt-1">
+                    Bu etkinliğe ait eski dönem alacağı sonradan tahsil edilmiş. Bu tutar toplam tahsilata dahil edilir; yeni dönem kârını artırmaz.
+                  </p>
+                </div>
+              ) : null}
 
               {blockingItems.length > 0 ? (
                 <div className="rounded-[1.5rem] border border-rose-100 bg-white p-5 shadow-sm">
@@ -660,7 +669,9 @@ export function EventFinancialClosureSection({
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   <MiniMetric title="Anlaşma" value={formatMoney(checklist.agreement_base_amount)} />
                   <MiniMetric title="Ödeme Planı" value={formatMoney(checklist.planned_base_amount)} />
-                  <MiniMetric title="Tahsil Edilen" value={formatMoney(checklist.collected_base_amount)} />
+                  <MiniMetric title="Normal Tahsilat" value={formatMoney(checklist.period_collected_base_amount)} />
+                  <MiniMetric title="Devreden Alacaktan Tahsilat" value={formatMoney(checklist.carried_customer_collection_base_amount)} />
+                  <MiniMetric title="Toplam Tahsil Edilen" value={formatMoney(checklist.collected_base_amount)} />
                   <MiniMetric title="Kalan Müşteri Alacağı" value={formatMoney(checklist.remaining_customer_receivable_base_amount)} />
                   <MiniMetric title="Sanatçı/Hizmet Maliyeti" value={formatMoney(checklist.total_event_cost_base_amount)} />
                   <MiniMetric title="Etkinlik Gideri" value={formatMoney(checklist.total_expense_base_amount)} />
