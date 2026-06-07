@@ -96,6 +96,28 @@ def _sum_collections(db: Session, event_id: int) -> float:
     return _round_money(value)
 
 
+def _sum_carried_customer_collections(db: Session, event_id: int) -> float:
+    """Devreden müşteri alacağı sonradan tahsil edildiyse etkinlik kapanışına dahil et.
+
+    Normal tahsilatlar Collection tablosundadır. Ancak dönem kapandıktan sonra
+    tahsil edilen eski müşteri alacakları, Devreden Kalem Kapat akışıyla
+    financial_movements tablosuna carry_forward_customer_collection olarak yazılır.
+    Eski açık etkinliğin final kapanışa hazır hale gelebilmesi için bu tahsilatlar
+    da müşteri tahsilatı toplamına eklenmelidir.
+    """
+    value = (
+        db.query(func.coalesce(func.sum(FinancialMovement.base_amount), 0))
+        .filter(
+            FinancialMovement.event_id == event_id,
+            FinancialMovement.movement_type == "carry_forward_customer_collection",
+            FinancialMovement.is_cancelled == False,  # noqa: E712
+        )
+        .scalar()
+    )
+
+    return _round_money(value)
+
+
 def _sum_supplier_payables(db: Session, event_id: int) -> float:
     value = (
         db.query(func.coalesce(func.sum(EventSupplierPayable.base_amount), 0))
@@ -252,7 +274,11 @@ def calculate_event_financial_closure_snapshot(
 
     agreement_base_amount = _round_money(event.base_agreement_amount or event.total_customer_amount or 0)
     planned_base_amount = _sum_payment_plans(db=db, event_id=event_id)
-    collected_base_amount = _sum_collections(db=db, event_id=event_id)
+    period_collected_base_amount = _sum_collections(db=db, event_id=event_id)
+    carried_customer_collection_base_amount = _sum_carried_customer_collections(db=db, event_id=event_id)
+    collected_base_amount = _round_money(
+        period_collected_base_amount + carried_customer_collection_base_amount
+    )
 
     expected_collection_base_amount = max(agreement_base_amount, planned_base_amount)
     remaining_customer_receivable_base_amount = _round_money(
@@ -326,8 +352,8 @@ def calculate_event_financial_closure_snapshot(
             title="Müşteri tahsilatı",
             is_ok=is_collection_completed,
             blocking=True,
-            ok_message="Müşteri tahsilatı tamamlanmış görünüyor.",
-            fail_message="Müşteri tahsilatı tamamlanmamış.",
+            ok_message="Müşteri tahsilatı ve varsa devreden alacak tahsilatı tamamlanmış görünüyor.",
+            fail_message="Müşteri tahsilatı/devreden alacak tahsilatı tamamlanmamış.",
         ),
         _check_item(
             key="supplier_debts_closed",
