@@ -8,6 +8,535 @@ import type {
   PeriodClosingPreviewResponse,
 } from "../types/financeCenterTypes";
 
+
+function escapeReportHtml(value: unknown) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatReportMoney(value: unknown) {
+  const numberValue = Number(value ?? 0);
+
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(numberValue) ? numberValue : 0);
+}
+
+function formatReportNumber(value: unknown, maximumFractionDigits = 4) {
+  const numberValue = Number(value ?? 0);
+
+  return new Intl.NumberFormat("tr-TR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(Number.isFinite(numberValue) ? numberValue : 0);
+}
+
+function formatReportDate(value: unknown) {
+  if (!value) {
+    return "-";
+  }
+
+  try {
+    return new Intl.DateTimeFormat("tr-TR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(String(value)));
+  } catch {
+    return String(value);
+  }
+}
+
+function reportStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    approved: "Onaylandı",
+    prepared: "Ön kapanış",
+    reopened: "Tekrar açıldı",
+    open: "Açık",
+    not_prepared: "Hazırlanmadı",
+  };
+
+  return labels[status] ?? status;
+}
+
+function reportBalanceLabel(direction: string) {
+  if (direction === "company_owes_partner") {
+    return "Şirket ortağa borçlu";
+  }
+
+  if (direction === "partner_owes_company") {
+    return "Ortak şirkete borçlu";
+  }
+
+  return "Dengede";
+}
+
+
+function reportCarryTypeLabel(item: any) {
+  if (item.source_reference_type === "period_profit_share") {
+    return "Ortak Kâr Payı";
+  }
+
+  const labels: Record<string, string> = {
+    open_event: "Açık Etkinlik",
+    customer_receivable: "Müşteri Alacağı",
+    supplier_payable: "Sanatçı / Hizmet Borcu",
+    partner_cash_on_hand: "Ortak Üzerindeki Şirket Parası",
+    company_payable_to_partner: "Şirketin Ortağa Borcu",
+  };
+
+  return labels[item.carry_type] ?? "Diğer Devir Kalemi";
+}
+
+function reportCarryReasonText(item: any) {
+  if (item.source_reference_type === "period_profit_share") {
+    return "Ortağın dönem kâr payı sonraki dönemde ortak cari hesabında alacak olarak takip edilecek.";
+  }
+
+  if (item.carry_type === "open_event") {
+    return "Bu etkinliğin finansal kapanışı henüz onaylanmadı. Sonraki dönemde açık etkinlik olarak takip edilecek.";
+  }
+
+  if (item.carry_type === "customer_receivable") {
+    return "Müşteriden tahsil edilecek kalan bakiye sonraki döneme aktarılacak.";
+  }
+
+  if (item.carry_type === "supplier_payable") {
+    return "Ödenmemiş sanatçı veya hizmet borcu sonraki döneme aktarılacak.";
+  }
+
+  if (item.carry_type === "partner_cash_on_hand") {
+    return "Ortağın üzerinde bulunan şirket tahsilatı sonraki dönemde teslim alınmak üzere takip edilecek.";
+  }
+
+  if (item.carry_type === "company_payable_to_partner") {
+    return "Şirketin ortağa olan açık borcu sonraki dönemde ortak cari hesabında takip edilecek.";
+  }
+
+  return item.carry_reason ?? "Sonraki döneme aktarılacak açık kalem.";
+}
+
+function buildReportMetric(label: string, value: string, note = "") {
+  return `
+    <div class="metric">
+      <div class="metric-label">${escapeReportHtml(label)}</div>
+      <div class="metric-value">${escapeReportHtml(value)}</div>
+      ${note ? `<div class="metric-note">${escapeReportHtml(note)}</div>` : ""}
+    </div>
+  `;
+}
+
+function buildPeriodClosingPdfHtml(preview: any) {
+  const summary = preview.summary;
+  const partnerSummaries = preview.partner_summaries ?? [];
+  const eventSummaries = preview.event_summaries ?? [];
+  const carryItems = preview.carry_forward_items ?? [];
+  const generatedAt = new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(new Date());
+
+  const summaryMetrics = [
+    buildReportMetric("Etkinlik Sayısı", String(summary.event_count ?? 0), `Açık etkinlik: ${summary.open_event_count ?? 0}`),
+    buildReportMetric("Dönem Geliri", formatReportMoney(summary.total_revenue_base_amount)),
+    buildReportMetric("Etkinlik Maliyeti", formatReportMoney(summary.total_event_cost_base_amount)),
+    buildReportMetric("Etkinlik Gideri", formatReportMoney(summary.total_event_expense_base_amount)),
+    buildReportMetric("Genel Gider", formatReportMoney((summary.total_general_expense_base_amount ?? 0) + (summary.total_allocated_expense_base_amount ?? 0))),
+    buildReportMetric("Net Kâr / Zarar", formatReportMoney(summary.net_profit_base_amount)),
+    buildReportMetric("Müşteri Alacağı Devri", formatReportMoney(summary.customer_receivable_base_amount)),
+    buildReportMetric("Sanatçı / Hizmet Borcu Devri", formatReportMoney(summary.supplier_payable_base_amount)),
+    buildReportMetric("Ortak Üzerindeki Para", formatReportMoney(summary.partner_cash_on_hand_base_amount)),
+    buildReportMetric("Şirketin Ortağa Borcu", formatReportMoney(summary.company_payable_to_partner_base_amount)),
+  ].join("");
+
+  const partnerRows = partnerSummaries
+    .map((partner: any) => `
+      <tr>
+        <td>${escapeReportHtml(partner.partner_name)}</td>
+        <td class="right">%${formatReportNumber(partner.ownership_percent)}</td>
+        <td class="right">${formatReportMoney(partner.profit_share_base_amount)}</td>
+        <td class="right">${formatReportMoney(partner.partner_cash_on_hand_base_amount)}</td>
+        <td class="right">${formatReportMoney(partner.company_payable_to_partner_base_amount)}</td>
+        <td class="right strong">${formatReportMoney(Math.abs(Number(partner.net_company_payable_to_partner_base_amount ?? 0)))}</td>
+        <td>${escapeReportHtml(reportBalanceLabel(partner.balance_direction))}</td>
+      </tr>
+    `)
+    .join("");
+
+  const eventRows = eventSummaries
+    .map((eventItem: any, index: number) => {
+      const partnerShares = (eventItem.partner_profit_shares ?? [])
+        .map((share: any) => `${escapeReportHtml(share.partner_name)}: ${escapeReportHtml(formatReportMoney(share.profit_share_base_amount))}`)
+        .join("<br />");
+
+      const carryLabels = (eventItem.carry_forward_labels ?? []).length > 0
+        ? (eventItem.carry_forward_labels ?? []).map((item: string) => escapeReportHtml(item)).join(", ")
+        : "Devir yok";
+
+      return `
+        <tr>
+          <td class="center">${index + 1}</td>
+          <td>
+            <div class="strong">${escapeReportHtml(eventItem.customer_name ?? "Müşteri yok")}</div>
+            <div>${escapeReportHtml(eventItem.event_title)}</div>
+            <div class="muted">${escapeReportHtml(eventItem.event_code ?? `#${eventItem.event_id}`)}</div>
+            ${eventItem.event_notes ? `<div class="tiny">${escapeReportHtml(eventItem.event_notes)}</div>` : ""}
+          </td>
+          <td>${escapeReportHtml(formatReportDate(eventItem.event_date))}</td>
+          <td class="right">${formatReportMoney(eventItem.agreement_base_amount)}</td>
+          <td class="right">${formatReportMoney(eventItem.collected_base_amount)}</td>
+          <td class="right">${formatReportMoney(eventItem.remaining_customer_receivable_base_amount)}</td>
+          <td class="right">${formatReportMoney(eventItem.supplier_payable_base_amount)}</td>
+          <td class="right">${formatReportMoney(eventItem.remaining_supplier_payable_base_amount)}</td>
+          <td class="right">${formatReportMoney(eventItem.event_expense_base_amount)}</td>
+          <td class="right strong">${formatReportMoney(eventItem.operational_profit_base_amount)}</td>
+          <td>
+            <div>${escapeReportHtml(reportStatusLabel(eventItem.financial_closure_status))}</div>
+            <div class="tiny">${escapeReportHtml(carryLabels)}</div>
+          </td>
+          <td>${partnerShares || "-"}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const carryRows = carryItems
+    .map((item: any) => `
+      <tr>
+        <td>${escapeReportHtml(reportCarryTypeLabel(item))}</td>
+        <td>${escapeReportHtml(item.event_title ?? "-")}</td>
+        <td class="right">${formatReportMoney(item.base_amount)}</td>
+        <td>${escapeReportHtml(reportCarryReasonText(item))}</td>
+      </tr>
+    `)
+    .join("");
+
+  return `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>VIA EVENTS - ${escapeReportHtml(summary.period_month)} Dönem Kapanış Raporu</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #0f172a;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .report {
+      width: 100%;
+    }
+
+    .cover {
+      border: 1px solid #d9e2ea;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #f8fafc 0%, #eefcf9 100%);
+      page-break-inside: avoid;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 2px solid #0f766e;
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .logo {
+      max-width: 210px;
+      max-height: 70px;
+      object-fit: contain;
+    }
+
+    .brand-fallback {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: #0f172a;
+    }
+
+    .title-block {
+      text-align: right;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 900;
+      margin: 0;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f766e;
+    }
+
+    .meta {
+      margin-top: 7px;
+      color: #475569;
+      font-weight: 700;
+    }
+
+    .section {
+      margin-top: 14px;
+      page-break-inside: avoid;
+    }
+
+    .section-title {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 900;
+      color: #0f172a;
+      border-left: 5px solid #0f766e;
+      padding-left: 8px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid #d9e2ea;
+      border-radius: 12px;
+      padding: 8px;
+      background: #ffffff;
+      min-height: 58px;
+    }
+
+    .metric-label {
+      font-size: 8px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #64748b;
+    }
+
+    .metric-value {
+      margin-top: 5px;
+      font-size: 14px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    .metric-note {
+      margin-top: 3px;
+      color: #64748b;
+      font-weight: 700;
+      font-size: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      page-break-inside: auto;
+      background: #ffffff;
+    }
+
+    thead {
+      display: table-header-group;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 7px 6px;
+      border: 1px solid #0f172a;
+      vertical-align: top;
+    }
+
+    td {
+      padding: 6px;
+      border: 1px solid #d9e2ea;
+      vertical-align: top;
+      color: #0f172a;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    .right {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .strong {
+      font-weight: 900;
+    }
+
+    .muted {
+      color: #64748b;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .tiny {
+      color: #64748b;
+      font-size: 8px;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    .footer {
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 1px solid #d9e2ea;
+      color: #64748b;
+      font-size: 8px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="report">
+    <section class="cover">
+      <div class="header">
+        <div>
+          <img class="logo" src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+          <div class="brand-fallback" style="display:none;">VIA EVENTS</div>
+        </div>
+        <div class="title-block">
+          <h1 class="title">Dönem Kapanış Raporu</h1>
+          <div class="subtitle">${escapeReportHtml(summary.period_month)} dönemi / ${escapeReportHtml(summary.target_period_month)} devri</div>
+          <div class="meta">Hazırlanma: ${escapeReportHtml(generatedAt)}</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">1. Genel Dönem Özeti</h2>
+        <div class="metrics">${summaryMetrics}</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">2. Etkinlik Bazlı Ayrıntılı Rapor</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:26px;">#</th>
+            <th style="width:230px;">Müşteri / Etkinlik</th>
+            <th>Tarih</th>
+            <th>Anlaşma</th>
+            <th>Tahsilat</th>
+            <th>Kalan Alacak</th>
+            <th>Maliyet</th>
+            <th>Açık Borç</th>
+            <th>Gider</th>
+            <th>Kâr/Zarar</th>
+            <th>Durum / Devir</th>
+            <th>Ortak Kâr Payları</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${eventRows || `<tr><td colspan="12" class="center">Bu dönem için etkinlik kaydı bulunamadı.</td></tr>`}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section page-break">
+      <h2 class="section-title">3. Ortak Hesap Özeti</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Ortak</th>
+            <th>Hisse</th>
+            <th>Dönem Kâr Payı</th>
+            <th>Ortak Üzerindeki Para</th>
+            <th>Şirketin Ortağa Eski Borcu</th>
+            <th>Net Ortak Bakiyesi</th>
+            <th>Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${partnerRows || `<tr><td colspan="7" class="center">Aktif ortak kaydı bulunamadı.</td></tr>`}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">4. Sonraki Döneme Aktarılacak Kalemler</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Kalem Türü</th>
+            <th>İlgili Etkinlik</th>
+            <th>Tutar</th>
+            <th>Açıklama</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${carryRows || `<tr><td colspan="4" class="center">Devreden açık kalem bulunmuyor.</td></tr>`}
+        </tbody>
+      </table>
+    </section>
+
+    <div class="footer">
+      <div>VIA EVENTS - Finans Merkezi</div>
+      <div>Bu rapor VIA EVENTS Finans Merkezi tarafından hazırlanmıştır.</div>
+    </div>
+  </main>
+</body>
+</html>`;
+}
+
+
 type PeriodClosingReportSectionProps = {
   focusKey?: number;
   currentPeriodMonth: string;
@@ -171,6 +700,7 @@ export function PeriodClosingReportSection({
   }, [focusKey]);
 
   const summary = preview?.summary ?? null;
+  const isPeriodClosedOrJustClosed = Boolean(summary?.source_period_is_locked || closeResult);
 
   const carryForwardTotals = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -199,8 +729,31 @@ export function PeriodClosingReportSection({
 
   const canClose =
     Boolean(summary?.can_close_period) &&
-    !summary?.source_period_is_locked &&
+    !isPeriodClosedOrJustClosed &&
     confirmText.trim().toLocaleUpperCase("tr-TR") === "KAPAT";
+
+  function handlePrintReport() {
+    if (!preview) {
+      window.alert("Önce dönem kapanış raporunu hazırlayın.");
+      return;
+    }
+
+    const reportWindow = window.open("", "_blank", "width=1400,height=900");
+
+    if (!reportWindow) {
+      window.alert("Rapor penceresi açılamadı. Tarayıcı açılır pencere iznini kontrol edin.");
+      return;
+    }
+
+    reportWindow.document.open();
+    reportWindow.document.write(buildPeriodClosingPdfHtml(preview));
+    reportWindow.document.close();
+    reportWindow.focus();
+
+    setTimeout(() => {
+      reportWindow.print();
+    }, 700);
+  }
 
   async function handleLoadPreview() {
     if (!isValidPeriodMonth(periodMonth)) {
@@ -230,7 +783,7 @@ export function PeriodClosingReportSection({
       return;
     }
 
-    if (summary?.source_period_is_locked) {
+    if (isPeriodClosedOrJustClosed) {
       setErrorMessage("Bu dönem zaten kapatılmış ve kilitlenmiş.");
       return;
     }
@@ -343,10 +896,10 @@ export function PeriodClosingReportSection({
                 {summary ? (
                   <button
                     type="button"
-                    onClick={() => window.print()}
+                    onClick={handlePrintReport}
                     className="h-12 rounded-full border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
                   >
-                    PDF / Yazdır
+                    Profesyonel PDF Raporu
                   </button>
                 ) : null}
                 <button
@@ -371,8 +924,8 @@ export function PeriodClosingReportSection({
             <>
               <div
                 className={`rounded-[1.5rem] border p-5 ${
-                  summary.source_period_is_locked
-                    ? "border-slate-200 bg-slate-50 text-slate-950"
+                  isPeriodClosedOrJustClosed
+                    ? "border-teal-100 bg-teal-50 text-teal-950"
                     : summary.can_close_period
                       ? "border-teal-100 bg-teal-50 text-teal-950"
                       : "border-rose-100 bg-rose-50 text-rose-950"
@@ -384,14 +937,14 @@ export function PeriodClosingReportSection({
                       2. Sistem yorumu
                     </p>
                     <h4 className="mt-2 text-2xl font-black">
-                      {summary.source_period_is_locked
+                      {isPeriodClosedOrJustClosed
                         ? "Bu dönem kapalı"
                         : summary.can_close_period
                           ? "Dönem kapanışa hazır"
                           : "Dönem kapatılamaz"}
                     </h4>
                     <p className="mt-2 text-sm font-bold leading-6 opacity-80">
-                      {summary.source_period_is_locked
+                      {isPeriodClosedOrJustClosed
                         ? `${formatPeriodMonth(summary.period_month)} dönemi daha önce kapatılmış ve kilitlenmiş.`
                         : summary.can_close_period
                           ? `${formatPeriodMonth(summary.period_month)} kapatılırsa açık kalemler ${formatPeriodMonth(summary.target_period_month)} dönemine devredilir.`
@@ -656,7 +1209,7 @@ export function PeriodClosingReportSection({
                 )}
               </div>
 
-              {(preview?.issues ?? []).length > 0 ? (
+              {!isPeriodClosedOrJustClosed && (preview?.issues ?? []).length > 0 ? (
                 <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-5">
                   <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600">
                     Uyarılar
@@ -674,9 +1227,9 @@ export function PeriodClosingReportSection({
                   6. Kontrollü kapanış
                 </p>
 
-                {summary.source_period_is_locked ? (
+                {summary?.source_period_is_locked ? (
                   <div className="mt-4 rounded-[1.25rem] bg-slate-50 p-5 text-sm font-bold leading-6 text-slate-600">
-                    Bu dönem zaten kapalı ve kilitli olduğu için tekrar kapanış yapılamaz.
+                    Bu dönem kapalıdır. Kapanış sonucu aşağıda gösterilir.
                   </div>
                 ) : (
                   <>
