@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
@@ -8,13 +8,16 @@ from app.models.event import Event
 from app.models.expense import Expense, ExpenseAllocation
 from app.models.finance import CarryForwardItem, EventFinancialClosure, EventSupplierPayable, FinancialMovement
 from app.models.payment import Collection, PaymentPlan
+from app.models.partner import Partner
 from app.models.period import MonthlyPeriod
 from app.models.user import User
+from app.modules.finance_engine.service import create_financial_movement
 from app.modules.period_closing.schemas import (
     CarryForwardItemRead,
     PeriodCloseRequest,
     PeriodCloseResponse,
     PeriodClosingIssue,
+    PeriodClosingPartnerSummary,
     PeriodClosingPreviewItem,
     PeriodClosingPreviewResponse,
     PeriodClosingPreviewSummary,
@@ -234,6 +237,60 @@ def _partner_balances_from_movements(db: Session, *, event_id: int) -> dict[int,
     return balances
 
 
+
+def _get_active_partners(db: Session) -> list[Partner]:
+    return (
+        db.query(Partner)
+        .filter(Partner.is_active == True)  # noqa: E712
+        .order_by(Partner.full_name.asc())
+        .all()
+    )
+
+
+def _partner_balance_direction(value: float) -> str:
+    if value > 0.0001:
+        return "company_owes_partner"
+
+    if value < -0.0001:
+        return "partner_owes_company"
+
+    return "balanced"
+
+
+def _build_partner_summaries(
+    db: Session,
+    *,
+    net_profit: float,
+    partner_cash_by_partner: dict[int, float],
+    company_payable_to_partner_by_partner: dict[int, float],
+) -> list[PeriodClosingPartnerSummary]:
+    summaries: list[PeriodClosingPartnerSummary] = []
+
+    for partner in _get_active_partners(db=db):
+        ownership_percent = _round_money(partner.ownership_percent)
+        profit_share = _round_money(net_profit * ownership_percent / 100)
+        partner_cash_on_hand = _round_money(partner_cash_by_partner.get(partner.id, 0))
+        company_payable_to_partner = _round_money(company_payable_to_partner_by_partner.get(partner.id, 0))
+        net_company_payable = _round_money(
+            profit_share + company_payable_to_partner - partner_cash_on_hand
+        )
+
+        summaries.append(
+            PeriodClosingPartnerSummary(
+                partner_id=partner.id,
+                partner_name=partner.full_name,
+                ownership_percent=ownership_percent,
+                profit_share_base_amount=profit_share,
+                partner_cash_on_hand_base_amount=partner_cash_on_hand,
+                company_payable_to_partner_base_amount=company_payable_to_partner,
+                net_company_payable_to_partner_base_amount=net_company_payable,
+                balance_direction=_partner_balance_direction(net_company_payable),
+            )
+        )
+
+    return summaries
+
+
 def _make_item(
     *,
     carry_type: str,
@@ -295,6 +352,8 @@ def build_period_closing_preview(
     supplier_payable_total = 0.0
     partner_cash_total = 0.0
     company_payable_to_partner_total = 0.0
+    partner_cash_by_partner: dict[int, float] = {}
+    company_payable_to_partner_by_partner: dict[int, float] = {}
     open_event_count = 0
 
     if source_period is not None and source_period.is_locked:
@@ -386,6 +445,13 @@ def build_period_closing_preview(
             partner_cash = _round_money(balances["partner_cash_on_hand"])
             company_payable_to_partner = _round_money(balances["company_payable_to_partner"])
 
+            partner_cash_by_partner[partner_id] = _round_money(
+                partner_cash_by_partner.get(partner_id, 0) + partner_cash
+            )
+            company_payable_to_partner_by_partner[partner_id] = _round_money(
+                company_payable_to_partner_by_partner.get(partner_id, 0) + company_payable_to_partner
+            )
+
             if partner_cash > 0.0001:
                 partner_cash_total += partner_cash
                 carry_items.append(
@@ -415,6 +481,33 @@ def build_period_closing_preview(
                 )
 
     net_profit = _round_money(total_revenue - total_event_cost - total_event_expense - total_general_expense - total_allocated_expense)
+
+    partner_summaries = _build_partner_summaries(
+        db=db,
+        net_profit=net_profit,
+        partner_cash_by_partner=partner_cash_by_partner,
+        company_payable_to_partner_by_partner=company_payable_to_partner_by_partner,
+    )
+
+    for partner_summary in partner_summaries:
+        profit_share = _round_money(partner_summary.profit_share_base_amount)
+
+        if profit_share > 0.0001:
+            company_payable_to_partner_total += profit_share
+            carry_items.append(
+                _make_item(
+                    carry_type="company_payable_to_partner",
+                    base_amount=profit_share,
+                    partner_id=partner_summary.partner_id,
+                    source_reference_type="period_profit_share",
+                    source_reference_id=partner_summary.partner_id,
+                    carry_reason=(
+                        f"{period_month} dönemi kâr payı: "
+                        f"{partner_summary.partner_name} için %{partner_summary.ownership_percent} ortaklık payı."
+                    ),
+                )
+            )
+
     blocking_issue_count = sum(1 for item in issues if item.blocking)
     warning_count = sum(1 for item in issues if item.severity == "warning")
 
@@ -445,6 +538,7 @@ def build_period_closing_preview(
         summary=summary,
         issues=issues,
         carry_forward_items=carry_items,
+        partner_summaries=partner_summaries,
     )
 
 
@@ -478,6 +572,42 @@ def close_period(
 
     created_count = 0
     now = datetime.now(timezone.utc)
+    closing_movement_date = _parse_period_month(period_month)[1] - timedelta(days=1)
+
+    for partner_summary in preview.partner_summaries:
+        profit_share = _round_money(partner_summary.profit_share_base_amount)
+
+        if profit_share <= 0.0001:
+            continue
+
+        create_financial_movement(
+            db=db,
+            movement_date=closing_movement_date,
+            source_type="monthly_period",
+            source_id=source_period.id,
+            movement_type="period_partner_profit_share",
+            account_area="partner_account",
+            direction="out",
+            amount=profit_share,
+            currency="TRY",
+            exchange_rate=1,
+            base_amount=profit_share,
+            title="Dönem kâr payı ortağa tahakkuk etti",
+            partner_id=partner_summary.partner_id,
+            monthly_period_id=source_period.id,
+            movement_group_key=f"period_profit_share:{source_period.id}:{partner_summary.partner_id}",
+            customer_effect="none",
+            cash_effect="none",
+            partner_effect="company_payable_to_partner_increase",
+            profit_effect="none",
+            description=(
+                f"{period_month} dönemi net kârından {partner_summary.partner_name} "
+                f"için hesaplanan ortak kâr payı."
+            ),
+            notes=payload.closing_note,
+            created_by_user_id=current_user.id,
+            approved_by_user_id=current_user.id,
+        )
 
     for item in preview.carry_forward_items:
         carry_item = CarryForwardItem(

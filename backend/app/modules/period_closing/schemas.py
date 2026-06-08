@@ -48,6 +48,20 @@ class PeriodClosingPreviewSummary(BaseModel):
     can_close_period: bool
 
 
+
+class PeriodClosingPartnerSummary(BaseModel):
+    partner_id: int
+    partner_name: str
+    ownership_percent: float
+
+    profit_share_base_amount: float
+    partner_cash_on_hand_base_amount: float
+    company_payable_to_partner_base_amount: float
+
+    net_company_payable_to_partner_base_amount: float
+    balance_direction: str
+
+
 class PeriodClosingIssue(BaseModel):
     key: str
     severity: str
@@ -59,6 +73,7 @@ class PeriodClosingPreviewResponse(BaseModel):
     summary: PeriodClosingPreviewSummary
     issues: list[PeriodClosingIssue]
     carry_forward_items: list[PeriodClosingPreviewItem]
+    partner_summaries: list[PeriodClosingPartnerSummary]
 
 
 class PeriodCloseRequest(BaseModel):

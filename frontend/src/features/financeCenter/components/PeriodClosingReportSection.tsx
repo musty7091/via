@@ -82,6 +82,19 @@ function getCarryTypeTone(carryType: string) {
   return "border-rose-100 bg-rose-50 text-rose-950";
 }
 
+
+function getPartnerBalanceLabel(direction: string) {
+  if (direction === "company_owes_partner") {
+    return "Şirket ortağa borçlu";
+  }
+
+  if (direction === "partner_owes_company") {
+    return "Ortak şirkete borçlu";
+  }
+
+  return "Dengede";
+}
+
 function isValidPeriodMonth(value: string) {
   return /^\d{4}-\d{2}$/.test(value);
 }
@@ -357,11 +370,82 @@ export function PeriodClosingReportSection({
                 <ReportMetric title="Şirketin Ortağa Borcu" value={formatMoney(summary.company_payable_to_partner_base_amount)} tone={summary.company_payable_to_partner_base_amount > 0 ? "warning" : "default"} />
               </div>
 
+
+              <div className="rounded-[1.5rem] border border-indigo-100 bg-indigo-50 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-500">
+                      3. Ortak Hesap Özeti
+                    </p>
+                    <h4 className="mt-1 text-xl font-black text-slate-950">
+                      Dönem kârı ve ortak cari etkisi
+                    </h4>
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
+                      Net kâr ortaklık oranlarına göre dağıtılır. Ortağın üzerindeki şirket parası varsa net alacağından düşülür.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-indigo-700 shadow-sm">
+                    {summary.net_profit_base_amount >= 0 ? "Kâr dağıtımı" : "Zarar dönemi"}
+                  </span>
+                </div>
+
+                {(preview?.partner_summaries ?? []).length === 0 ? (
+                  <div className="mt-4 rounded-[1.25rem] border border-dashed border-indigo-200 bg-white/70 p-5 text-sm font-bold text-slate-500">
+                    Aktif ortak kaydı bulunamadı.
+                  </div>
+                ) : (
+                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    {(preview?.partner_summaries ?? []).map((partner) => (
+                      <div key={partner.partner_id} className="rounded-[1.25rem] border border-white/70 bg-white p-4 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-lg font-black text-slate-950">{partner.partner_name}</p>
+                            <p className="mt-1 text-xs font-black uppercase tracking-[0.14em] text-indigo-500">
+                              %{new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 4 }).format(partner.ownership_percent)} ortaklık
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-700">
+                            {getPartnerBalanceLabel(partner.balance_direction)}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 space-y-2 text-sm font-bold text-slate-600">
+                          <div className="flex justify-between gap-3">
+                            <span>Dönem kâr payı</span>
+                            <span className="text-slate-950">{formatMoney(partner.profit_share_base_amount)}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span>Ortak üzerindeki para</span>
+                            <span className="text-slate-950">{formatMoney(partner.partner_cash_on_hand_base_amount)}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span>Şirketin ortağa eski borcu</span>
+                            <span className="text-slate-950">{formatMoney(partner.company_payable_to_partner_base_amount)}</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl bg-slate-950 p-3 text-white">
+                          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-teal-200">
+                            Net ortak bakiyesi
+                          </p>
+                          <p className="mt-1 text-lg font-black">
+                            {formatMoney(Math.abs(partner.net_company_payable_to_partner_base_amount))}
+                          </p>
+                          <p className="mt-1 text-xs font-bold text-slate-300">
+                            {getPartnerBalanceLabel(partner.balance_direction)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                      3. Devredecek kalemler
+                      4. Devredecek kalemler
                     </p>
                     <h4 className="mt-1 text-xl font-black">
                       Bu dönem kapatılırsa sonraki döneme taşınacaklar
@@ -422,7 +506,7 @@ export function PeriodClosingReportSection({
 
               <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                  4. Kontrollü kapanış
+                  5. Kontrollü kapanış
                 </p>
 
                 {summary.source_period_is_locked ? (

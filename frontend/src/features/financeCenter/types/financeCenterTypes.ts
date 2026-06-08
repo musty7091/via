@@ -223,6 +223,17 @@ export type PeriodClosingPreviewSummary = {
   can_close_period: boolean;
 };
 
+export type PeriodClosingPartnerSummary = {
+  partner_id: number;
+  partner_name: string;
+  ownership_percent: number;
+  profit_share_base_amount: number;
+  partner_cash_on_hand_base_amount: number;
+  company_payable_to_partner_base_amount: number;
+  net_company_payable_to_partner_base_amount: number;
+  balance_direction: string;
+};
+
 export type PeriodClosingIssue = {
   key: string;
   severity: string;
@@ -234,6 +245,7 @@ export type PeriodClosingPreviewResponse = {
   summary: PeriodClosingPreviewSummary;
   issues: PeriodClosingIssue[];
   carry_forward_items: PeriodClosingPreviewItem[];
+  partner_summaries: PeriodClosingPartnerSummary[];
 };
 
 export type PeriodClosePayload = {
