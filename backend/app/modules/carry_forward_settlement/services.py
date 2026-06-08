@@ -25,7 +25,11 @@ def _to_float(value) -> float:
 
 
 def _round_money(value) -> float:
-    return round(_to_float(value), 4)
+    return round(_to_float(value), 2)
+
+
+def _is_penny_difference(value: float) -> bool:
+    return abs(_round_money(value)) <= 0.01
 
 
 def _get_item_or_404(db: Session, item_id: int) -> CarryForwardItem:
@@ -80,11 +84,18 @@ def _validate_settlement_amount(item: CarryForwardItem, amount: float) -> float:
             detail="Bu devir kaleminin açık bakiyesi yok.",
         )
 
-    if amount > remaining + 0.0001:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kapanış tutarı kalan devir tutarından büyük olamaz.",
-        )
+    # Para işlemleri kuruş hassasiyetinde çalışır.
+    # Ekranda 0,01 TL görünen küçük yuvarlama farklarında kullanıcıyı engelleme.
+    if amount > remaining:
+        difference = _round_money(amount - remaining)
+
+        if not _is_penny_difference(difference):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kapanış tutarı kalan devir tutarından büyük olamaz.",
+            )
+
+        amount = remaining
 
     return amount
 
@@ -96,10 +107,16 @@ def _apply_remaining_update(
     current_user: User,
     note: str | None,
 ) -> None:
-    new_remaining = _round_money(_to_float(item.remaining_base_amount) - amount)
+    current_remaining = _round_money(item.remaining_base_amount)
+    amount = _round_money(amount)
+    new_remaining = _round_money(current_remaining - amount)
+
+    if _is_penny_difference(new_remaining):
+        new_remaining = 0
+
     item.remaining_base_amount = new_remaining
 
-    if new_remaining <= 0.0001:
+    if new_remaining <= 0:
         item.remaining_base_amount = 0
         item.status = "closed"
         item.closed_by_user_id = current_user.id
