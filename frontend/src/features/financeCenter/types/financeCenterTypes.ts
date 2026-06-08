@@ -182,6 +182,85 @@ export type EventFinancialClosureReopenPayload = {
 };
 
 
+export type PeriodClosingPreviewItem = {
+  carry_type: string;
+  event_id: number | null;
+  event_title: string | null;
+  customer_id: number | null;
+  partner_id: number | null;
+  artist_id: number | null;
+  service_item_id: number | null;
+  source_reference_type: string | null;
+  source_reference_id: number | null;
+  amount: number;
+  currency: string;
+  exchange_rate: number;
+  base_amount: number;
+  remaining_base_amount: number;
+  carry_reason: string;
+};
+
+export type PeriodClosingPreviewSummary = {
+  period_month: string;
+  target_period_month: string;
+  source_period_status: string | null;
+  source_period_is_locked: boolean;
+  event_count: number;
+  open_event_count: number;
+  total_revenue_base_amount: number;
+  total_event_cost_base_amount: number;
+  total_event_expense_base_amount: number;
+  total_general_expense_base_amount: number;
+  total_allocated_expense_base_amount: number;
+  net_profit_base_amount: number;
+  customer_receivable_base_amount: number;
+  supplier_payable_base_amount: number;
+  partner_cash_on_hand_base_amount: number;
+  company_payable_to_partner_base_amount: number;
+  carry_forward_count: number;
+  blocking_issue_count: number;
+  warning_count: number;
+  can_close_period: boolean;
+};
+
+export type PeriodClosingIssue = {
+  key: string;
+  severity: string;
+  blocking: boolean;
+  message: string;
+};
+
+export type PeriodClosingPreviewResponse = {
+  summary: PeriodClosingPreviewSummary;
+  issues: PeriodClosingIssue[];
+  carry_forward_items: PeriodClosingPreviewItem[];
+};
+
+export type PeriodClosePayload = {
+  closing_note?: string | null;
+};
+
+export type PeriodCloseResponse = {
+  period_month: string;
+  target_period_month: string;
+  monthly_period_id: number;
+  target_monthly_period_id: number | null;
+  status: string;
+  is_locked: boolean;
+  closed_at: string | null;
+  created_carry_forward_count: number;
+  event_count: number;
+  open_event_count: number;
+  total_revenue_base_amount: number;
+  total_event_cost_base_amount: number;
+  total_event_expense_base_amount: number;
+  total_general_expense_base_amount: number;
+  total_allocated_expense_base_amount: number;
+  net_profit_base_amount: number;
+  message: string;
+};
+
+
 export type PeriodExpenseSummary = {
   period_month: string;
   direct_general_expense_base_amount: number;

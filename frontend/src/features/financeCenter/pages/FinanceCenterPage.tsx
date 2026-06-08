@@ -36,6 +36,7 @@ import { SupplierPayablesSection } from "../components/SupplierPayablesSection";
 import { SupplierPaymentQuickActionModal } from "../components/SupplierPaymentQuickActionModal";
 import { CarryForwardSettlementSection } from "../components/CarryForwardSettlementSection";
 import { EventFinancialClosureSection } from "../components/EventFinancialClosureSection";
+import { PeriodClosingReportSection } from "../components/PeriodClosingReportSection";
 
 type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
@@ -154,14 +155,14 @@ const quickActions: QuickAction[] = [
   },
   {
     key: "periodClose",
-    title: "Dönem Kapanışı",
-    description: "Ay sonu kontrolünü yap ve dönemi kilitle.",
-    helper: "Açık kalemler sonraki döneme devredilir.",
+    title: "Dönem Kapanış Raporu",
+    description: "Ay sonu gelir, gider, açık etkinlik ve devir kontrolünü yap.",
+    helper: "Önce rapor hazırlanır, sonra kontrollü kapanış yapılır.",
     icon: "■",
     tone: "dark",
-    warningTitle: "Dönem Kapatılacak",
+    warningTitle: "Dönem Kapanış Raporu Açılacak",
     warningMessage:
-      "Bu dönem kapatılırsa açık müşteri alacakları, sanatçı/hizmet borçları, ortak üzerindeki paralar ve açık etkinlikler sonraki döneme devredilir. Kapanan döneme normal işlem girilemez.",
+      "Bu işlem önce dönem kapanış raporunu açar. Dönem sadece rapor ekranının altındaki ayrıca onaylanan işlemle kapatılır.",
   },
 ];
 
@@ -394,6 +395,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [supplierPayablesRefreshKey, setSupplierPayablesRefreshKey] = useState(0);
   const [carryForwardFocusKey, setCarryForwardFocusKey] = useState(0);
   const [eventClosureFocusKey, setEventClosureFocusKey] = useState(0);
+  const [periodClosingFocusKey, setPeriodClosingFocusKey] = useState(0);
   const [collectionQuickOpenKey, setCollectionQuickOpenKey] = useState(0);
   const [collectionQuickOpenMode, setCollectionQuickOpenMode] = useState<"partner-cash" | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseWithAllocations | null>(null);
@@ -498,6 +500,11 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
     if (action.key === "eventClosure") {
       setEventClosureFocusKey((previous) => previous + 1);
+      return;
+    }
+
+    if (action.key === "periodClose") {
+      setPeriodClosingFocusKey((previous) => previous + 1);
       return;
     }
 
@@ -728,6 +735,12 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
         />
 
         <div className="mt-6 space-y-4">
+          <PeriodClosingReportSection
+            focusKey={periodClosingFocusKey}
+            currentPeriodMonth={currentPeriodMonth}
+            onChanged={loadDashboard}
+          />
+
           <EventFinancialClosureSection
             focusKey={eventClosureFocusKey}
             onChanged={loadDashboard}

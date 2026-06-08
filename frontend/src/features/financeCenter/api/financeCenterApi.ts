@@ -14,6 +14,9 @@ import type {
   EventFinancialClosurePreparePayload,
   EventFinancialClosureChecklistResponse,
   EventFinancialClosureApprovePayload,
+  PeriodClosePayload,
+  PeriodCloseResponse,
+  PeriodClosingPreviewResponse,
   PartnerRead,
   CancelExpensePayload,
   CarryForwardItem,
@@ -222,6 +225,23 @@ export async function reopenEventFinancialClosure(
       body: JSON.stringify(payload),
     }
   );
+}
+
+
+export async function fetchPeriodClosingPreview(
+  periodMonth: string
+): Promise<PeriodClosingPreviewResponse> {
+  return requestJson<PeriodClosingPreviewResponse>(`/period-closing/${periodMonth}/preview`);
+}
+
+export async function closePeriod(
+  periodMonth: string,
+  payload: PeriodClosePayload
+): Promise<PeriodCloseResponse> {
+  return requestJson<PeriodCloseResponse>(`/period-closing/${periodMonth}/close`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchPartners(): Promise<PartnerRead[]> {
