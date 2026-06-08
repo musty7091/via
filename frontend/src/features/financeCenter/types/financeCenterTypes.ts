@@ -223,6 +223,36 @@ export type PeriodClosingPreviewSummary = {
   can_close_period: boolean;
 };
 
+export type PeriodClosingEventPartnerShare = {
+  partner_id: number;
+  partner_name: string;
+  ownership_percent: number;
+  profit_share_base_amount: number;
+};
+
+export type PeriodClosingEventSummary = {
+  event_id: number;
+  event_code: string | null;
+  event_title: string;
+  event_date: string;
+  customer_id: number | null;
+  customer_name: string | null;
+  event_status: string;
+  financial_closure_status: string;
+  is_financially_approved: boolean;
+  event_notes: string | null;
+  agreement_base_amount: number;
+  planned_base_amount: number;
+  collected_base_amount: number;
+  remaining_customer_receivable_base_amount: number;
+  supplier_payable_base_amount: number;
+  remaining_supplier_payable_base_amount: number;
+  event_expense_base_amount: number;
+  operational_profit_base_amount: number;
+  carry_forward_labels: string[];
+  partner_profit_shares: PeriodClosingEventPartnerShare[];
+};
+
 export type PeriodClosingPartnerSummary = {
   partner_id: number;
   partner_name: string;
@@ -246,6 +276,7 @@ export type PeriodClosingPreviewResponse = {
   issues: PeriodClosingIssue[];
   carry_forward_items: PeriodClosingPreviewItem[];
   partner_summaries: PeriodClosingPartnerSummary[];
+  event_summaries: PeriodClosingEventSummary[];
 };
 
 export type PeriodClosePayload = {

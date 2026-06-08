@@ -49,6 +49,40 @@ class PeriodClosingPreviewSummary(BaseModel):
 
 
 
+
+class PeriodClosingEventPartnerShare(BaseModel):
+    partner_id: int
+    partner_name: str
+    ownership_percent: float
+    profit_share_base_amount: float
+
+
+class PeriodClosingEventSummary(BaseModel):
+    event_id: int
+    event_code: str | None = None
+    event_title: str
+    event_date: str
+    customer_id: int | None = None
+    customer_name: str | None = None
+    event_status: str
+    financial_closure_status: str
+    is_financially_approved: bool
+    event_notes: str | None = None
+
+    agreement_base_amount: float
+    planned_base_amount: float
+    collected_base_amount: float
+    remaining_customer_receivable_base_amount: float
+
+    supplier_payable_base_amount: float
+    remaining_supplier_payable_base_amount: float
+    event_expense_base_amount: float
+    operational_profit_base_amount: float
+
+    carry_forward_labels: list[str]
+    partner_profit_shares: list[PeriodClosingEventPartnerShare]
+
+
 class PeriodClosingPartnerSummary(BaseModel):
     partner_id: int
     partner_name: str
@@ -74,6 +108,7 @@ class PeriodClosingPreviewResponse(BaseModel):
     issues: list[PeriodClosingIssue]
     carry_forward_items: list[PeriodClosingPreviewItem]
     partner_summaries: list[PeriodClosingPartnerSummary]
+    event_summaries: list[PeriodClosingEventSummary]
 
 
 class PeriodCloseRequest(BaseModel):

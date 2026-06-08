@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.customer import Customer
 from app.models.event import Event
 from app.models.expense import Expense, ExpenseAllocation
 from app.models.finance import CarryForwardItem, EventFinancialClosure, EventSupplierPayable, FinancialMovement
@@ -16,6 +17,8 @@ from app.modules.period_closing.schemas import (
     CarryForwardItemRead,
     PeriodCloseRequest,
     PeriodCloseResponse,
+    PeriodClosingEventPartnerShare,
+    PeriodClosingEventSummary,
     PeriodClosingIssue,
     PeriodClosingPartnerSummary,
     PeriodClosingPreviewItem,
@@ -195,6 +198,57 @@ def _supplier_payable_total(db: Session, *, event_id: int) -> float:
     return _round_money(sum(_to_float(item.base_amount) for item in _supplier_payables(db=db, event_id=event_id)))
 
 
+
+def _supplier_payable_remaining_total(db: Session, *, event_id: int) -> float:
+    return _round_money(
+        sum(_to_float(item.remaining_base_amount) for item in _supplier_payables(db=db, event_id=event_id))
+    )
+
+
+def _get_customer_name(db: Session, *, customer_id: int | None) -> str | None:
+    if customer_id is None:
+        return None
+
+    customer = db.get(Customer, customer_id)
+
+    if customer is None:
+        return None
+
+    return customer.name
+
+
+def _get_event_closure_status(db: Session, *, event_id: int) -> str:
+    closure = _latest_event_closure(db=db, event_id=event_id)
+
+    if closure is None:
+        return "not_prepared"
+
+    return closure.status
+
+
+def _build_event_partner_profit_shares(
+    db: Session,
+    *,
+    operational_profit: float,
+) -> list[PeriodClosingEventPartnerShare]:
+    shares: list[PeriodClosingEventPartnerShare] = []
+
+    for partner in _get_active_partners(db=db):
+        ownership_percent = _round_money(partner.ownership_percent)
+        profit_share = _round_money(operational_profit * ownership_percent / 100)
+
+        shares.append(
+            PeriodClosingEventPartnerShare(
+                partner_id=partner.id,
+                partner_name=partner.full_name,
+                ownership_percent=ownership_percent,
+                profit_share_base_amount=profit_share,
+            )
+        )
+
+    return shares
+
+
 def _financial_movements(db: Session, *, event_id: int) -> list[FinancialMovement]:
     return (
         db.query(FinancialMovement)
@@ -341,6 +395,7 @@ def build_period_closing_preview(
 
     carry_items: list[PeriodClosingPreviewItem] = []
     issues: list[PeriodClosingIssue] = []
+    event_summaries: list[PeriodClosingEventSummary] = []
 
     total_revenue = 0.0
     total_event_cost = 0.0
@@ -385,13 +440,18 @@ def build_period_closing_preview(
         customer_remaining = _round_money(max(expected_collection - collected_base_amount, 0))
 
         event_supplier_total = _supplier_payable_total(db=db, event_id=event.id)
+        event_supplier_remaining_total = _supplier_payable_remaining_total(db=db, event_id=event.id)
         event_expense_total = _sum_event_expenses(db=db, event_id=event.id)
+        event_operational_profit = _round_money(agreement_base_amount - event_supplier_total - event_expense_total)
 
         total_revenue += agreement_base_amount
         total_event_cost += event_supplier_total
         total_event_expense += event_expense_total
 
+        event_carry_labels: list[str] = []
+
         if not _is_event_financially_approved(db=db, event_id=event.id):
+            event_carry_labels.append("Açık etkinlik")
             open_event_count += 1
             carry_items.append(
                 _make_item(
@@ -406,6 +466,7 @@ def build_period_closing_preview(
             )
 
         if customer_remaining > 0.0001:
+            event_carry_labels.append("Müşteri alacağı")
             customer_receivable_total += customer_remaining
             carry_items.append(
                 _make_item(
@@ -425,6 +486,7 @@ def build_period_closing_preview(
             if remaining <= 0.0001:
                 continue
 
+            event_carry_labels.append("Sanatçı / hizmet borcu")
             supplier_payable_total += remaining
             carry_items.append(
                 _make_item(
@@ -453,6 +515,8 @@ def build_period_closing_preview(
             )
 
             if partner_cash > 0.0001:
+                if "Ortak üzerindeki para" not in event_carry_labels:
+                    event_carry_labels.append("Ortak üzerindeki para")
                 partner_cash_total += partner_cash
                 carry_items.append(
                     _make_item(
@@ -467,6 +531,8 @@ def build_period_closing_preview(
                 )
 
             if company_payable_to_partner > 0.0001:
+                if "Şirketin ortağa borcu" not in event_carry_labels:
+                    event_carry_labels.append("Şirketin ortağa borcu")
                 company_payable_to_partner_total += company_payable_to_partner
                 carry_items.append(
                     _make_item(
@@ -479,6 +545,34 @@ def build_period_closing_preview(
                         carry_reason="Dönem kapanışında şirketin ortağa borcu bulunduğu için sonraki döneme devreder.",
                     )
                 )
+
+        event_summaries.append(
+            PeriodClosingEventSummary(
+                event_id=event.id,
+                event_code=event.event_code,
+                event_title=event.title,
+                event_date=event.event_date.isoformat(),
+                customer_id=event.customer_id,
+                customer_name=_get_customer_name(db=db, customer_id=event.customer_id),
+                event_status=event.status,
+                financial_closure_status=_get_event_closure_status(db=db, event_id=event.id),
+                is_financially_approved=_is_event_financially_approved(db=db, event_id=event.id),
+                event_notes=event.notes,
+                agreement_base_amount=agreement_base_amount,
+                planned_base_amount=planned_base_amount,
+                collected_base_amount=collected_base_amount,
+                remaining_customer_receivable_base_amount=customer_remaining,
+                supplier_payable_base_amount=event_supplier_total,
+                remaining_supplier_payable_base_amount=event_supplier_remaining_total,
+                event_expense_base_amount=event_expense_total,
+                operational_profit_base_amount=event_operational_profit,
+                carry_forward_labels=event_carry_labels,
+                partner_profit_shares=_build_event_partner_profit_shares(
+                    db=db,
+                    operational_profit=event_operational_profit,
+                ),
+            )
+        )
 
     net_profit = _round_money(total_revenue - total_event_cost - total_event_expense - total_general_expense - total_allocated_expense)
 
@@ -539,6 +633,7 @@ def build_period_closing_preview(
         issues=issues,
         carry_forward_items=carry_items,
         partner_summaries=partner_summaries,
+        event_summaries=event_summaries,
     )
 
 

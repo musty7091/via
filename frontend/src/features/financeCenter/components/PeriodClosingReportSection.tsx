@@ -83,6 +83,46 @@ function getCarryTypeTone(carryType: string) {
 }
 
 
+
+function getClosureStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    approved: "Onaylandı",
+    prepared: "Ön kapanış",
+    reopened: "Tekrar açıldı",
+    open: "Açık",
+    not_prepared: "Hazırlanmadı",
+  };
+
+  return labels[status] ?? status;
+}
+
+function formatEventDate(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatPartnerShares(
+  shares: { partner_name: string; profit_share_base_amount: number; ownership_percent: number }[]
+) {
+  if (shares.length === 0) {
+    return "-";
+  }
+
+  return shares
+    .map(
+      (share) =>
+        `${share.partner_name}: ${formatMoney(share.profit_share_base_amount)}`
+    )
+    .join(" / ");
+}
+
 function getPartnerBalanceLabel(direction: string) {
   if (direction === "company_owes_partner") {
     return "Şirket ortağa borçlu";
@@ -299,14 +339,25 @@ export function PeriodClosingReportSection({
             </label>
 
             <div className="flex items-end">
-              <button
-                type="button"
-                onClick={handleLoadPreview}
+              <div className="flex flex-wrap items-end gap-3">
+                {summary ? (
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="h-12 rounded-full border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                  >
+                    PDF / Yazdır
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleLoadPreview}
                 disabled={isPreviewLoading}
                 className="h-12 rounded-full bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-teal-700 disabled:opacity-60"
               >
                 {isPreviewLoading ? "Hazırlanıyor..." : "Raporu Hazırla"}
-              </button>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -371,11 +422,125 @@ export function PeriodClosingReportSection({
               </div>
 
 
+
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
+                      3. Etkinlik Bazlı Detay
+                    </p>
+                    <h4 className="mt-1 text-xl font-black">
+                      Her etkinliğin gelir, maliyet, tahsilat ve ortak kâr payı
+                    </h4>
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+                      Bu tablo PDF çıktısında ay içindeki her etkinliği ayrı satır olarak gösterir.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                    {(preview?.event_summaries ?? []).length} etkinlik
+                  </span>
+                </div>
+
+                {(preview?.event_summaries ?? []).length === 0 ? (
+                  <div className="mt-4 rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-bold text-slate-500">
+                    Bu dönem için etkinlik detayı bulunmuyor.
+                  </div>
+                ) : (
+                  <div className="mt-5 overflow-x-auto">
+                    <table className="min-w-[1200px] w-full border-separate border-spacing-y-2 text-left text-sm">
+                      <thead>
+                        <tr className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                          <th className="px-3 py-2">Müşteri / Etkinlik</th>
+                          <th className="px-3 py-2">Tarih</th>
+                          <th className="px-3 py-2 text-right">Anlaşma</th>
+                          <th className="px-3 py-2 text-right">Tahsilat</th>
+                          <th className="px-3 py-2 text-right">Kalan Alacak</th>
+                          <th className="px-3 py-2 text-right">Maliyet</th>
+                          <th className="px-3 py-2 text-right">Gider</th>
+                          <th className="px-3 py-2 text-right">Kâr/Zarar</th>
+                          <th className="px-3 py-2">Durum</th>
+                          <th className="px-3 py-2">Ortak Kâr Payları</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(preview?.event_summaries ?? []).map((eventItem) => (
+                          <tr key={eventItem.event_id} className="align-top">
+                            <td className="rounded-l-2xl bg-slate-50 px-3 py-3">
+                              <p className="font-black text-slate-950">
+                                {eventItem.customer_name ?? "Müşteri yok"}
+                              </p>
+                              <p className="mt-1 font-bold text-slate-600">
+                                {eventItem.event_title}
+                              </p>
+                              <p className="mt-1 text-xs font-bold text-slate-400">
+                                {eventItem.event_code ?? `#${eventItem.event_id}`}
+                              </p>
+                              {eventItem.event_notes ? (
+                                <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+                                  {eventItem.event_notes}
+                                </p>
+                              ) : null}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 font-bold text-slate-600">
+                              {formatEventDate(eventItem.event_date)}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
+                              {formatMoney(eventItem.agreement_base_amount)}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 text-right font-black text-teal-700">
+                              {formatMoney(eventItem.collected_base_amount)}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 text-right font-black text-amber-700">
+                              {formatMoney(eventItem.remaining_customer_receivable_base_amount)}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
+                              {formatMoney(eventItem.supplier_payable_base_amount)}
+                              {eventItem.remaining_supplier_payable_base_amount > 0 ? (
+                                <p className="mt-1 text-xs font-bold text-rose-600">
+                                  Açık: {formatMoney(eventItem.remaining_supplier_payable_base_amount)}
+                                </p>
+                              ) : null}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
+                              {formatMoney(eventItem.event_expense_base_amount)}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
+                              {formatMoney(eventItem.operational_profit_base_amount)}
+                            </td>
+                            <td className="bg-slate-50 px-3 py-3">
+                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                                eventItem.is_financially_approved
+                                  ? "bg-teal-100 text-teal-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}>
+                                {getClosureStatusLabel(eventItem.financial_closure_status)}
+                              </span>
+                              {eventItem.carry_forward_labels.length > 0 ? (
+                                <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+                                  Devir: {eventItem.carry_forward_labels.join(", ")}
+                                </p>
+                              ) : (
+                                <p className="mt-2 text-xs font-bold text-teal-700">
+                                  Devir yok
+                                </p>
+                              )}
+                            </td>
+                            <td className="rounded-r-2xl bg-slate-50 px-3 py-3 text-xs font-bold leading-5 text-slate-600">
+                              {formatPartnerShares(eventItem.partner_profit_shares)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-[1.5rem] border border-indigo-100 bg-indigo-50 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-500">
-                      3. Ortak Hesap Özeti
+                      4. Ortak Hesap Özeti
                     </p>
                     <h4 className="mt-1 text-xl font-black text-slate-950">
                       Dönem kârı ve ortak cari etkisi
@@ -445,7 +610,7 @@ export function PeriodClosingReportSection({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                      4. Devredecek kalemler
+                      5. Devredecek kalemler
                     </p>
                     <h4 className="mt-1 text-xl font-black">
                       Bu dönem kapatılırsa sonraki döneme taşınacaklar
@@ -506,7 +671,7 @@ export function PeriodClosingReportSection({
 
               <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                  5. Kontrollü kapanış
+                  6. Kontrollü kapanış
                 </p>
 
                 {summary.source_period_is_locked ? (
