@@ -279,6 +279,15 @@ export function EventFinancialClosureSection({
   const blockingItems = checklist ? getBlockingItems(checklist) : [];
   const warningItems = checklist ? getWarningItems(checklist) : [];
   const nextAction = checklist ? getNextAction(checklist) : null;
+  const isFinanciallyApproved = latestClosure?.status === "approved";
+  const visibleNextAction = isFinanciallyApproved
+    ? {
+        title: "Kapanış onaylandı",
+        message:
+          "Bu etkinlik finansal olarak kapatıldı. Artık aynı etkinlik için tekrar onay vermene gerek yok.",
+        tone: "ready" as const,
+      }
+    : nextAction;
 
   async function loadEvents() {
     setIsEventsLoading(true);
@@ -538,11 +547,11 @@ export function EventFinancialClosureSection({
             </div>
           ) : null}
 
-          {checklist && nextAction ? (
+          {checklist && visibleNextAction ? (
             <>
               <div
                 className={`rounded-[1.5rem] border p-5 ${
-                  nextAction.tone === "ready"
+                  visibleNextAction.tone === "ready"
                     ? "border-teal-100 bg-teal-50 text-teal-950"
                     : "border-rose-100 bg-rose-50 text-rose-950"
                 }`}
@@ -552,9 +561,9 @@ export function EventFinancialClosureSection({
                     <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
                       2. Sistem yorumu
                     </p>
-                    <h4 className="mt-2 text-2xl font-black">{nextAction.title}</h4>
+                    <h4 className="mt-2 text-2xl font-black">{visibleNextAction.title}</h4>
                     <p className="mt-2 text-sm font-bold leading-6 opacity-80">
-                      {nextAction.message}
+                      {visibleNextAction.message}
                     </p>
                   </div>
                   <div className="rounded-[1.25rem] bg-white/70 px-5 py-4 text-right shadow-sm">
@@ -607,6 +616,26 @@ export function EventFinancialClosureSection({
                       <ChecklistRow key={item.key} item={item} />
                     ))}
                   </div>
+                </div>
+              ) : isFinanciallyApproved ? (
+                <div className="rounded-[1.5rem] border border-teal-100 bg-teal-50 p-5 shadow-sm">
+                  <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-500">
+                    3. Final onay tamamlandı
+                  </p>
+                  <h4 className="mt-1 text-xl font-black text-teal-950">
+                    Bu etkinlik finansal olarak kapandı
+                  </h4>
+                  <p className="mt-2 text-sm font-bold leading-6 text-teal-800">
+                    Bu etkinlik için tekrar onay vermene gerek yok. Dönem kapanış raporunda kapalı etkinlik olarak görünür.
+                  </p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <MiniMetric title="Kapanış Durumu" value="Onaylandı" />
+                    <MiniMetric title="Toplam Tahsilat" value={formatMoney(checklist.collected_base_amount)} />
+                    <MiniMetric title="Operasyonel Kâr/Zarar" value={formatMoney(checklist.operational_profit_base_amount)} strong />
+                  </div>
+                  <p className="mt-4 rounded-2xl bg-white/80 p-4 text-sm font-bold leading-6 text-slate-600">
+                    Hatalı kapanış yaptıysan aşağıdaki “Ek işlemleri göster” alanından onaylı kapanışı tekrar açabilirsin.
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-[1.5rem] border border-teal-100 bg-white p-5 shadow-sm">
