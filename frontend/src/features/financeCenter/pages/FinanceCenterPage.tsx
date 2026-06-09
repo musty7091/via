@@ -372,18 +372,18 @@ function getDefaultExpenseForm(): ExpenseFormState {
 
 function getToneClasses(tone: QuickAction["tone"]) {
   if (tone === "teal") {
-    return "border-teal-200 bg-teal-300 text-slate-950 shadow-teal-100";
+    return "border-teal-200 bg-white text-slate-950 shadow-sm hover:border-teal-300 hover:bg-teal-50";
   }
 
   if (tone === "dark") {
-    return "border-slate-800 bg-slate-950 text-white shadow-slate-300";
+    return "border-slate-300 bg-white text-slate-950 shadow-sm hover:border-slate-500 hover:bg-slate-50";
   }
 
   if (tone === "amber") {
-    return "border-amber-200 bg-amber-100 text-amber-950 shadow-amber-100";
+    return "border-amber-200 bg-white text-slate-950 shadow-sm hover:border-amber-300 hover:bg-amber-50";
   }
 
-  return "border-slate-200 bg-white text-slate-950 shadow-slate-200";
+  return "border-slate-200 bg-white text-slate-950 shadow-sm hover:border-teal-200 hover:bg-slate-50";
 }
 
 export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps) {
@@ -551,8 +551,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div>
             <button
@@ -565,7 +565,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
               <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
                 Finans Merkezi
               </h1>
-              <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-black text-teal-800">
+              <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-black text-teal-700">
                 Ön Muhasebe Paneli
               </span>
             </div>
@@ -581,22 +581,22 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
       </header>
 
       <section className="mx-auto max-w-7xl px-5 py-6">
-        <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-300 lg:p-7">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-teal-300">
-            VIA EVENTS
-          </p>
-          <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="max-w-4xl text-2xl font-black leading-tight tracking-tight sm:text-3xl">
-                Finans Merkezi
-              </h2>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-300 sm:text-base">
-                Tahsilat, ödeme, gider, cari, devir ve dönem kontrolü için günlük muhasebe paneli.
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">
+                Finans Kontrol Paneli
+              </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                Tahsilat, ödeme, gider, devir ve dönem kapanışı işlemleri için sade günlük takip ekranı.
               </p>
             </div>
-            <span className="w-fit rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black text-teal-200">
-              Uyarılar işlem anında gösterilir
-            </span>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right sm:hidden">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                Aktif Dönem
+              </p>
+              <p className="text-base font-black text-slate-950">{currentPeriodMonth}</p>
+            </div>
           </div>
         </div>
 
@@ -620,7 +620,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <SummaryCard
             title="Kasa / Banka Net"
             value={formatMoney(cashBalance)}
@@ -659,96 +659,110 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           />
         </div>
 
-        <section className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
                 Hızlı İşlemler
               </p>
-              <h3 className="mt-1 text-2xl font-black">Muhasebe işlemleri</h3>
+              <h3 className="mt-1 text-xl font-black">Muhasebe işlemleri</h3>
             </div>
-            <span className="rounded-full bg-teal-50 px-3 py-2 text-xs font-black text-teal-700">
-              Her kritik işlemde onay sorusu
+            <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-2 text-xs font-black text-teal-700">
+              Kritik işlemlerde onay sorulur
             </span>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {quickActions.map((action) => (
               <button
                 key={action.title}
+                type="button"
                 onClick={() => handleQuickAction(action)}
-                className={`rounded-[1.5rem] border p-5 text-left shadow-lg transition hover:-translate-y-1 hover:shadow-xl ${getToneClasses(
+                className={`group rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md ${getToneClasses(
                   action.tone
                 )}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-xl font-black text-white">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-base font-black text-white transition group-hover:bg-teal-700">
                     {action.icon}
                   </span>
-                  <span className="text-xs font-black uppercase tracking-[0.18em] opacity-60">
-                    İşlem
-                  </span>
+                  <div className="min-w-0">
+                    <p className="text-base font-black leading-5">{action.title}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{action.description}</p>
+                  </div>
                 </div>
-                <p className="mt-5 text-xl font-black">{action.title}</p>
-                <p className="mt-2 text-sm leading-6 opacity-75">{action.description}</p>
-                <p className="mt-4 text-xs font-black opacity-70">{action.helper}</p>
+                <p className="mt-3 border-t border-slate-100 pt-3 text-[11px] font-bold leading-5 text-slate-400">
+                  {action.helper}
+                </p>
               </button>
             ))}
           </div>
         </section>
 
-        <section id="finance-movements-section" className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <section id="finance-movements-section" className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
                 Son Finans Hareketleri
               </p>
-              <h3 className="mt-1 text-2xl font-black">Denetim izi</h3>
+              <h3 className="mt-1 text-xl font-black">Denetim izi</h3>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Tahsilat, ödeme, gider, devir ve iptal hareketlerinin son kayıtları.
+                Tahsilat, ödeme, gider, devir ve iptal hareketlerinin sayfalı son kayıtları.
               </p>
             </div>
-            <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">
               {summary.total_count} toplam kayıt
             </span>
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+            <div className="hidden grid-cols-[150px_1.1fr_2fr_160px] gap-4 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-500 md:grid">
+              <span>Tarih / Tür</span>
+              <span>İşlem</span>
+              <span>Açıklama</span>
+              <span className="text-right">Tutar</span>
+            </div>
+
             {movements.length === 0 ? (
-              <EmptyState text="Henüz finans hareketi bulunmuyor." />
+              <div className="p-4">
+                <EmptyState text="Henüz finans hareketi bulunmuyor." />
+              </div>
             ) : (
               movements.map((movement) => (
                 <div
                   key={movement.id}
-                  className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
+                  className="grid gap-3 border-t border-slate-100 px-4 py-4 text-sm md:grid-cols-[150px_1.1fr_2fr_160px] md:items-center"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-black">{movement.title}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">
-                        {getMovementLabel(movement.movement_type)} · {movement.movement_date}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="font-black text-slate-950">{movement.movement_date}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-400">
+                      {getMovementLabel(movement.movement_type)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-black text-slate-950">{movement.title}</p>
+                  </div>
+                  <p className="leading-6 text-slate-500">
+                    {movement.description ?? "Açıklama yok."}
+                  </p>
+                  <div className="md:text-right">
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
                         movement.direction === "in"
-                          ? "bg-teal-100 text-teal-800"
-                          : "bg-rose-100 text-rose-800"
+                          ? "bg-teal-50 text-teal-700"
+                          : "bg-rose-50 text-rose-700"
                       }`}
                     >
                       {movement.direction === "in" ? "+" : "-"}
                       {formatMoney(movement.base_amount, movement.currency)}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
-                    {movement.description ?? "Açıklama yok."}
-                  </p>
                 </div>
               ))
             )}
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-bold text-slate-500">
               Sayfa {movementPage} / {movementTotalPages}
             </p>
@@ -773,41 +787,6 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
       </section>
-
-      {activePanel ? (
-        <FinanceDetailModal title={getFinancePanelTitle(activePanel)} onClose={() => setActivePanel(null)}>
-          {activePanel === "collectionRecords" ? (
-            <CollectionRecordsSection
-              onChanged={loadDashboard}
-              quickOpenMode={collectionQuickOpenMode}
-              quickOpenKey={collectionQuickOpenKey}
-            />
-          ) : null}
-
-          {activePanel === "carryForward" ? (
-            <CarryForwardSettlementSection
-              carryForwards={carryForwards}
-              focusKey={carryForwardFocusKey}
-              onChanged={loadDashboard}
-            />
-          ) : null}
-
-          {activePanel === "eventClosure" ? (
-            <EventFinancialClosureSection
-              focusKey={eventClosureFocusKey}
-              onChanged={loadDashboard}
-            />
-          ) : null}
-
-          {activePanel === "periodClose" ? (
-            <PeriodClosingReportSection
-              focusKey={periodClosingFocusKey}
-              currentPeriodMonth={currentPeriodMonth}
-              onChanged={loadDashboard}
-            />
-          ) : null}
-        </FinanceDetailModal>
-      ) : null}
 
       {selectedAction ? (
         <ActionWarningModal
@@ -920,22 +899,30 @@ type SummaryCardProps = {
 };
 
 function SummaryCard({ title, value, description, tone }: SummaryCardProps) {
-  const classes =
+  const accentClasses =
     tone === "dark"
-      ? "bg-slate-950 text-white"
+      ? "bg-slate-950"
       : tone === "teal"
-        ? "bg-teal-300 text-slate-950"
+        ? "bg-teal-500"
         : tone === "amber"
-          ? "bg-amber-100 text-amber-950"
-          : "bg-white text-slate-950";
+          ? "bg-amber-400"
+          : "bg-slate-300";
+
+  const valueClasses =
+    tone === "teal"
+      ? "text-teal-700"
+      : tone === "amber"
+        ? "text-amber-700"
+        : "text-slate-950";
 
   return (
-    <article className={`rounded-[1.5rem] p-5 shadow-lg shadow-slate-200 ${classes}`}>
-      <p className="text-xs font-black uppercase tracking-[0.18em] opacity-60">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className={`h-1.5 w-12 rounded-full ${accentClasses}`} />
+      <p className="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
         {title}
       </p>
-      <p className="mt-4 text-2xl font-black tracking-tight">{value}</p>
-      <p className="mt-2 text-sm leading-6 opacity-70">{description}</p>
+      <p className={`mt-3 text-2xl font-black tracking-tight ${valueClasses}`}>{value}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
     </article>
   );
 }
