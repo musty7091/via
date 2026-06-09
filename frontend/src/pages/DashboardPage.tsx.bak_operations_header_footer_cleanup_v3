@@ -77,7 +77,6 @@ function getWorkflowToneClass(tone: WorkflowStep["tone"]) {
 }
 
 export function DashboardPage({
-  user,
   onLogout,
   onOpenCustomers,
   onOpenServiceCatalog,
@@ -150,21 +149,12 @@ export function DashboardPage({
             </h1>
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-right sm:block">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                Oturum
-              </p>
-              <p className="mt-0.5 text-sm font-black text-slate-950">{user.full_name}</p>
-            </div>
-
-            <button
-              onClick={onLogout}
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              Çıkış
-            </button>
-          </div>
+          <button
+            onClick={onLogout}
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
+          >
+            Çıkış
+          </button>
         </div>
       </header>
 
@@ -179,7 +169,7 @@ export function DashboardPage({
                 Katalogdan etkinlik dosyasına.
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                Katalog, müşteri, teklif, anlaşma ve saha kontrol sürecini başlat.
+                Katalog, müşteri, teklif, anlaşma ve saha kontrol sürecini tek ekrandan başlat.
               </p>
             </div>
             <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
@@ -228,8 +218,8 @@ export function DashboardPage({
           })}
         </div>
 
-        <footer className="mt-8 border-t border-slate-200 pt-4 text-center text-xs font-semibold text-slate-400">
-          © 2026 VIA EVENTS. Tüm hakları saklıdır.
+        <footer className="mt-8 border-t border-slate-200 pt-4 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+          VIA EVENTS · Operasyon Merkezi
         </footer>
       </section>
     </main>

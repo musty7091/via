@@ -277,9 +277,7 @@ export function UserManagementPage({
             <button
               onClick={onBackToDashboard}
               className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-            >
-              Dashboard
-            </button>
+            >Geri Dön</button>
           </div>
         </header>
 
@@ -313,9 +311,7 @@ export function UserManagementPage({
           <button
             onClick={onBackToDashboard}
             className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-          >
-            Dashboard
-          </button>
+          >Geri Dön</button>
         </div>
       </header>
 
