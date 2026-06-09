@@ -148,7 +148,7 @@ export function DashboardPage({
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-teal-700">
-              Operasyon Merkezi
+              Ana İş Akışı
             </p>
             <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
               Katalogdan etkinlik dosyasına.

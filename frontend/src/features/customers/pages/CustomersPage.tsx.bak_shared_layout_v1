@@ -16,8 +16,6 @@ import { CustomerDetailPanel } from "../components/CustomerDetailPanel";
 import { CustomerEmptyState } from "../components/CustomerEmptyState";
 import { CustomerForm } from "../components/CustomerForm";
 import { CustomerSelector } from "../components/CustomerSelector";
-import { AppLayout } from "../../../components/layout/AppLayout";
-import type { AuthUser } from "../../../types/auth";
 import type {
   CustomerContactCreatePayload,
   CustomerCreatePayload,
@@ -28,16 +26,12 @@ import type {
 } from "../types/customerTypes";
 
 type CustomersPageProps = {
-    user?: AuthUser | null;
-  onLogout?: () => void;
-onBackToDashboard: () => void;
+  onBackToDashboard: () => void;
 };
 
 const PAGE_SIZE = 20;
 
-export function CustomersPage({   user,
-  onLogout,
-onBackToDashboard }: CustomersPageProps) {
+export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
     null
@@ -197,8 +191,32 @@ onBackToDashboard }: CustomersPageProps) {
     null;
 
   return (
-    <AppLayout user={user} onLogout={onLogout} onBack={onBackToDashboard}>
-<section className="space-y-5">
+    <main className="min-h-screen bg-slate-100 text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
+            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
+              Müşteriler
+            </h1>
+          </div>
+
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => setShowCreatePanel(true)}
+              className="rounded-full bg-teal-300 px-4 py-2 text-sm font-black text-slate-950"
+            >
+              Yeni Müşteri
+            </button>
+            <button
+              onClick={onBackToDashboard}
+              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
+            >Geri Dön</button>
+          </div>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
         <CustomerSelector
           customers={customers}
           selectedCustomerId={selectedCustomerId}
@@ -277,6 +295,6 @@ onBackToDashboard }: CustomersPageProps) {
           </div>
         </div>
       ) : null}
-    </AppLayout>
+    </main>
   );
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
 import { EventsPage } from "./features/events/pages/EventsPage";
@@ -181,39 +181,40 @@ function App() {
   }
 
   if (screen === "customers" && currentUser) {
-    return <CustomersPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />;
+    return <CustomersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "serviceCatalog" && currentUser) {
     return (
-      <ServiceCatalogPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />
+      <ServiceCatalogPage onBackToDashboard={() => navigate("dashboard")} />
     );
   }
 
   if (screen === "offers" && currentUser) {
-    return <OffersPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />;
+    return <OffersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "events" && currentUser) {
-    return <EventsPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />;
+    return <EventsPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "partners" && currentUser) {
-    return <PartnersPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />;
+    return <PartnersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "finance" && currentUser) {
-    return <FinanceCenterPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />;
+    return <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "expenses" && currentUser) {
-    return <ExpensesPage user={currentUser} onBackToDashboard={() => navigate("dashboard")} />;
+    return <ExpensesPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "users" && currentUser) {
     return (
       <UserManagementPage
-        currentUser={currentUser} onBackToDashboard={() => navigate("dashboard")}
+        currentUser={currentUser}
+        onBackToDashboard={() => navigate("dashboard")}
       />
     );
   }
@@ -223,7 +224,7 @@ function App() {
       <section className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.28),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.22),_transparent_30%),linear-gradient(180deg,_rgba(15,23,42,0)_0%,_rgba(15,23,42,1)_100%)]" />
 
-        <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
+        <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
           <header className="flex items-center justify-between gap-4">
             <button
               onClick={() => navigate("landing")}
@@ -247,52 +248,52 @@ function App() {
                 
 
                 <h1 className="text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
-                  Etkinlik deneyiminizi birlikte planlayalÄ±m.
+                  Etkinlik deneyiminizi birlikte planlayalım.
                 </h1>
 
                 <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-                  SanatÃ§Ä± tanÄ±tÄ±mlarÄ±, program seÃ§enekleri ve etkinlik hizmetlerini
-                  modern bir vitrinle keÅŸfedin.
+                  Sanatçı tanıtımları, program seçenekleri ve etkinlik hizmetlerini
+                  modern bir vitrinle keşfedin.
                 </p>
               </div>
 
               <div className="mt-10 grid gap-5 lg:grid-cols-3">
                 <LandingCenterCard
-                  eyebrow="Halka AÃ§Ä±k"
+                  eyebrow="Halka Açık"
                   title="Etkinlikler"
-                  subtitle="Halka AÃ§Ä±k Vitrin"
-                  description="SanatÃ§Ä± tanÄ±tÄ±mlarÄ±, program seÃ§enekleri ve etkinlik hizmetleri halka aÃ§Ä±k vitrin alanÄ±nda sunulur."
-                  icon="âœ¦"
+                  subtitle="Halka Açık Vitrin"
+                  description="Sanatçı tanıtımları, program seçenekleri ve etkinlik hizmetleri halka açık vitrin alanında sunulur."
+                  icon="✦"
                   tone="light"
-                  actionLabel="Etkinlikleri keÅŸfet"
+                  actionLabel="Etkinlikleri keşfet"
                 />
 
                 <LandingCenterCard
-                  eyebrow="Yetkili GiriÅŸ"
+                  eyebrow="Yetkili Giriş"
                   title="Operasyon Merkezi"
-                  subtitle="Yetkili YÃ¶netim AlanÄ±"
-                  description="Teklif, anlaÅŸma, etkinlik dosyasÄ±, hizmet kataloÄŸu ve saha operasyonlarÄ±nÄ± yÃ¶netin."
-                  icon="â–£"
+                  subtitle="Yetkili Yönetim Alanı"
+                  description="Teklif, anlaşma, etkinlik dosyası, hizmet kataloğu ve saha operasyonlarını yönetin."
+                  icon="▣"
                   tone="dark"
-                  actionLabel="Operasyon merkezine giriÅŸ yap"
+                  actionLabel="Operasyon merkezine giriş yap"
                   onClick={() => openLoginFor("dashboard")}
                 />
 
                 <LandingCenterCard
-                  eyebrow="Yetkili GiriÅŸ"
+                  eyebrow="Yetkili Giriş"
                   title="Finans Merkezi"
-                  subtitle="Yetkili Muhasebe AlanÄ±"
-                  description="Tahsilat, gider, cari, kasa, banka, devir ve dÃ¶nem kapanÄ±ÅŸÄ± iÅŸlemlerini yÃ¶netin."
-                  icon="â‚º"
+                  subtitle="Yetkili Muhasebe Alanı"
+                  description="Tahsilat, gider, cari, kasa, banka, devir ve dönem kapanışı işlemlerini yönetin."
+                  icon="₺"
                   tone="teal"
-                  actionLabel="Finans merkezine giriÅŸ yap"
+                  actionLabel="Finans merkezine giriş yap"
                   onClick={() => openLoginFor("finance")}
                 />
               </div>
 
               <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-teal-200">
-                  <div className="text-center">Bize UlaÅŸÄ±n: 0539 114 90 90</div>
+                  <div className="text-center">Bize Ulaşın: 0539 114 90 90</div>
                 </p>
                 
               </div>
@@ -385,11 +386,10 @@ function LandingCenterCard({
       </div>
 
       <div className="mt-auto pt-6">
-        <span className="text-sm font-black">{actionLabel} â†’</span>
+        <span className="text-sm font-black">{actionLabel} →</span>
       </div>
     </article>
   );
 }
 
 export default App;
-

@@ -39,12 +39,8 @@ import { EventFinancialClosureSection } from "../components/EventFinancialClosur
 import { PeriodClosingReportSection } from "../components/PeriodClosingReportSection";
 import { ExpenseQuickEntryModal } from "../../expenses/components/ExpenseQuickEntryModal";
 
-import { AppLayout } from "../../../components/layout/AppLayout";
-import type { AuthUser } from "../../../types/auth";
 type FinanceCenterPageProps = {
-    user?: AuthUser | null;
-  onLogout?: () => void;
-onBackToDashboard: () => void;
+  onBackToDashboard: () => void;
 };
 
 type ActivePanelKey =
@@ -390,9 +386,7 @@ function getToneClasses(tone: QuickAction["tone"]) {
   return "border-slate-200 bg-white text-slate-950 shadow-sm hover:border-teal-200 hover:bg-slate-50";
 }
 
-export function FinanceCenterPage({   user,
-  onLogout,
-onBackToDashboard }: FinanceCenterPageProps) {
+export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps) {
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [summary, setSummary] = useState<FinancialMovementSummary>(defaultSummary);
   const [periodExpenseSummary, setPeriodExpenseSummary] =
@@ -557,8 +551,36 @@ onBackToDashboard }: FinanceCenterPageProps) {
   }
 
   return (
-    <AppLayout user={user} onLogout={onLogout} onBack={onBackToDashboard}>
-<section className="mx-auto max-w-7xl px-5 py-6">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <div>
+            <button
+              onClick={onBackToDashboard}
+              className="text-sm font-black text-slate-500 transition hover:text-slate-950"
+            >
+              ← Operasyon Merkezi
+            </button>
+            <div className="mt-2 flex flex-wrap items-end gap-3">
+              <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+                Finans Merkezi
+              </h1>
+              <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-black text-teal-700">
+                Ön Muhasebe Paneli
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden rounded-2xl bg-slate-950 px-4 py-3 text-right text-white sm:block">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-200">
+              Aktif Dönem
+            </p>
+            <p className="text-lg font-black">{currentPeriodMonth}</p>
+          </div>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-7xl px-5 py-6">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -819,7 +841,7 @@ onBackToDashboard }: FinanceCenterPageProps) {
           onCancelled={handleExpenseCancelled}
         />
       ) : null}
-    </AppLayout>
+    </main>
   );
 }
 
@@ -846,7 +868,7 @@ function FinanceDetailModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
-      <div className="max-h-[92vh] w-full max-w-7xl overflow-y-auto rounded-[2rem] bg-slate-100 p-4 text-slate-950 shadow-2xl sm:p-6">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[2rem] bg-slate-100 p-4 text-slate-950 shadow-2xl sm:p-6">
         <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-start justify-between gap-4 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 backdrop-blur">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">

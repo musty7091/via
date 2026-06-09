@@ -25,8 +25,6 @@ import {
 import { OfferList } from "../components/OfferList";
 import { OfferToolbar } from "../components/OfferToolbar";
 import { openOfferPrintWindow } from "../components/offerPrint";
-import { AppLayout } from "../../../components/layout/AppLayout";
-import type { AuthUser } from "../../../types/auth";
 import type {
   CustomerOption,
   OfferCreatePayload,
@@ -39,16 +37,12 @@ import type {
 } from "../types/offerTypes";
 
 type OffersPageProps = {
-    user?: AuthUser | null;
-  onLogout?: () => void;
-onBackToDashboard: () => void;
+  onBackToDashboard: () => void;
 };
 
 const PAGE_SIZE = 20;
 
-export function OffersPage({   user,
-  onLogout,
-onBackToDashboard }: OffersPageProps) {
+export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   const [offers, setOffers] = useState<OfferListItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -317,8 +311,24 @@ onBackToDashboard }: OffersPageProps) {
   }, [selectedOfferId]);
 
   return (
-    <AppLayout user={user} onLogout={onLogout} onBack={onBackToDashboard}>
-<section className="space-y-5">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-20 select-none cursor-default border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <img draggable={false} src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="pointer-events-none h-9 w-auto select-none object-contain" />
+            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
+              Teklif ve Anlaşma
+            </h1>
+          </div>
+
+          <button
+            onClick={onBackToDashboard}
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
+          >Geri Dön</button>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-7xl space-y-5 px-5 py-6">
         <OfferToolbar
           search={search}
           statusFilter={statusFilter}
@@ -450,6 +460,6 @@ onBackToDashboard }: OffersPageProps) {
           />
         </ModalShell>
       ) : null}
-    </AppLayout>
+    </main>
   );
 }

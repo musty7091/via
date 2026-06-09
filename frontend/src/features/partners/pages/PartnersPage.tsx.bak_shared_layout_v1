@@ -3,12 +3,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createPartner, fetchPartners, updatePartner } from "../api/partnersApi";
 import type { Partner } from "../types/partnerTypes";
 
-import { AppLayout } from "../../../components/layout/AppLayout";
-import type { AuthUser } from "../../../types/auth";
 type PartnersPageProps = {
-    user?: AuthUser | null;
-  onLogout?: () => void;
-onBackToDashboard: () => void;
+  onBackToDashboard: () => void;
 };
 
 type PartnerFormState = {
@@ -32,9 +28,7 @@ function formatPercent(value: number) {
   }).format(value);
 }
 
-export function PartnersPage({   user,
-  onLogout,
-onBackToDashboard }: PartnersPageProps) {
+export function PartnersPage({ onBackToDashboard }: PartnersPageProps) {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
   const [form, setForm] = useState<PartnerFormState>(emptyForm);
@@ -157,8 +151,24 @@ onBackToDashboard }: PartnersPageProps) {
   }, [selectedPartner]);
 
   return (
-    <AppLayout user={user} onLogout={onLogout} onBack={onBackToDashboard}>
-<section className="space-y-5">
+    <main className="min-h-screen bg-slate-100 text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
+            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
+              Ortaklar Yönetimi
+            </h1>
+          </div>
+
+          <button
+            onClick={onBackToDashboard}
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
+          >Geri Dön</button>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-6xl space-y-5 px-4 py-5">
         <section className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-300">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-teal-300">
             Finans Omurgası
@@ -365,7 +375,7 @@ onBackToDashboard }: PartnersPageProps) {
           </section>
         </section>
       </section>
-    </AppLayout>
+    </main>
   );
 }
 

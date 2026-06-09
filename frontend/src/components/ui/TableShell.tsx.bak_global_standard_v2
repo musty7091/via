@@ -1,0 +1,14 @@
+import type { ReactNode } from "react";
+
+type TableShellProps = {
+  children: ReactNode;
+  minWidthClass?: string;
+};
+
+export function TableShell({ children, minWidthClass = "min-w-[900px]" }: TableShellProps) {
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+      <div className={minWidthClass}>{children}</div>
+    </div>
+  );
+}

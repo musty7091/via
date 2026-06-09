@@ -21,8 +21,6 @@ import {
 import { CatalogEmptyState } from "../components/CatalogEmptyState";
 import { CatalogList } from "../components/CatalogList";
 import { CatalogToolbar } from "../components/CatalogToolbar";
-import { AppLayout } from "../../../components/layout/AppLayout";
-import type { AuthUser } from "../../../types/auth";
 import {
   ArtistForm,
   ModalShell,
@@ -45,9 +43,7 @@ import type {
 } from "../types/serviceCatalogTypes";
 
 type ServiceCatalogPageProps = {
-    user?: AuthUser | null;
-  onLogout?: () => void;
-onBackToDashboard: () => void;
+  onBackToDashboard: () => void;
 };
 
 type CatalogMode = "artists" | "services" | "packages";
@@ -79,9 +75,7 @@ const modeConfig = {
 };
 
 export function ServiceCatalogPage({
-    user,
-  onLogout,
-onBackToDashboard,
+  onBackToDashboard,
 }: ServiceCatalogPageProps) {
   const [mode, setMode] = useState<CatalogMode>("artists");
   const [search, setSearch] = useState("");
@@ -350,8 +344,24 @@ onBackToDashboard,
   const config = modeConfig[mode];
 
   return (
-    <AppLayout user={user} onLogout={onLogout} onBack={onBackToDashboard}>
-<section className="space-y-5">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-7 w-auto object-contain" />
+            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
+              Hizmet Kataloğu
+            </h1>
+          </div>
+
+          <button
+            onClick={onBackToDashboard}
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
+          >Geri Dön</button>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
         <div className="flex gap-2 overflow-x-auto rounded-full bg-white p-2 shadow-sm">
           {(["artists", "services", "packages"] as CatalogMode[]).map((item) => (
             <button
@@ -495,6 +505,6 @@ onBackToDashboard,
           />
         </ModalShell>
       ) : null}
-    </AppLayout>
+    </main>
   );
 }
