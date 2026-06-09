@@ -98,8 +98,15 @@ export async function fetchFinanceSummary(): Promise<FinancialMovementSummary> {
   return requestJson<FinancialMovementSummary>("/finance/movements/summary");
 }
 
-export async function fetchRecentFinanceMovements(): Promise<FinancialMovementListResponse> {
-  return requestJson<FinancialMovementListResponse>("/finance/movements?limit=8");
+export async function fetchRecentFinanceMovements(params?: {
+  skip?: number;
+  limit?: number;
+}): Promise<FinancialMovementListResponse> {
+  const searchParams = new URLSearchParams();
+  searchParams.set("skip", String(params?.skip ?? 0));
+  searchParams.set("limit", String(params?.limit ?? 5));
+
+  return requestJson<FinancialMovementListResponse>(`/finance/movements?${searchParams.toString()}`);
 }
 
 export async function fetchOpenCarryForwards(): Promise<CarryForwardItem[]> {

@@ -37,10 +37,17 @@ import { SupplierPaymentQuickActionModal } from "../components/SupplierPaymentQu
 import { CarryForwardSettlementSection } from "../components/CarryForwardSettlementSection";
 import { EventFinancialClosureSection } from "../components/EventFinancialClosureSection";
 import { PeriodClosingReportSection } from "../components/PeriodClosingReportSection";
+import { ExpenseQuickEntryModal } from "../../expenses/components/ExpenseQuickEntryModal";
 
 type FinanceCenterPageProps = {
   onBackToDashboard: () => void;
 };
+
+type ActivePanelKey =
+  | "collectionRecords"
+  | "carryForward"
+  | "eventClosure"
+  | "periodClose";
 
 type QuickActionKey =
   | "collection"
@@ -75,6 +82,8 @@ type ExpenseFormState = {
   notes: string;
 };
 
+const financeMovementPageSize = 5;
+
 const defaultSummary: FinancialMovementSummary = {
   total_count: 0,
   total_in_base_amount: 0,
@@ -100,9 +109,9 @@ const quickActions: QuickAction[] = [
   },
   {
     key: "expense",
-    title: "Gider Faturası Gir",
-    description: "Normal dönem gideri veya sezonluk gider kaydet.",
-    helper: "Sezonluk giderler aylara otomatik bölünür.",
+    title: "Hızlı Gider Kaydı",
+    description: "Aynı gider formunu hızlı işlem olarak aç.",
+    helper: "Detaylı liste ve iptal işlemleri Gider Yönetimi ekranındadır.",
     icon: "▦",
     tone: "white",
     warningTitle: "Gider Kaydı Açılacak",
@@ -403,6 +412,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   const [expenseDetailError, setExpenseDetailError] = useState<string | null>(null);
   const [cancelExpenseTarget, setCancelExpenseTarget] = useState<ExpenseRead | null>(null);
   const [isMovementsOpen, setIsMovementsOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<ActivePanelKey | null>(null);
+  const [movementPage, setMovementPage] = useState(1);
 
   async function loadDashboard() {
     setIsLoading(true);
@@ -410,7 +421,10 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
     const results = await Promise.allSettled([
       fetchFinanceSummary(),
-      fetchRecentFinanceMovements(),
+      fetchRecentFinanceMovements({
+        skip: (movementPage - 1) * financeMovementPageSize,
+        limit: financeMovementPageSize,
+      }),
       fetchOpenCarryForwards(),
       fetchPeriodExpenseSummary(currentPeriodMonth),
       fetchExpenses(),
@@ -452,7 +466,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
 
   useEffect(() => {
     loadDashboard();
-  }, [currentPeriodMonth]);
+  }, [currentPeriodMonth, movementPage]);
 
   const openCarryForwardTotal = carryForwards.reduce(
     (total, item) => total + Number(item.remaining_base_amount ?? 0),
@@ -470,6 +484,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
     .reduce((total, item) => total + Number(item.remaining_base_amount ?? 0), 0);
 
   const cashBalance = summary.company_cash_in_base_amount - summary.company_cash_out_base_amount;
+  const movementTotalPages = Math.max(1, Math.ceil(summary.total_count / financeMovementPageSize));
 
   function handleQuickAction(action: QuickAction) {
     if (action.key === "collection") {
@@ -490,21 +505,25 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
     if (action.key === "partnerCash") {
       setCollectionQuickOpenMode("partner-cash");
       setCollectionQuickOpenKey((previous) => previous + 1);
+      setActivePanel("collectionRecords");
       return;
     }
 
     if (action.key === "carryForward") {
       setCarryForwardFocusKey((previous) => previous + 1);
+      setActivePanel("carryForward");
       return;
     }
 
     if (action.key === "eventClosure") {
       setEventClosureFocusKey((previous) => previous + 1);
+      setActivePanel("eventClosure");
       return;
     }
 
     if (action.key === "periodClose") {
       setPeriodClosingFocusKey((previous) => previous + 1);
+      setActivePanel("periodClose");
       return;
     }
 
@@ -640,47 +659,6 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           />
         </div>
 
-        <section id="finance-expense-records-section" className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                Günlük İşler
-              </p>
-              <h3 className="mt-1 text-2xl font-black">Bugün yapılacaklar</h3>
-            </div>
-            <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-              Sistem yönlendirmesi
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <TodoRow
-              title="Bekleyen tahsilatlar"
-              value={formatMoney(customerReceivableTotal)}
-              description="Devreden müşteri alacakları takip edilmeli."
-              status={customerReceivableTotal > 0 ? "Takip gerekli" : "Temiz"}
-            />
-            <TodoRow
-              title="Ödenecek sanatçı / hizmet borçları"
-              value={formatMoney(supplierPayableTotal)}
-              description="Açık borçlar kapanmadan etkinlik finans kapanışı tamamlanamaz."
-              status={supplierPayableTotal > 0 ? "Ödeme bekliyor" : "Temiz"}
-            />
-            <TodoRow
-              title="Ortak üzerindeki paralar"
-              value={formatMoney(partnerCashOnHandTotal)}
-              description="Ortağın aldığı tahsilatlar şirkete teslim edilmeli."
-              status={partnerCashOnHandTotal > 0 ? "Teslim bekliyor" : "Temiz"}
-            />
-            <TodoRow
-              title="Bu ay sezonluk gider payı"
-              value={formatMoney(periodExpenseSummary?.allocated_expense_base_amount ?? 0)}
-              description="Geçmişten gelen sezonluk gider payı dönem sonucuna dahil edilir."
-              status={(periodExpenseSummary?.allocation_count ?? 0) > 0 ? "Dağıtım var" : "Yok"}
-            />
-          </div>
-        </section>
-
         <section className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -719,109 +697,117 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
 
-        <CollectionRecordsSection
-          onChanged={loadDashboard}
-          quickOpenMode={collectionQuickOpenMode}
-          quickOpenKey={collectionQuickOpenKey}
-        />
-
-        <SupplierPayablesSection refreshKey={supplierPayablesRefreshKey} onChanged={loadDashboard} />
-
-        <ExpenseRecordsSection
-          expenses={expenses}
-          isDetailLoading={isExpenseDetailLoading}
-          currentPeriodMonth={currentPeriodMonth}
-          onOpenDetail={openExpenseDetail}
-        />
-
-        <div className="mt-6 space-y-4">
-          <PeriodClosingReportSection
-            focusKey={periodClosingFocusKey}
-            currentPeriodMonth={currentPeriodMonth}
-            onChanged={loadDashboard}
-          />
-
-          <EventFinancialClosureSection
-            focusKey={eventClosureFocusKey}
-            onChanged={loadDashboard}
-          />
-
-          <CarryForwardSettlementSection
-            carryForwards={carryForwards}
-            focusKey={carryForwardFocusKey}
-            onChanged={loadDashboard}
-          />
-
-          <section id="finance-movements-section" className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
-                  Son Finans Hareketleri
-                </p>
-                <h3 className="mt-1 text-2xl font-black">Denetim izi</h3>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {isMovementsOpen ? (
-                  <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-                    {summary.total_count} toplam
-                  </span>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                  const nextIsOpen = !isMovementsOpen;
-                  setIsMovementsOpen(nextIsOpen);
-
-                  if (nextIsOpen) {
-                    scrollToElementById("finance-movements-section");
-                  }
-                }}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
-                >
-                  {isMovementsOpen ? "Kapat ▲" : "Detayı Aç ▼"}
-                </button>
-              </div>
+        <section id="finance-movements-section" className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
+                Son Finans Hareketleri
+              </p>
+              <h3 className="mt-1 text-2xl font-black">Denetim izi</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Tahsilat, ödeme, gider, devir ve iptal hareketlerinin son kayıtları.
+              </p>
             </div>
+            <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+              {summary.total_count} toplam kayıt
+            </span>
+          </div>
 
-            {isMovementsOpen ? (
-              <div className="mt-5 space-y-3">
-                {movements.length === 0 ? (
-                  <EmptyState text="Henüz finans hareketi bulunmuyor." />
-                ) : (
-                  movements.map((movement) => (
-                    <div
-                      key={movement.id}
-                      className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="font-black">{movement.title}</p>
-                          <p className="mt-1 text-xs font-bold text-slate-500">
-                            {getMovementLabel(movement.movement_type)} · {movement.movement_date}
-                          </p>
-                        </div>
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-black ${
-                            movement.direction === "in"
-                              ? "bg-teal-100 text-teal-800"
-                              : "bg-rose-100 text-rose-800"
-                          }`}
-                        >
-                          {movement.direction === "in" ? "+" : "-"}
-                          {formatMoney(movement.base_amount, movement.currency)}
-                        </span>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-500">
-                        {movement.description ?? "Açıklama yok."}
+          <div className="mt-5 space-y-3">
+            {movements.length === 0 ? (
+              <EmptyState text="Henüz finans hareketi bulunmuyor." />
+            ) : (
+              movements.map((movement) => (
+                <div
+                  key={movement.id}
+                  className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-black">{movement.title}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {getMovementLabel(movement.movement_type)} · {movement.movement_date}
                       </p>
                     </div>
-                  ))
-                )}
-              </div>
-            ) : null}
-          </section>
-        </div>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                        movement.direction === "in"
+                          ? "bg-teal-100 text-teal-800"
+                          : "bg-rose-100 text-rose-800"
+                      }`}
+                    >
+                      {movement.direction === "in" ? "+" : "-"}
+                      {formatMoney(movement.base_amount, movement.currency)}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    {movement.description ?? "Açıklama yok."}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <p className="text-sm font-bold text-slate-500">
+              Sayfa {movementPage} / {movementTotalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={movementPage <= 1}
+                onClick={() => setMovementPage((previous) => Math.max(1, previous - 1))}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Önceki
+              </button>
+              <button
+                type="button"
+                disabled={movementPage >= movementTotalPages}
+                onClick={() => setMovementPage((previous) => Math.min(movementTotalPages, previous + 1))}
+                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Sonraki
+              </button>
+            </div>
+          </div>
+        </section>
       </section>
+
+      {activePanel ? (
+        <FinanceDetailModal title={getFinancePanelTitle(activePanel)} onClose={() => setActivePanel(null)}>
+          {activePanel === "collectionRecords" ? (
+            <CollectionRecordsSection
+              onChanged={loadDashboard}
+              quickOpenMode={collectionQuickOpenMode}
+              quickOpenKey={collectionQuickOpenKey}
+            />
+          ) : null}
+
+          {activePanel === "carryForward" ? (
+            <CarryForwardSettlementSection
+              carryForwards={carryForwards}
+              focusKey={carryForwardFocusKey}
+              onChanged={loadDashboard}
+            />
+          ) : null}
+
+          {activePanel === "eventClosure" ? (
+            <EventFinancialClosureSection
+              focusKey={eventClosureFocusKey}
+              onChanged={loadDashboard}
+            />
+          ) : null}
+
+          {activePanel === "periodClose" ? (
+            <PeriodClosingReportSection
+              focusKey={periodClosingFocusKey}
+              currentPeriodMonth={currentPeriodMonth}
+              onChanged={loadDashboard}
+            />
+          ) : null}
+        </FinanceDetailModal>
+      ) : null}
 
       {selectedAction ? (
         <ActionWarningModal
@@ -852,7 +838,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
       ) : null}
 
       {showExpenseModal ? (
-        <ExpenseModal
+        <ExpenseQuickEntryModal
           onClose={() => setShowExpenseModal(false)}
           onSaved={async () => {
             setShowExpenseModal(false);
@@ -877,6 +863,52 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
         />
       ) : null}
     </main>
+  );
+}
+
+
+function getFinancePanelTitle(activePanel: ActivePanelKey) {
+  const titles: Record<ActivePanelKey, string> = {
+    collectionRecords: "Ortaktan Para Teslim Al",
+    carryForward: "Devreden Kalem Kapat",
+    eventClosure: "Etkinlik Finans Kapanışı",
+    periodClose: "Dönem Kapanış Raporu",
+  };
+
+  return titles[activePanel];
+}
+
+function FinanceDetailModal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[2rem] bg-slate-100 p-4 text-slate-950 shadow-2xl sm:p-6">
+        <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-start justify-between gap-4 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 backdrop-blur">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+              Detaylı Finans İşlemi
+            </p>
+            <h3 className="mt-2 text-2xl font-black">{title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white"
+          >
+            Kapat
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -905,30 +937,6 @@ function SummaryCard({ title, value, description, tone }: SummaryCardProps) {
       <p className="mt-4 text-2xl font-black tracking-tight">{value}</p>
       <p className="mt-2 text-sm leading-6 opacity-70">{description}</p>
     </article>
-  );
-}
-
-type TodoRowProps = {
-  title: string;
-  value: string;
-  description: string;
-  status: string;
-};
-
-function TodoRow({ title, value, description, status }: TodoRowProps) {
-  return (
-    <div className="rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-black">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-        </div>
-        <div className="text-right">
-          <p className="font-black">{value}</p>
-          <p className="mt-1 text-xs font-black text-teal-700">{status}</p>
-        </div>
-      </div>
-    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { ExpenseEntryForm } from "../components/ExpenseEntryForm";
 import {
   cancelExpense,
   createExpense,
@@ -469,15 +470,15 @@ export function ExpensesPage({ onBackToDashboard }: ExpensesPageProps) {
               {tabs.find((tab) => tab.key === activeTab)?.description}
             </p>
 
-            <ExpenseForm
+            <ExpenseEntryForm
               activeTab={activeTab}
-              form={form}
               eventOptions={eventOptions}
               partnerOptions={partnerOptions}
-              saving={saving}
-              onSubmit={handleSubmit}
-              onChange={updateForm}
-              onReset={resetForm}
+              onSaved={async () => {
+                setMessage("Gider kaydı başarıyla oluşturuldu.");
+                await loadData();
+              }}
+              className="mt-5"
             />
           </section>
 
