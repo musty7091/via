@@ -158,7 +158,6 @@ function App() {
       <LoginPage
         onLoginSuccess={handleLoginSuccess}
         onBack={() => navigate("landing")}
-        targetScreen={postLoginScreen}
       />
     );
   }
@@ -235,7 +234,7 @@ function App() {
                 VIA EVENTS
               </span>
               <span className="mt-1 text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
-                Etkinlik ve Organizasyon Platformu
+                Event Experıence Platform
               </span>
             </button>
 
@@ -260,33 +259,33 @@ function App() {
               <div className="mt-10 grid gap-5 lg:grid-cols-3">
                 <LandingCenterCard
                   eyebrow="Halka Açık"
-                  title="Etkinlikler"
-                  subtitle="Halka Açık Vitrin"
-                  description="Sanatçı tanıtımları, program seçenekleri ve etkinlik hizmetleri halka açık vitrin alanında sunulur."
+                  title="Events"
+                  subtitle="Hizmet Kataloğu"
+                  description="Sanatçı tanıtımları, kısa videolar, program seçenekleri ve etkinlik hizmetleri bu alanda ziyaretçilere sunulur."
                   icon="✦"
                   tone="light"
-                  actionLabel="Etkinlikleri keşfet"
+                  actionLabel="Vitrini keşfet"
                 />
 
                 <LandingCenterCard
                   eyebrow="Yetkili Giriş"
-                  title="Operasyon Merkezi"
-                  subtitle="Yetkili Yönetim Alanı"
-                  description="Teklif, anlaşma, etkinlik dosyası, hizmet kataloğu ve saha operasyonlarını yönetin."
+                  title="Operations Center"
+                  subtitle="Operasyon Merkezi"
+                  description="Teklif, anlaşma, etkinlik dosyası ve saha operasyon yönetimi."
                   icon="▣"
                   tone="dark"
-                  actionLabel="Operasyon merkezine giriş yap"
+                  actionLabel="Operasyon girişi"
                   onClick={() => openLoginFor("dashboard")}
                 />
 
                 <LandingCenterCard
                   eyebrow="Yetkili Giriş"
-                  title="Finans Merkezi"
-                  subtitle="Yetkili Muhasebe Alanı"
-                  description="Tahsilat, gider, cari, kasa, banka, devir ve dönem kapanışı işlemlerini yönetin."
+                  title="Finance Center"
+                  subtitle="Muhasebe Merkezi"
+                  description="Yetkili kullanıcılar için tahsilat, gider, cari, kasa, banka, devir ve dönem takibi."
                   icon="₺"
                   tone="teal"
-                  actionLabel="Finans merkezine giriş yap"
+                  actionLabel="Muhasebe girişi"
                   onClick={() => openLoginFor("finance")}
                 />
               </div>

@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { loginUser } from "../services/apiClient";
 import { saveAuthSession } from "../services/authStorage";
@@ -7,30 +7,13 @@ import type { AuthUser } from "../types/auth";
 type LoginPageProps = {
   onLoginSuccess: (user: AuthUser) => void;
   onBack: () => void;
-  targetScreen?: string;
 };
 
-export function LoginPage({ onLoginSuccess, onBack, targetScreen }: LoginPageProps) {
+export function LoginPage({ onLoginSuccess, onBack }: LoginPageProps) {
   const [email, setEmail] = useState("admin@viaevents.com");
   const [password, setPassword] = useState("Via12345!");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  const loginCopy = useMemo(() => {
-    if (targetScreen === "finance") {
-      return {
-        title: "Finans Merkezi Girişi",
-        description:
-          "Tahsilat, gider, cari hesap, kasa/banka, devir ve dönem kapanışı işlemleri için güvenli giriş alanı.",
-      };
-    }
-
-    return {
-      title: "Operasyon Merkezi Girişi",
-      description:
-        "Teklif, anlaşma, etkinlik dosyaları, hizmet kataloğu ve saha operasyonları için güvenli giriş alanı.",
-    };
-  }, [targetScreen]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,21 +40,18 @@ export function LoginPage({ onLoginSuccess, onBack, targetScreen }: LoginPagePro
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-md flex-col justify-center">
         <button
           onClick={onBack}
-          className="mb-6 w-fit rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/15"
+          className="mb-6 w-fit rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-slate-200"
         >
           ← Ana ekrana dön
         </button>
 
         <section className="rounded-[2rem] border border-white/10 bg-white/10 p-5 shadow-2xl shadow-black/30 backdrop-blur">
           <div className="rounded-[1.5rem] bg-white p-5 text-slate-950">
-            <img
-              src="/brand/via-logo-horizontal.png"
-              alt="VIA EVENTS"
-              className="h-12 w-auto object-contain"
-            />
-            <h1 className="mt-3 text-3xl font-black">{loginCopy.title}</h1>
+            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-12 w-auto object-contain" />
+            <h1 className="mt-3 text-3xl font-black">Back Office Girişi</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              {loginCopy.description}
+              Etkinlik, tahsilat, gider, operasyon ve ortak hesapları için
+              güvenli yönetim alanı.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">

@@ -559,7 +559,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
               onClick={onBackToDashboard}
               className="text-sm font-black text-slate-500 transition hover:text-slate-950"
             >
-              ← Operasyon Merkezi
+              ← Back Office
             </button>
             <div className="mt-2 flex flex-wrap items-end gap-3">
               <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
