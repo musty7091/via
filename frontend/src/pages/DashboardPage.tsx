@@ -9,6 +9,7 @@ type DashboardPageProps = {
   onOpenEvents: () => void;
   onOpenPartners: () => void;
   onOpenFinanceCenter: () => void;
+  onOpenExpenses: () => void;
   onOpenUsers: () => void;
 };
 
@@ -40,8 +41,13 @@ const dashboardCards = [
   },
   {
     value: "Finans Merkezi",
-    description: "Tahsilat, gider, cari, devir ve dönem kapanışı.",
+    description: "Tahsilat, cari, devir ve dönem kapanışı.",
     action: "finance",
+  },
+  {
+    value: "Gider Yönetimi",
+    description: "Etkinlik giderleri, genel aylık giderler ve sezonluk dağıtımlar.",
+    action: "expenses",
   },
   {
     value: "Kullanıcı Yönetimi",
@@ -60,6 +66,7 @@ export function DashboardPage({
   onOpenEvents,
   onOpenPartners,
   onOpenFinanceCenter,
+  onOpenExpenses,
   onOpenUsers,
 }: DashboardPageProps) {
   const visibleDashboardCards = dashboardCards.filter(
@@ -115,7 +122,9 @@ export function DashboardPage({
                         ? onOpenPartners
                         : card.action === "finance"
                           ? onOpenFinanceCenter
-                          : card.action === "users"
+                          : card.action === "expenses"
+                            ? onOpenExpenses
+                            : card.action === "users"
                             ? onOpenUsers
                             : onOpenEvents
               }
