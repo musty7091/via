@@ -1,8 +1,7 @@
-import { FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 
 import {
   artistTypeOptions,
-  componentTypeOptions,
   currencyOptions,
   packageTypeOptions,
   programSectionOptions,
@@ -11,20 +10,26 @@ import {
 import type {
   ArtistCreatePayload,
   ArtistService,
+  Currency,
   PackageItemCreatePayload,
-  RiderCreatePayload,
+  ServicePackage,
   ServicePackageCreatePayload,
   TechnicalService,
   TechnicalServiceCreatePayload,
 } from "../types/serviceCatalogTypes";
-import type { Currency } from "../types/serviceCatalogTypes";
 
 type ModalShellProps = {
   title: string;
   eyebrow: string;
   onClose: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 };
+
+const packageComponentTypeOptions = [
+  { value: "artist", label: "Sanatçı Hizmeti" },
+  { value: "service", label: "Teknik / Operasyon Hizmeti" },
+  { value: "manual", label: "Manuel Kalem" },
+];
 
 export function ModalShell({
   title,
@@ -139,9 +144,7 @@ export function ArtistForm({
           label="Maliyet para birimi"
           value={costCurrency}
           onChange={(value) => setCostCurrency(value as Currency)}
-          options={
-            currencyOptions as unknown as Array<{ value: string; label: string }>
-          }
+          options={currencyOptions}
         />
 
         <NumberField label="Teklif tutarı" value={sale} onChange={setSale} />
@@ -150,9 +153,7 @@ export function ArtistForm({
           label="Teklif para birimi"
           value={saleCurrency}
           onChange={(value) => setSaleCurrency(value as Currency)}
-          options={
-            currencyOptions as unknown as Array<{ value: string; label: string }>
-          }
+          options={currencyOptions}
         />
       </div>
 
@@ -166,16 +167,31 @@ export function ArtistForm({
 export function TechnicalServiceForm({
   onSubmit,
   onDone,
+  initialService,
+  submitLabel = "Teknik Hizmeti Kaydet",
 }: {
   onSubmit: (payload: TechnicalServiceCreatePayload) => Promise<void>;
   onDone: () => void;
+  initialService?: TechnicalService | null;
+  submitLabel?: string;
 }) {
-  const [serviceType, setServiceType] = useState("technical_service");
-  const [name, setName] = useState("");
-  const [cost, setCost] = useState("0");
-  const [sale, setSale] = useState("0");
-  const [currency, setCurrency] = useState<Currency>("TRY");
-  const [notes, setNotes] = useState("");
+  const [serviceType, setServiceType] = useState(
+    initialService?.service_type ?? "technical_service"
+  );
+  const [name, setName] = useState(initialService?.name ?? "");
+  const [cost, setCost] = useState(
+    String(initialService?.default_cost_amount ?? 0)
+  );
+  const [costCurrency, setCostCurrency] = useState<Currency>(
+    initialService?.default_cost_currency ?? "TRY"
+  );
+  const [sale, setSale] = useState(
+    String(initialService?.default_sale_amount ?? 0)
+  );
+  const [saleCurrency, setSaleCurrency] = useState<Currency>(
+    initialService?.default_sale_currency ?? "TRY"
+  );
+  const [notes, setNotes] = useState(initialService?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -192,11 +208,11 @@ export function TechnicalServiceForm({
         service_type: serviceType,
         name: name.trim(),
         default_cost_amount: Number(cost || 0),
-        default_cost_currency: currency,
+        default_cost_currency: costCurrency,
         default_sale_amount: Number(sale || 0),
-        default_sale_currency: currency,
+        default_sale_currency: saleCurrency,
         notes: notes.trim() || null,
-        is_active: true,
+        is_active: initialService?.is_active ?? true,
       });
 
       onDone();
@@ -216,23 +232,29 @@ export function TechnicalServiceForm({
 
       <TextField label="Hizmet adı" value={name} onChange={setName} required />
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <NumberField label="Maliyet" value={cost} onChange={setCost} />
-        <NumberField label="Teklif" value={sale} onChange={setSale} />
+      <div className="grid gap-3 md:grid-cols-2">
+        <NumberField label="Maliyet tutarı" value={cost} onChange={setCost} />
 
         <SelectField
-          label="Para birimi"
-          value={currency}
-          onChange={(value) => setCurrency(value as Currency)}
-          options={
-            currencyOptions as unknown as Array<{ value: string; label: string }>
-          }
+          label="Maliyet para birimi"
+          value={costCurrency}
+          onChange={(value) => setCostCurrency(value as Currency)}
+          options={currencyOptions}
+        />
+
+        <NumberField label="Teklif tutarı" value={sale} onChange={setSale} />
+
+        <SelectField
+          label="Teklif para birimi"
+          value={saleCurrency}
+          onChange={(value) => setSaleCurrency(value as Currency)}
+          options={currencyOptions}
         />
       </div>
 
       <TextareaField label="Not" value={notes} onChange={setNotes} />
 
-      <SubmitButton isSaving={isSaving} label="Teknik Hizmeti Kaydet" />
+      <SubmitButton isSaving={isSaving} label={submitLabel} />
     </form>
   );
 }
@@ -240,16 +262,28 @@ export function TechnicalServiceForm({
 export function PackageForm({
   onSubmit,
   onDone,
+  initialPackage,
+  submitLabel = "Paketi Kaydet",
 }: {
   onSubmit: (payload: ServicePackageCreatePayload) => Promise<void>;
   onDone: () => void;
+  initialPackage?: ServicePackage | null;
+  submitLabel?: string;
 }) {
-  const [packageType, setPackageType] = useState("program");
-  const [name, setName] = useState("");
-  const [sale, setSale] = useState("0");
-  const [currency, setCurrency] = useState<Currency>("TRY");
-  const [description, setDescription] = useState("");
-  const [notes, setNotes] = useState("");
+  const [packageType, setPackageType] = useState(
+    initialPackage?.package_type ?? "program"
+  );
+  const [name, setName] = useState(initialPackage?.name ?? "");
+  const [sale, setSale] = useState(
+    String(initialPackage?.default_sale_amount ?? 0)
+  );
+  const [currency, setCurrency] = useState<Currency>(
+    initialPackage?.default_sale_currency ?? "TRY"
+  );
+  const [description, setDescription] = useState(
+    initialPackage?.description ?? ""
+  );
+  const [notes, setNotes] = useState(initialPackage?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -269,7 +303,7 @@ export function PackageForm({
         default_sale_amount: Number(sale || 0),
         default_sale_currency: currency,
         notes: notes.trim() || null,
-        is_active: true,
+        is_active: initialPackage?.is_active ?? true,
       });
 
       onDone();
@@ -291,7 +325,7 @@ export function PackageForm({
 
       <div className="grid gap-3 md:grid-cols-2">
         <NumberField
-          label="Varsayılan teklif"
+          label="Varsayılan paket satış fiyatı"
           value={sale}
           onChange={setSale}
         />
@@ -300,9 +334,7 @@ export function PackageForm({
           label="Para birimi"
           value={currency}
           onChange={(value) => setCurrency(value as Currency)}
-          options={
-            currencyOptions as unknown as Array<{ value: string; label: string }>
-          }
+          options={currencyOptions}
         />
       </div>
 
@@ -314,7 +346,7 @@ export function PackageForm({
 
       <TextareaField label="İç not" value={notes} onChange={setNotes} />
 
-      <SubmitButton isSaving={isSaving} label="Paketi Kaydet" />
+      <SubmitButton isSaving={isSaving} label={submitLabel} />
     </form>
   );
 }
@@ -323,11 +355,18 @@ export function RiderForm({
   onSubmit,
   onDone,
 }: {
-  onSubmit: (payload: RiderCreatePayload) => Promise<void>;
+  onSubmit: (payload: {
+    title: string;
+    description?: string | null;
+    category?: string | null;
+    sort_order: number;
+    is_required: boolean;
+    is_active?: boolean;
+  }) => Promise<void>;
   onDone: () => void;
 }) {
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("kulis");
+  const [category, setCategory] = useState("Genel");
   const [description, setDescription] = useState("");
   const [isRequired, setIsRequired] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -391,11 +430,13 @@ export function RiderForm({
 export function PackageItemForm({
   artists,
   services,
+  nextSortOrder,
   onSubmit,
   onDone,
 }: {
   artists: ArtistService[];
   services: TechnicalService[];
+  nextSortOrder: number;
   onSubmit: (payload: PackageItemCreatePayload) => Promise<void>;
   onDone: () => void;
 }) {
@@ -403,17 +444,38 @@ export function PackageItemForm({
   const [artistId, setArtistId] = useState("");
   const [serviceItemId, setServiceItemId] = useState("");
   const [manualTitle, setManualTitle] = useState("");
-  const [programSection, setProgramSection] = useState("opening");
-  const [sortOrder, setSortOrder] = useState("1");
-  const [startTime, setStartTime] = useState("20:00");
-  const [endTime, setEndTime] = useState("21:00");
+  const [programSection, setProgramSection] = useState("main_performance");
+  const [sortOrder, setSortOrder] = useState(String(nextSortOrder));
+  const [quantity, setQuantity] = useState("1");
   const [cost, setCost] = useState("0");
+  const [costCurrency, setCostCurrency] = useState<Currency>("TRY");
   const [sale, setSale] = useState("0");
-  const [currency, setCurrency] = useState<Currency>("TRY");
+  const [saleCurrency, setSaleCurrency] = useState<Currency>("TRY");
   const [isVisibleOnOffer, setIsVisibleOnOffer] = useState(true);
   const [isOptional, setIsOptional] = useState(false);
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  const totalCost = useMemo(
+    () => Number(quantity || 0) * Number(cost || 0),
+    [cost, quantity]
+  );
+
+  const totalSale = useMemo(
+    () => Number(quantity || 0) * Number(sale || 0),
+    [quantity, sale]
+  );
+
+  function handleComponentTypeChange(value: string) {
+    setComponentType(value);
+    setArtistId("");
+    setServiceItemId("");
+    setManualTitle("");
+    setCost("0");
+    setSale("0");
+    setCostCurrency("TRY");
+    setSaleCurrency("TRY");
+  }
 
   function fillFromSelected(value: string, type: "artist" | "service") {
     if (type === "artist") {
@@ -423,8 +485,9 @@ export function PackageItemForm({
 
       if (artist) {
         setCost(String(artist.default_cost_amount));
+        setCostCurrency(artist.default_cost_currency);
         setSale(String(artist.default_sale_amount));
-        setCurrency(artist.default_sale_currency);
+        setSaleCurrency(artist.default_sale_currency);
       }
 
       return;
@@ -436,13 +499,37 @@ export function PackageItemForm({
 
     if (service) {
       setCost(String(service.default_cost_amount));
+      setCostCurrency(service.default_cost_currency);
       setSale(String(service.default_sale_amount));
-      setCurrency(service.default_sale_currency);
+      setSaleCurrency(service.default_sale_currency);
     }
+  }
+
+  function getSelectedTitle() {
+    if (componentType === "artist") {
+      return (
+        artists.find((artist) => artist.id === Number(artistId))?.name ?? null
+      );
+    }
+
+    if (componentType === "service") {
+      return (
+        services.find((service) => service.id === Number(serviceItemId))?.name ??
+        null
+      );
+    }
+
+    return manualTitle.trim() || null;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const selectedTitle = getSelectedTitle();
+
+    if (!selectedTitle) {
+      return;
+    }
 
     setIsSaving(true);
 
@@ -452,16 +539,16 @@ export function PackageItemForm({
         artist_id: componentType === "artist" ? Number(artistId) || null : null,
         service_item_id:
           componentType === "service" ? Number(serviceItemId) || null : null,
-        title: componentType === "manual" ? manualTitle.trim() : null,
-        program_section: programSection,
+        title: selectedTitle,
+        program_section: programSection || null,
         sort_order: Number(sortOrder || 0),
-        start_time: startTime ? `${startTime}:00` : null,
-        end_time: endTime ? `${endTime}:00` : null,
-        quantity: 1,
+        start_time: null,
+        end_time: null,
+        quantity: Number(quantity || 1),
         unit_cost_amount: Number(cost || 0),
-        unit_cost_currency: currency,
+        unit_cost_currency: costCurrency,
         unit_sale_amount: Number(sale || 0),
-        unit_sale_currency: currency,
+        unit_sale_currency: saleCurrency,
         is_optional: isOptional,
         is_visible_on_offer: isVisibleOnOffer,
         is_active: true,
@@ -477,10 +564,10 @@ export function PackageItemForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
       <SelectField
-        label="Bileşen tipi"
+        label="Kalem tipi"
         value={componentType}
-        onChange={setComponentType}
-        options={componentTypeOptions}
+        onChange={handleComponentTypeChange}
+        options={packageComponentTypeOptions}
       />
 
       {componentType === "artist" ? (
@@ -515,7 +602,7 @@ export function PackageItemForm({
 
       {componentType === "manual" ? (
         <TextField
-          label="Manuel kalem başlığı"
+          label="Manuel kalem adı"
           value={manualTitle}
           onChange={setManualTitle}
           required
@@ -530,23 +617,47 @@ export function PackageItemForm({
           options={programSectionOptions}
         />
 
-        <TextField label="Başlangıç" value={startTime} onChange={setStartTime} />
+        <NumberField label="Sıra" value={sortOrder} onChange={setSortOrder} />
 
-        <TextField label="Bitiş" value={endTime} onChange={setEndTime} />
+        <NumberField label="Adet" value={quantity} onChange={setQuantity} />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <NumberField label="Sıra" value={sortOrder} onChange={setSortOrder} />
-        <NumberField label="Maliyet" value={cost} onChange={setCost} />
-        <NumberField label="Teklif" value={sale} onChange={setSale} />
+      <div className="grid gap-3 md:grid-cols-2">
+        <NumberField
+          label="Paket içi birim maliyet"
+          value={cost}
+          onChange={setCost}
+        />
 
         <SelectField
-          label="Para birimi"
-          value={currency}
-          onChange={(value) => setCurrency(value as Currency)}
-          options={
-            currencyOptions as unknown as Array<{ value: string; label: string }>
-          }
+          label="Maliyet para birimi"
+          value={costCurrency}
+          onChange={(value) => setCostCurrency(value as Currency)}
+          options={currencyOptions}
+        />
+
+        <NumberField
+          label="Paket içi satış etkisi"
+          value={sale}
+          onChange={setSale}
+        />
+
+        <SelectField
+          label="Satış para birimi"
+          value={saleCurrency}
+          onChange={(value) => setSaleCurrency(value as Currency)}
+          options={currencyOptions}
+        />
+      </div>
+
+      <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
+        <SummaryLine
+          label="Toplam maliyet"
+          value={formatSimpleMoney(totalCost, costCurrency)}
+        />
+        <SummaryLine
+          label="Toplam satış etkisi"
+          value={formatSimpleMoney(totalSale, saleCurrency)}
         />
       </div>
 
@@ -566,13 +677,13 @@ export function PackageItemForm({
             checked={isOptional}
             onChange={(event) => setIsOptional(event.target.checked)}
           />
-          Opsiyonel
+          Opsiyonel kalem
         </label>
       </div>
 
-      <TextareaField label="Not" value={notes} onChange={setNotes} />
+      <TextareaField label="İç not" value={notes} onChange={setNotes} />
 
-      <SubmitButton isSaving={isSaving} label="Akış Kalemini Kaydet" />
+      <SubmitButton isSaving={isSaving} label="Paket Kalemini Ekle" />
     </form>
   );
 }
@@ -617,6 +728,8 @@ function NumberField({
 
       <input
         type="number"
+        min="0"
+        step="0.01"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none ring-teal-500 transition focus:ring-4"
@@ -634,7 +747,7 @@ function SelectField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
+  options: ReadonlyArray<{ value: string; label: string }>;
 }) {
   return (
     <label className="block">
@@ -678,6 +791,17 @@ function TextareaField({
   );
 }
 
+function SummaryLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
+
 function SubmitButton({
   isSaving,
   label,
@@ -694,4 +818,12 @@ function SubmitButton({
       {isSaving ? "Kaydediliyor..." : label}
     </button>
   );
+}
+
+function formatSimpleMoney(value: number, currency: Currency) {
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
 }

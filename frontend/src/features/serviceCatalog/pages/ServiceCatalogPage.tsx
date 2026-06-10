@@ -14,6 +14,8 @@ import {
   fetchServicePackages,
   fetchTechnicalServices,
   updateArtist,
+  updateServicePackage,
+  updateTechnicalService,
 } from "../api/serviceCatalogApi";
 import {
   ArtistDetail,
@@ -41,8 +43,10 @@ import type {
   ServicePackage,
   ServicePackageCreatePayload,
   ServicePackageDetail,
+  ServicePackageUpdatePayload,
   TechnicalService,
   TechnicalServiceCreatePayload,
+  TechnicalServiceUpdatePayload,
 } from "../types/serviceCatalogTypes";
 
 type ServiceCatalogPageProps = {
@@ -72,8 +76,8 @@ const modeConfig = {
   packages: {
     title: "Program Paketleri",
     description:
-      "DJ + öncü grup + ana grup + dansçı gibi müşteriye sunulacak program paketleri.",
-    modeLabel: "paket",
+      "Sanatçı ve teknik hizmetlerden oluşan hazır program paketleri.",
+    modeLabel: "program paketi",
     createTitle: "Yeni Program Paketi",
   },
 };
@@ -114,6 +118,8 @@ export function ServiceCatalogPage({
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditArtistModal, setShowEditArtistModal] = useState(false);
+  const [showEditServiceModal, setShowEditServiceModal] = useState(false);
+  const [showEditPackageModal, setShowEditPackageModal] = useState(false);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [showPackageItemModal, setShowPackageItemModal] = useState(false);
   const [removingPackageItemId, setRemovingPackageItemId] =
@@ -328,6 +334,23 @@ export function ServiceCatalogPage({
     await loadPackageOptions();
   }
 
+  async function handleUpdateService(payload: TechnicalServiceUpdatePayload) {
+    if (!selectedServiceId) {
+      return;
+    }
+
+    const updated = await updateTechnicalService(selectedServiceId, payload);
+
+    await loadCurrentList({
+      nextMode: "services",
+      nextPageIndex: pageIndex,
+      nextSearch: search,
+      nextSelectedId: updated.id,
+    });
+
+    await loadPackageOptions();
+  }
+
   async function handleCreatePackage(payload: ServicePackageCreatePayload) {
     const created = await createServicePackage(payload);
 
@@ -337,6 +360,24 @@ export function ServiceCatalogPage({
       nextSearch: "",
       nextSelectedId: created.id,
     });
+  }
+
+  async function handleUpdatePackage(payload: ServicePackageUpdatePayload) {
+    if (!selectedPackageId) {
+      return;
+    }
+
+    const updated = await updateServicePackage(selectedPackageId, payload);
+
+    await loadCurrentList({
+      nextMode: "packages",
+      nextPageIndex: pageIndex,
+      nextSearch: search,
+      nextSelectedId: updated.id,
+    });
+
+    const detail = await fetchServicePackageDetail(updated.id);
+    setPackageDetail(detail);
   }
 
   async function handleCreateRider(payload: RiderCreatePayload) {
@@ -365,7 +406,7 @@ export function ServiceCatalogPage({
     }
 
     const confirmed = window.confirm(
-      "Bu program akışı kalemini kaldırmak istiyor musun? Kayıt tamamen silinmez, pasif hale alınır."
+      "Bu paket kalemini kaldırmak istiyor musun? Kayıt tamamen silinmez, pasif hale alınır."
     );
 
     if (!confirmed) {
@@ -381,7 +422,7 @@ export function ServiceCatalogPage({
       setPackageDetail(detail);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Akış kalemi kaldırılamadı."
+        error instanceof Error ? error.message : "Paket kalemi kaldırılamadı."
       );
     } finally {
       setRemovingPackageItemId(null);
@@ -487,10 +528,14 @@ export function ServiceCatalogPage({
                 onOpenEdit={() => setShowEditArtistModal(true)}
               />
             ) : mode === "services" && selectedService ? (
-              <TechnicalServiceDetail service={selectedService} />
+              <TechnicalServiceDetail
+                service={selectedService}
+                onOpenEdit={() => setShowEditServiceModal(true)}
+              />
             ) : mode === "packages" && packageDetail ? (
               <PackageDetail
                 detail={packageDetail}
+                onOpenEdit={() => setShowEditPackageModal(true)}
                 onOpenItemForm={() => setShowPackageItemModal(true)}
                 onRemoveItem={handleRemovePackageItem}
                 removingItemId={removingPackageItemId}
@@ -549,6 +594,36 @@ export function ServiceCatalogPage({
         </ModalShell>
       ) : null}
 
+      {showEditServiceModal && selectedService ? (
+        <ModalShell
+          eyebrow="Teknik / Operasyon Hizmeti"
+          title="Hizmet Bilgilerini Düzenle"
+          onClose={() => setShowEditServiceModal(false)}
+        >
+          <TechnicalServiceForm
+            initialService={selectedService}
+            submitLabel="Hizmet Bilgilerini Güncelle"
+            onSubmit={handleUpdateService}
+            onDone={() => setShowEditServiceModal(false)}
+          />
+        </ModalShell>
+      ) : null}
+
+      {showEditPackageModal && packageDetail ? (
+        <ModalShell
+          eyebrow="Program Paketi"
+          title="Paket Bilgilerini Düzenle"
+          onClose={() => setShowEditPackageModal(false)}
+        >
+          <PackageForm
+            initialPackage={packageDetail.package}
+            submitLabel="Paket Bilgilerini Güncelle"
+            onSubmit={handleUpdatePackage}
+            onDone={() => setShowEditPackageModal(false)}
+          />
+        </ModalShell>
+      ) : null}
+
       {showRiderModal && selectedArtistId ? (
         <ModalShell
           eyebrow="Rider Şablonu"
@@ -564,13 +639,14 @@ export function ServiceCatalogPage({
 
       {showPackageItemModal && selectedPackageId ? (
         <ModalShell
-          eyebrow="Program Akışı"
-          title="Yeni Akış Kalemi"
+          eyebrow="Program Paketi"
+          title="Paket Kalemi Ekle"
           onClose={() => setShowPackageItemModal(false)}
         >
           <PackageItemForm
             artists={packageArtistOptions}
             services={packageServiceOptions}
+            nextSortOrder={(packageDetail?.items.length ?? 0) + 1}
             onSubmit={handleCreatePackageItem}
             onDone={() => setShowPackageItemModal(false)}
           />
