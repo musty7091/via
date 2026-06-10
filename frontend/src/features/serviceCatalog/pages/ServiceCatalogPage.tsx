@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { ViaPageShell } from "../../../components/layout/ViaPageShell";
 import {
   createArtist,
   createArtistRiderItem,
@@ -12,6 +13,7 @@ import {
   fetchServicePackageDetail,
   fetchServicePackages,
   fetchTechnicalServices,
+  updateArtist,
 } from "../api/serviceCatalogApi";
 import {
   ArtistDetail,
@@ -32,6 +34,7 @@ import {
 import type {
   ArtistCreatePayload,
   ArtistService,
+  ArtistUpdatePayload,
   PackageItemCreatePayload,
   RiderCreatePayload,
   RiderItem,
@@ -48,7 +51,8 @@ type ServiceCatalogPageProps = {
 
 type CatalogMode = "artists" | "services" | "packages";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 7;
+const REQUEST_LIMIT = PAGE_SIZE + 1;
 
 const modeConfig = {
   artists: {
@@ -89,17 +93,31 @@ export function ServiceCatalogPage({
   const [services, setServices] = useState<TechnicalService[]>([]);
   const [packages, setPackages] = useState<ServicePackage[]>([]);
 
+  const [packageArtistOptions, setPackageArtistOptions] = useState<
+    ArtistService[]
+  >([]);
+  const [packageServiceOptions, setPackageServiceOptions] = useState<
+    TechnicalService[]
+  >([]);
+
   const [selectedArtistId, setSelectedArtistId] = useState<number | null>(null);
-  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
-  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
+    null
+  );
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(
+    null
+  );
 
   const [riderItems, setRiderItems] = useState<RiderItem[]>([]);
-  const [packageDetail, setPackageDetail] = useState<ServicePackageDetail | null>(null);
+  const [packageDetail, setPackageDetail] =
+    useState<ServicePackageDetail | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditArtistModal, setShowEditArtistModal] = useState(false);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [showPackageItemModal, setShowPackageItemModal] = useState(false);
-  const [removingPackageItemId, setRemovingPackageItemId] = useState<number | null>(null);
+  const [removingPackageItemId, setRemovingPackageItemId] =
+    useState<number | null>(null);
 
   const currentItems = useMemo(() => {
     if (mode === "artists") {
@@ -130,6 +148,20 @@ export function ServiceCatalogPage({
       ? services.find((service) => service.id === selectedServiceId) ?? null
       : null;
 
+  async function loadPackageOptions() {
+    try {
+      const [artistOptions, serviceOptions] = await Promise.all([
+        fetchArtists({ isActive: true, limit: 100 }),
+        fetchTechnicalServices({ isActive: true, limit: 100 }),
+      ]);
+
+      setPackageArtistOptions(artistOptions);
+      setPackageServiceOptions(serviceOptions);
+    } catch {
+      // Paket seçim listeleri yüklenemezse ana katalog ekranını bozmayız.
+    }
+  }
+
   async function loadCurrentList(options?: {
     nextMode?: CatalogMode;
     nextPageIndex?: number;
@@ -149,10 +181,12 @@ export function ServiceCatalogPage({
           search: targetSearch,
           isActive: true,
           skip: targetPageIndex * PAGE_SIZE,
-          limit: PAGE_SIZE,
+          limit: REQUEST_LIMIT,
         });
-        setArtists(data);
-        setHasNextPage(data.length === PAGE_SIZE);
+
+        setArtists(data.slice(0, PAGE_SIZE));
+        setHasNextPage(data.length > PAGE_SIZE);
+
         if (options?.nextSelectedId) {
           setSelectedArtistId(options.nextSelectedId);
         }
@@ -163,10 +197,12 @@ export function ServiceCatalogPage({
           search: targetSearch,
           isActive: true,
           skip: targetPageIndex * PAGE_SIZE,
-          limit: PAGE_SIZE,
+          limit: REQUEST_LIMIT,
         });
-        setServices(data);
-        setHasNextPage(data.length === PAGE_SIZE);
+
+        setServices(data.slice(0, PAGE_SIZE));
+        setHasNextPage(data.length > PAGE_SIZE);
+
         if (options?.nextSelectedId) {
           setSelectedServiceId(options.nextSelectedId);
         }
@@ -177,10 +213,12 @@ export function ServiceCatalogPage({
           search: targetSearch,
           isActive: true,
           skip: targetPageIndex * PAGE_SIZE,
-          limit: PAGE_SIZE,
+          limit: REQUEST_LIMIT,
         });
-        setPackages(data);
-        setHasNextPage(data.length === PAGE_SIZE);
+
+        setPackages(data.slice(0, PAGE_SIZE));
+        setHasNextPage(data.length > PAGE_SIZE);
+
         if (options?.nextSelectedId) {
           setSelectedPackageId(options.nextSelectedId);
         }
@@ -225,6 +263,7 @@ export function ServiceCatalogPage({
     setPageIndex(0);
     setErrorMessage("");
     setPackageDetail(null);
+
     void loadCurrentList({
       nextMode,
       nextPageIndex: 0,
@@ -248,26 +287,50 @@ export function ServiceCatalogPage({
 
   async function handleCreateArtist(payload: ArtistCreatePayload) {
     const created = await createArtist(payload);
+
     await loadCurrentList({
       nextMode: "artists",
       nextPageIndex: 0,
       nextSearch: "",
       nextSelectedId: created.id,
     });
+
+    await loadPackageOptions();
+  }
+
+  async function handleUpdateArtist(payload: ArtistUpdatePayload) {
+    if (!selectedArtistId) {
+      return;
+    }
+
+    const updated = await updateArtist(selectedArtistId, payload);
+
+    await loadCurrentList({
+      nextMode: "artists",
+      nextPageIndex: pageIndex,
+      nextSearch: search,
+      nextSelectedId: updated.id,
+    });
+
+    await loadPackageOptions();
   }
 
   async function handleCreateService(payload: TechnicalServiceCreatePayload) {
     const created = await createTechnicalService(payload);
+
     await loadCurrentList({
       nextMode: "services",
       nextPageIndex: 0,
       nextSearch: "",
       nextSelectedId: created.id,
     });
+
+    await loadPackageOptions();
   }
 
   async function handleCreatePackage(payload: ServicePackageCreatePayload) {
     const created = await createServicePackage(payload);
+
     await loadCurrentList({
       nextMode: "packages",
       nextPageIndex: 0,
@@ -331,8 +394,8 @@ export function ServiceCatalogPage({
       nextPageIndex: 0,
       nextSearch: "",
     });
-    void fetchArtists({ isActive: true, limit: 100 }).then(setArtists);
-    void fetchTechnicalServices({ isActive: true, limit: 100 }).then(setServices);
+
+    void loadPackageOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -344,38 +407,30 @@ export function ServiceCatalogPage({
   const config = modeConfig[mode];
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
-            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
-              Hizmet Kataloğu
-            </h1>
-          </div>
-
-          <button
-            onClick={onBackToDashboard}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-          >Geri Dön</button>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
-        <div className="flex gap-2 overflow-x-auto rounded-full bg-white p-2 shadow-sm">
-          {(["artists", "services", "packages"] as CatalogMode[]).map((item) => (
-            <button
-              key={item}
-              onClick={() => changeMode(item)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
-                mode === item
-                  ? "bg-slate-950 text-white"
-                  : "bg-slate-100 text-slate-700"
-              }`}
-            >
-              {modeConfig[item].title}
-            </button>
-          ))}
+    <ViaPageShell
+      eyebrow="Operasyon Merkezi"
+      title="Hizmet Kataloğu"
+      description="Sanatçı hizmetleri, teknik / operasyon hizmetleri ve program paketlerini tek katalog yapısı içinde yönetin."
+      onBack={onBackToDashboard}
+    >
+      <div className="space-y-5">
+        <div className="flex gap-2 overflow-x-auto rounded-[2rem] border border-slate-200 bg-white p-2 shadow-sm">
+          {(["artists", "services", "packages"] as CatalogMode[]).map(
+            (item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => changeMode(item)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+                  mode === item
+                    ? "bg-slate-950 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {modeConfig[item].title}
+              </button>
+            )
+          )}
         </div>
 
         <CatalogToolbar
@@ -411,7 +466,7 @@ export function ServiceCatalogPage({
           </div>
         ) : null}
 
-        <section className="grid gap-5 xl:grid-cols-[390px_1fr]">
+        <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
           <CatalogList
             mode={mode}
             items={currentItems}
@@ -419,7 +474,7 @@ export function ServiceCatalogPage({
             onSelect={handleSelect}
           />
 
-          <div>
+          <div className="min-w-0">
             {isLoadingDetail ? (
               <div className="rounded-[2rem] bg-white p-8 text-center text-slate-500 shadow-sm">
                 Detay yükleniyor...
@@ -429,6 +484,7 @@ export function ServiceCatalogPage({
                 artist={selectedArtist}
                 riderItems={riderItems}
                 onOpenRiderForm={() => setShowRiderModal(true)}
+                onOpenEdit={() => setShowEditArtistModal(true)}
               />
             ) : mode === "services" && selectedService ? (
               <TechnicalServiceDetail service={selectedService} />
@@ -447,7 +503,7 @@ export function ServiceCatalogPage({
             )}
           </div>
         </section>
-      </section>
+      </div>
 
       {showCreateModal ? (
         <ModalShell
@@ -478,6 +534,21 @@ export function ServiceCatalogPage({
         </ModalShell>
       ) : null}
 
+      {showEditArtistModal && selectedArtist ? (
+        <ModalShell
+          eyebrow="Sanatçı Hizmeti"
+          title="Sanatçı Bilgilerini Düzenle"
+          onClose={() => setShowEditArtistModal(false)}
+        >
+          <ArtistForm
+            initialArtist={selectedArtist}
+            submitLabel="Sanatçı Bilgilerini Güncelle"
+            onSubmit={handleUpdateArtist}
+            onDone={() => setShowEditArtistModal(false)}
+          />
+        </ModalShell>
+      ) : null}
+
       {showRiderModal && selectedArtistId ? (
         <ModalShell
           eyebrow="Rider Şablonu"
@@ -498,13 +569,13 @@ export function ServiceCatalogPage({
           onClose={() => setShowPackageItemModal(false)}
         >
           <PackageItemForm
-            artists={artists}
-            services={services}
+            artists={packageArtistOptions}
+            services={packageServiceOptions}
             onSubmit={handleCreatePackageItem}
             onDone={() => setShowPackageItemModal(false)}
           />
         </ModalShell>
       ) : null}
-    </main>
+    </ViaPageShell>
   );
 }

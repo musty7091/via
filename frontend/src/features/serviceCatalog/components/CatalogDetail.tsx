@@ -18,12 +18,14 @@ type ArtistDetailProps = {
   artist: ArtistService;
   riderItems: RiderItem[];
   onOpenRiderForm: () => void;
+  onOpenEdit: () => void;
 };
 
 export function ArtistDetail({
   artist,
   riderItems,
   onOpenRiderForm,
+  onOpenEdit,
 }: ArtistDetailProps) {
   return (
     <section className="space-y-4">
@@ -33,6 +35,16 @@ export function ArtistDetail({
         badge={getOptionLabel(artistTypeOptions, artist.artist_type)}
         description={artist.notes}
       />
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onOpenEdit}
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+        >
+          Sanatçı Bilgilerini Düzenle
+        </button>
+      </div>
 
       <MoneyGrid
         cost={artist.default_cost_amount}
@@ -45,13 +57,15 @@ export function ArtistDetail({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-black text-slate-950">
-              Rider Şablonu
+              Rider Checklist
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Operasyon ekibine aktarılacak kulis ve teknik hazırlık maddeleri.
+              Sanatçı için operasyon öncesi kontrol edilecek rider maddeleri.
             </p>
           </div>
+
           <button
+            type="button"
             onClick={onOpenRiderForm}
             className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white"
           >
@@ -64,19 +78,18 @@ export function ArtistDetail({
             Henüz rider maddesi yok.
           </p>
         ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
             {riderItems.map((item) => (
-              <article key={item.id} className="rounded-2xl bg-slate-50 p-4">
-                <p className="font-black text-slate-950">{item.title}</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {item.category ?? "Genel"} • {item.is_required ? "Zorunlu" : "Opsiyonel"}
-                </p>
-                {item.description ? (
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
-                    {item.description}
-                  </p>
-                ) : null}
-              </article>
+              <div
+                key={item.id}
+                className="flex items-center gap-3 border-b border-slate-100 bg-white px-4 py-3 last:border-b-0"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-50" />
+
+                <span className="min-w-0 flex-1 truncate text-sm font-black text-slate-800">
+                  {item.title}
+                </span>
+              </div>
             ))}
           </div>
         )}
@@ -87,9 +100,13 @@ export function ArtistDetail({
 
 type TechnicalServiceDetailProps = {
   service: TechnicalService;
+  onOpenEdit?: () => void;
 };
 
-export function TechnicalServiceDetail({ service }: TechnicalServiceDetailProps) {
+export function TechnicalServiceDetail({
+  service,
+  onOpenEdit,
+}: TechnicalServiceDetailProps) {
   return (
     <section className="space-y-4">
       <HeaderCard
@@ -98,6 +115,18 @@ export function TechnicalServiceDetail({ service }: TechnicalServiceDetailProps)
         badge={getOptionLabel(serviceTypeOptions, service.service_type)}
         description={service.notes}
       />
+
+      {onOpenEdit ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onOpenEdit}
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+          >
+            Hizmet Bilgilerini Düzenle
+          </button>
+        </div>
+      ) : null}
 
       <MoneyGrid
         cost={service.default_cost_amount}
@@ -114,6 +143,7 @@ type PackageDetailProps = {
   onOpenItemForm: () => void;
   onRemoveItem: (itemId: number) => void;
   removingItemId: number | null;
+  onOpenEdit?: () => void;
 };
 
 export function PackageDetail({
@@ -121,6 +151,7 @@ export function PackageDetail({
   onOpenItemForm,
   onRemoveItem,
   removingItemId,
+  onOpenEdit,
 }: PackageDetailProps) {
   const currencySummaries = buildCurrencySummaries(detail.items);
 
@@ -132,6 +163,18 @@ export function PackageDetail({
         badge={getOptionLabel(packageTypeOptions, detail.package.package_type)}
         description={detail.package.description}
       />
+
+      {onOpenEdit ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onOpenEdit}
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+          >
+            Paket Bilgilerini Düzenle
+          </button>
+        </div>
+      ) : null}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -160,15 +203,18 @@ export function PackageDetail({
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
                   {summary.currency} Özeti
                 </p>
+
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                   <MiniMetric
                     title="Maliyet"
                     value={formatMoney(summary.totalCost, summary.currency)}
                   />
+
                   <MiniMetric
                     title="Teklif"
                     value={formatMoney(summary.totalSale, summary.currency)}
                   />
+
                   <MiniMetric
                     title="Brüt Kâr"
                     value={
@@ -187,15 +233,15 @@ export function PackageDetail({
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-slate-950">
-              Program Akışı
-            </h3>
+            <h3 className="text-lg font-black text-slate-950">Program Akışı</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Müşteriye sunulacak program sırası ve içeride izlenecek maliyetler.
+              Müşteriye sunulacak program sırası ve içeride izlenecek
+              maliyetler.
             </p>
           </div>
 
           <button
+            type="button"
             onClick={onOpenItemForm}
             className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white"
           >
@@ -225,7 +271,10 @@ export function PackageDetail({
                 <div>
                   <p className="font-black text-slate-950">{item.title}</p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {getOptionLabel(programSectionOptions, item.program_section)}
+                    {getOptionLabel(
+                      programSectionOptions,
+                      item.program_section
+                    )}
                     {item.is_optional ? " • Opsiyonel" : ""}
                   </p>
                 </div>
@@ -259,6 +308,7 @@ export function PackageDetail({
 
                 <div className="flex items-start xl:justify-end">
                   <button
+                    type="button"
                     onClick={() => onRemoveItem(item.id)}
                     disabled={removingItemId === item.id}
                     className="rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:opacity-60"
@@ -291,12 +341,15 @@ function HeaderCard({
       <p className="text-xs font-bold uppercase tracking-[0.3em] text-teal-300">
         {eyebrow}
       </p>
+
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-3xl font-black">{title}</h2>
+
         <span className="rounded-full bg-teal-300 px-4 py-2 text-sm font-black text-slate-950">
           {badge}
         </span>
       </div>
+
       {description ? (
         <p className="mt-4 rounded-2xl bg-white/10 p-4 text-sm leading-6 text-slate-200">
           {description}
@@ -321,11 +374,23 @@ function MoneyGrid({
 
   return (
     <div className="grid gap-3 md:grid-cols-3">
-      <MetricCard title="Varsayılan Maliyet" value={formatMoney(cost, costCurrency)} />
-      <MetricCard title="Varsayılan Teklif" value={formatMoney(sale, saleCurrency)} />
+      <MetricCard
+        title="Varsayılan Maliyet"
+        value={formatMoney(cost, costCurrency)}
+      />
+
+      <MetricCard
+        title="Varsayılan Teklif"
+        value={formatMoney(sale, saleCurrency)}
+      />
+
       <MetricCard
         title="Tahmini Brüt Kâr"
-        value={saleCurrency === costCurrency ? formatMoney(profit, saleCurrency) : "Kur farkı var"}
+        value={
+          saleCurrency === costCurrency
+            ? formatMoney(profit, saleCurrency)
+            : "Kur farkı var"
+        }
       />
     </div>
   );

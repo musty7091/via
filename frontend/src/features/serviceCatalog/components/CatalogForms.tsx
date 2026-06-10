@@ -26,7 +26,12 @@ type ModalShellProps = {
   children: React.ReactNode;
 };
 
-export function ModalShell({ title, eyebrow, onClose, children }: ModalShellProps) {
+export function ModalShell({
+  title,
+  eyebrow,
+  onClose,
+  children,
+}: ModalShellProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
       <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
@@ -39,6 +44,7 @@ export function ModalShell({ title, eyebrow, onClose, children }: ModalShellProp
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
           >
@@ -55,37 +61,55 @@ export function ModalShell({ title, eyebrow, onClose, children }: ModalShellProp
 export function ArtistForm({
   onSubmit,
   onDone,
+  initialArtist,
+  submitLabel = "Sanatçı Hizmetini Kaydet",
 }: {
   onSubmit: (payload: ArtistCreatePayload) => Promise<void>;
   onDone: () => void;
+  initialArtist?: ArtistService | null;
+  submitLabel?: string;
 }) {
-  const [artistType, setArtistType] = useState("solo_artist");
-  const [name, setName] = useState("");
-  const [cost, setCost] = useState("0");
-  const [sale, setSale] = useState("0");
-  const [currency, setCurrency] = useState<Currency>("TRY");
-  const [notes, setNotes] = useState("");
+  const [artistType, setArtistType] = useState(
+    initialArtist?.artist_type ?? "solo_artist"
+  );
+  const [name, setName] = useState(initialArtist?.name ?? "");
+  const [cost, setCost] = useState(
+    String(initialArtist?.default_cost_amount ?? 0)
+  );
+  const [costCurrency, setCostCurrency] = useState<Currency>(
+    initialArtist?.default_cost_currency ?? "TRY"
+  );
+  const [sale, setSale] = useState(
+    String(initialArtist?.default_sale_amount ?? 0)
+  );
+  const [saleCurrency, setSaleCurrency] = useState<Currency>(
+    initialArtist?.default_sale_currency ?? "TRY"
+  );
+  const [notes, setNotes] = useState(initialArtist?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!name.trim()) {
       return;
     }
 
     setIsSaving(true);
+
     try {
       await onSubmit({
         artist_type: artistType,
         name: name.trim(),
-        manager_partner_id: null,
+        manager_partner_id: initialArtist?.manager_partner_id ?? null,
         default_cost_amount: Number(cost || 0),
-        default_cost_currency: currency,
+        default_cost_currency: costCurrency,
         default_sale_amount: Number(sale || 0),
-        default_sale_currency: currency,
+        default_sale_currency: saleCurrency,
         notes: notes.trim() || null,
-        is_active: true,
+        is_active: initialArtist?.is_active ?? true,
       });
+
       onDone();
     } finally {
       setIsSaving(false);
@@ -94,15 +118,47 @@ export function ArtistForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <SelectField label="Hizmet tipi" value={artistType} onChange={setArtistType} options={artistTypeOptions} />
-      <TextField label="Sanatçı / ekip adı" value={name} onChange={setName} required />
-      <div className="grid gap-3 md:grid-cols-3">
-        <NumberField label="Maliyet" value={cost} onChange={setCost} />
-        <NumberField label="Teklif" value={sale} onChange={setSale} />
-        <SelectField label="Para birimi" value={currency} onChange={(value) => setCurrency(value as Currency)} options={currencyOptions as unknown as Array<{ value: string; label: string }>} />
+      <SelectField
+        label="Sanatçı kategorisi"
+        value={artistType}
+        onChange={setArtistType}
+        options={artistTypeOptions}
+      />
+
+      <TextField
+        label="Sanatçı / ekip adı"
+        value={name}
+        onChange={setName}
+        required
+      />
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <NumberField label="Maliyet tutarı" value={cost} onChange={setCost} />
+
+        <SelectField
+          label="Maliyet para birimi"
+          value={costCurrency}
+          onChange={(value) => setCostCurrency(value as Currency)}
+          options={
+            currencyOptions as unknown as Array<{ value: string; label: string }>
+          }
+        />
+
+        <NumberField label="Teklif tutarı" value={sale} onChange={setSale} />
+
+        <SelectField
+          label="Teklif para birimi"
+          value={saleCurrency}
+          onChange={(value) => setSaleCurrency(value as Currency)}
+          options={
+            currencyOptions as unknown as Array<{ value: string; label: string }>
+          }
+        />
       </div>
+
       <TextareaField label="Not" value={notes} onChange={setNotes} />
-      <SubmitButton isSaving={isSaving} label="Sanatçı Hizmetini Kaydet" />
+
+      <SubmitButton isSaving={isSaving} label={submitLabel} />
     </form>
   );
 }
@@ -124,11 +180,13 @@ export function TechnicalServiceForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!name.trim()) {
       return;
     }
 
     setIsSaving(true);
+
     try {
       await onSubmit({
         service_type: serviceType,
@@ -140,6 +198,7 @@ export function TechnicalServiceForm({
         notes: notes.trim() || null,
         is_active: true,
       });
+
       onDone();
     } finally {
       setIsSaving(false);
@@ -148,14 +207,31 @@ export function TechnicalServiceForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <SelectField label="Hizmet tipi" value={serviceType} onChange={setServiceType} options={serviceTypeOptions} />
+      <SelectField
+        label="Hizmet tipi"
+        value={serviceType}
+        onChange={setServiceType}
+        options={serviceTypeOptions}
+      />
+
       <TextField label="Hizmet adı" value={name} onChange={setName} required />
+
       <div className="grid gap-3 md:grid-cols-3">
         <NumberField label="Maliyet" value={cost} onChange={setCost} />
         <NumberField label="Teklif" value={sale} onChange={setSale} />
-        <SelectField label="Para birimi" value={currency} onChange={(value) => setCurrency(value as Currency)} options={currencyOptions as unknown as Array<{ value: string; label: string }>} />
+
+        <SelectField
+          label="Para birimi"
+          value={currency}
+          onChange={(value) => setCurrency(value as Currency)}
+          options={
+            currencyOptions as unknown as Array<{ value: string; label: string }>
+          }
+        />
       </div>
+
       <TextareaField label="Not" value={notes} onChange={setNotes} />
+
       <SubmitButton isSaving={isSaving} label="Teknik Hizmeti Kaydet" />
     </form>
   );
@@ -178,11 +254,13 @@ export function PackageForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!name.trim()) {
       return;
     }
 
     setIsSaving(true);
+
     try {
       await onSubmit({
         package_type: packageType,
@@ -193,6 +271,7 @@ export function PackageForm({
         notes: notes.trim() || null,
         is_active: true,
       });
+
       onDone();
     } finally {
       setIsSaving(false);
@@ -201,14 +280,40 @@ export function PackageForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <SelectField label="Paket tipi" value={packageType} onChange={setPackageType} options={packageTypeOptions} />
+      <SelectField
+        label="Paket tipi"
+        value={packageType}
+        onChange={setPackageType}
+        options={packageTypeOptions}
+      />
+
       <TextField label="Paket adı" value={name} onChange={setName} required />
+
       <div className="grid gap-3 md:grid-cols-2">
-        <NumberField label="Varsayılan teklif" value={sale} onChange={setSale} />
-        <SelectField label="Para birimi" value={currency} onChange={(value) => setCurrency(value as Currency)} options={currencyOptions as unknown as Array<{ value: string; label: string }>} />
+        <NumberField
+          label="Varsayılan teklif"
+          value={sale}
+          onChange={setSale}
+        />
+
+        <SelectField
+          label="Para birimi"
+          value={currency}
+          onChange={(value) => setCurrency(value as Currency)}
+          options={
+            currencyOptions as unknown as Array<{ value: string; label: string }>
+          }
+        />
       </div>
-      <TextareaField label="Müşteriye gösterilecek açıklama" value={description} onChange={setDescription} />
+
+      <TextareaField
+        label="Müşteriye gösterilecek açıklama"
+        value={description}
+        onChange={setDescription}
+      />
+
       <TextareaField label="İç not" value={notes} onChange={setNotes} />
+
       <SubmitButton isSaving={isSaving} label="Paketi Kaydet" />
     </form>
   );
@@ -229,11 +334,13 @@ export function RiderForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!title.trim()) {
       return;
     }
 
     setIsSaving(true);
+
     try {
       await onSubmit({
         title: title.trim(),
@@ -243,6 +350,7 @@ export function RiderForm({
         is_required: isRequired,
         is_active: true,
       });
+
       onDone();
     } finally {
       setIsSaving(false);
@@ -251,9 +359,21 @@ export function RiderForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <TextField label="Rider başlığı" value={title} onChange={setTitle} required />
+      <TextField
+        label="Rider başlığı"
+        value={title}
+        onChange={setTitle}
+        required
+      />
+
       <TextField label="Kategori" value={category} onChange={setCategory} />
-      <TextareaField label="Açıklama" value={description} onChange={setDescription} />
+
+      <TextareaField
+        label="Açıklama"
+        value={description}
+        onChange={setDescription}
+      />
+
       <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
         <input
           type="checkbox"
@@ -262,6 +382,7 @@ export function RiderForm({
         />
         Zorunlu hazırlık maddesi
       </label>
+
       <SubmitButton isSaving={isSaving} label="Rider Maddesini Kaydet" />
     </form>
   );
@@ -297,20 +418,26 @@ export function PackageItemForm({
   function fillFromSelected(value: string, type: "artist" | "service") {
     if (type === "artist") {
       setArtistId(value);
+
       const artist = artists.find((item) => item.id === Number(value));
+
       if (artist) {
         setCost(String(artist.default_cost_amount));
         setSale(String(artist.default_sale_amount));
         setCurrency(artist.default_sale_currency);
       }
-    } else {
-      setServiceItemId(value);
-      const service = services.find((item) => item.id === Number(value));
-      if (service) {
-        setCost(String(service.default_cost_amount));
-        setSale(String(service.default_sale_amount));
-        setCurrency(service.default_sale_currency);
-      }
+
+      return;
+    }
+
+    setServiceItemId(value);
+
+    const service = services.find((item) => item.id === Number(value));
+
+    if (service) {
+      setCost(String(service.default_cost_amount));
+      setSale(String(service.default_sale_amount));
+      setCurrency(service.default_sale_currency);
     }
   }
 
@@ -318,6 +445,7 @@ export function PackageItemForm({
     event.preventDefault();
 
     setIsSaving(true);
+
     try {
       await onSubmit({
         component_type: componentType,
@@ -339,6 +467,7 @@ export function PackageItemForm({
         is_active: true,
         notes: notes.trim() || null,
       });
+
       onDone();
     } finally {
       setIsSaving(false);
@@ -347,7 +476,12 @@ export function PackageItemForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
-      <SelectField label="Bileşen tipi" value={componentType} onChange={setComponentType} options={componentTypeOptions} />
+      <SelectField
+        label="Bileşen tipi"
+        value={componentType}
+        onChange={setComponentType}
+        options={componentTypeOptions}
+      />
 
       {componentType === "artist" ? (
         <SelectField
@@ -380,12 +514,24 @@ export function PackageItemForm({
       ) : null}
 
       {componentType === "manual" ? (
-        <TextField label="Manuel kalem başlığı" value={manualTitle} onChange={setManualTitle} required />
+        <TextField
+          label="Manuel kalem başlığı"
+          value={manualTitle}
+          onChange={setManualTitle}
+          required
+        />
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-3">
-        <SelectField label="Program bölümü" value={programSection} onChange={setProgramSection} options={programSectionOptions} />
+        <SelectField
+          label="Program bölümü"
+          value={programSection}
+          onChange={setProgramSection}
+          options={programSectionOptions}
+        />
+
         <TextField label="Başlangıç" value={startTime} onChange={setStartTime} />
+
         <TextField label="Bitiş" value={endTime} onChange={setEndTime} />
       </div>
 
@@ -393,7 +539,15 @@ export function PackageItemForm({
         <NumberField label="Sıra" value={sortOrder} onChange={setSortOrder} />
         <NumberField label="Maliyet" value={cost} onChange={setCost} />
         <NumberField label="Teklif" value={sale} onChange={setSale} />
-        <SelectField label="Para birimi" value={currency} onChange={(value) => setCurrency(value as Currency)} options={currencyOptions as unknown as Array<{ value: string; label: string }>} />
+
+        <SelectField
+          label="Para birimi"
+          value={currency}
+          onChange={(value) => setCurrency(value as Currency)}
+          options={
+            currencyOptions as unknown as Array<{ value: string; label: string }>
+          }
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -405,6 +559,7 @@ export function PackageItemForm({
           />
           Müşteri teklifinde görünsün
         </label>
+
         <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
           <input
             type="checkbox"
@@ -416,6 +571,7 @@ export function PackageItemForm({
       </div>
 
       <TextareaField label="Not" value={notes} onChange={setNotes} />
+
       <SubmitButton isSaving={isSaving} label="Akış Kalemini Kaydet" />
     </form>
   );
@@ -435,6 +591,7 @@ function TextField({
   return (
     <label className="block">
       <span className="text-sm font-bold text-slate-700">{label}</span>
+
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -457,6 +614,7 @@ function NumberField({
   return (
     <label className="block">
       <span className="text-sm font-bold text-slate-700">{label}</span>
+
       <input
         type="number"
         value={value}
@@ -481,6 +639,7 @@ function SelectField({
   return (
     <label className="block">
       <span className="text-sm font-bold text-slate-700">{label}</span>
+
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -508,6 +667,7 @@ function TextareaField({
   return (
     <label className="block">
       <span className="text-sm font-bold text-slate-700">{label}</span>
+
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -518,7 +678,13 @@ function TextareaField({
   );
 }
 
-function SubmitButton({ isSaving, label }: { isSaving: boolean; label: string }) {
+function SubmitButton({
+  isSaving,
+  label,
+}: {
+  isSaving: boolean;
+  label: string;
+}) {
   return (
     <button
       type="submit"

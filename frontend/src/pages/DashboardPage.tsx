@@ -1,8 +1,6 @@
-import type { AuthUser } from "../types/auth";
+import { ViaPageShell } from "../components/layout/ViaPageShell";
 
 type DashboardPageProps = {
-  user: AuthUser;
-  onLogout: () => void;
   onOpenCustomers: () => void;
   onOpenServiceCatalog: () => void;
   onOpenOffers: () => void;
@@ -77,8 +75,6 @@ function getWorkflowToneClass(tone: WorkflowStep["tone"]) {
 }
 
 export function DashboardPage({
-  user,
-  onLogout,
   onOpenCustomers,
   onOpenServiceCatalog,
   onOpenOffers,
@@ -136,102 +132,56 @@ export function DashboardPage({
   ];
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <button className="text-left" aria-label="VIA EVENTS Operasyon Merkezi">
-            <img
-              src="/brand/via-logo-horizontal.png"
-              alt="VIA EVENTS"
-              className="h-5 w-auto object-contain"
-            />
-            <h1 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
-              Operasyon Merkezi
-            </h1>
-          </button>
+    <ViaPageShell
+      eyebrow="Operasyon Merkezi"
+      title="Katalogdan etkinlik dosyasına."
+      description="Katalog, müşteri, teklif, anlaşma ve saha kontrol sürecini tek standart yönetim ekranından başlat."
+      actions={
+        <span className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 shadow-sm">
+          6 adım
+        </span>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {workflowSteps.map((item) => {
+          const toneClass = getWorkflowToneClass(item.tone);
 
-          <div className="flex items-center gap-3">
-            <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-right sm:block">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                Oturum
-              </p>
-              <p className="mt-0.5 text-sm font-black text-slate-950">{user.full_name}</p>
-            </div>
-
+          return (
             <button
-              onClick={onLogout}
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
+              key={item.step}
+              type="button"
+              onClick={item.onClick}
+              className={`group flex min-h-[12.5rem] flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${toneClass.border}`}
             >
-              Çıkış
-            </button>
-          </div>
-        </div>
-      </header>
+              <div className="flex items-start justify-between gap-4">
+                <span
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${toneClass.accent}`}
+                >
+                  {item.step}
+                </span>
+                <span
+                  className={`rounded-full border px-3 py-1 text-xs font-black ${toneClass.badge}`}
+                >
+                  Operasyon
+                </span>
+              </div>
 
-      <section className="mx-auto max-w-6xl px-5 py-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-teal-700">
-            Operasyon Akışı
-          </p>
-          <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-            <div>
-              <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                Katalogdan etkinlik dosyasına.
-              </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                Katalog, müşteri, teklif, anlaşma ve saha kontrol sürecini başlat.
-              </p>
-            </div>
-            <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-              6 adım
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {workflowSteps.map((item) => {
-            const toneClass = getWorkflowToneClass(item.tone);
-
-            return (
-              <button
-                key={item.step}
-                onClick={item.onClick}
-                className={`group flex min-h-[12.5rem] flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${toneClass.border}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${toneClass.accent}`}
-                  >
-                    {item.step}
-                  </span>
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-black ${toneClass.badge}`}
-                  >
-                    Operasyon
-                  </span>
-                </div>
-
-                <div className="mt-5">
-                  <h3 className="text-2xl font-black tracking-tight text-slate-950">
-                    {item.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
-                    {item.description}
-                  </p>
-                </div>
-
-                <p className={`mt-auto pt-5 text-sm font-black ${toneClass.action}`}>
-                  {item.actionLabel} →
+              <div className="mt-5">
+                <h3 className="text-2xl font-black tracking-tight text-slate-950">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-slate-500">
+                  {item.description}
                 </p>
-              </button>
-            );
-          })}
-        </div>
+              </div>
 
-        <footer className="mt-8 border-t border-slate-200 pt-4 text-center text-xs font-semibold text-slate-400">
-          © 2026 VIA EVENTS. Tüm hakları saklıdır.
-        </footer>
-      </section>
-    </main>
+              <p className={`mt-auto pt-5 text-sm font-black ${toneClass.action}`}>
+                {item.actionLabel} →
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </ViaPageShell>
   );
 }
