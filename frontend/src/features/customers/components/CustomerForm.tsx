@@ -7,29 +7,57 @@ import {
   invoiceTypeOptions,
   riskLevelOptions,
 } from "../constants/customerConstants";
-import type { CustomerCreatePayload } from "../types/customerTypes";
+import type {
+  CustomerCreatePayload,
+  CustomerDetail,
+} from "../types/customerTypes";
 
 type CustomerFormProps = {
-  onCreateCustomer: (payload: CustomerCreatePayload) => Promise<void>;
+  onCreateCustomer?: (payload: CustomerCreatePayload) => Promise<void>;
+  onSubmit?: (payload: CustomerCreatePayload) => Promise<void>;
+  initialCustomer?: CustomerDetail | null;
+  eyebrow?: string;
+  title?: string;
+  submitLabel?: string;
 };
 
-export function CustomerForm({ onCreateCustomer }: CustomerFormProps) {
-  const [name, setName] = useState("");
-  const [shortName, setShortName] = useState("");
-  const [customerType, setCustomerType] = useState("company");
-  const [customerStatus, setCustomerStatus] = useState("active");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [taxNumber, setTaxNumber] = useState("");
-  const [taxOffice, setTaxOffice] = useState("");
-  const [city, setCity] = useState("");
-  const [district, setDistrict] = useState("");
-  const [address, setAddress] = useState("");
-  const [defaultInvoiceType, setDefaultInvoiceType] =
-    useState("select_on_event");
-  const [defaultCurrency, setDefaultCurrency] = useState("TRY");
-  const [riskLevel, setRiskLevel] = useState("normal");
-  const [notes, setNotes] = useState("");
+export function CustomerForm({
+  onCreateCustomer,
+  onSubmit,
+  initialCustomer,
+  eyebrow = "Yeni müşteri",
+  title = "Müşteri kartı oluştur",
+  submitLabel = "Müşteri Kaydet",
+}: CustomerFormProps) {
+  const [name, setName] = useState(initialCustomer?.name ?? "");
+  const [shortName, setShortName] = useState(initialCustomer?.short_name ?? "");
+  const [customerType, setCustomerType] = useState(
+    initialCustomer?.customer_type ?? "company"
+  );
+  const [customerStatus, setCustomerStatus] = useState(
+    initialCustomer?.customer_status ?? "active"
+  );
+  const [phone, setPhone] = useState(initialCustomer?.phone ?? "");
+  const [email, setEmail] = useState(initialCustomer?.email ?? "");
+  const [taxNumber, setTaxNumber] = useState(
+    initialCustomer?.tax_number ?? ""
+  );
+  const [taxOffice, setTaxOffice] = useState(
+    initialCustomer?.tax_office ?? ""
+  );
+  const [city, setCity] = useState(initialCustomer?.city ?? "");
+  const [district, setDistrict] = useState(initialCustomer?.district ?? "");
+  const [address, setAddress] = useState(initialCustomer?.address ?? "");
+  const [defaultInvoiceType, setDefaultInvoiceType] = useState(
+    initialCustomer?.default_invoice_type ?? "select_on_event"
+  );
+  const [defaultCurrency, setDefaultCurrency] = useState(
+    initialCustomer?.default_currency ?? "TRY"
+  );
+  const [riskLevel, setRiskLevel] = useState(
+    initialCustomer?.risk_level ?? "normal"
+  );
+  const [notes, setNotes] = useState(initialCustomer?.notes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -39,10 +67,16 @@ export function CustomerForm({ onCreateCustomer }: CustomerFormProps) {
       return;
     }
 
+    const submitHandler = onSubmit ?? onCreateCustomer;
+
+    if (!submitHandler) {
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      await onCreateCustomer({
+      await submitHandler({
         customer_type: customerType,
         customer_status: customerStatus,
         name: name.trim(),
@@ -51,27 +85,33 @@ export function CustomerForm({ onCreateCustomer }: CustomerFormProps) {
         email: email.trim() || null,
         tax_number: taxNumber.trim() || null,
         tax_office: taxOffice.trim() || null,
-        country: "KKTC",
+        website: initialCustomer?.website ?? null,
+        country: initialCustomer?.country ?? "KKTC",
         city: city.trim() || null,
         district: district.trim() || null,
         address: address.trim() || null,
         default_invoice_type: defaultInvoiceType,
         default_currency: defaultCurrency,
+        default_payment_term_days:
+          initialCustomer?.default_payment_term_days ?? null,
         risk_level: riskLevel,
-        is_active: true,
+        risk_note: initialCustomer?.risk_note ?? null,
+        is_active: initialCustomer?.is_active ?? true,
         notes: notes.trim() || null,
       });
 
-      setName("");
-      setShortName("");
-      setPhone("");
-      setEmail("");
-      setTaxNumber("");
-      setTaxOffice("");
-      setCity("");
-      setDistrict("");
-      setAddress("");
-      setNotes("");
+      if (!initialCustomer) {
+        setName("");
+        setShortName("");
+        setPhone("");
+        setEmail("");
+        setTaxNumber("");
+        setTaxOffice("");
+        setCity("");
+        setDistrict("");
+        setAddress("");
+        setNotes("");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -84,11 +124,9 @@ export function CustomerForm({ onCreateCustomer }: CustomerFormProps) {
     >
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
-          Yeni müşteri
+          {eyebrow}
         </p>
-        <h3 className="mt-2 text-xl font-black text-slate-950">
-          Müşteri kartı oluştur
-        </h3>
+        <h3 className="mt-2 text-xl font-black text-slate-950">{title}</h3>
       </div>
 
       <div className="mt-5 grid gap-4">
@@ -172,9 +210,7 @@ export function CustomerForm({ onCreateCustomer }: CustomerFormProps) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-bold text-slate-700">
-              Vergi no
-            </span>
+            <span className="text-sm font-bold text-slate-700">Vergi no</span>
             <input
               value={taxNumber}
               onChange={(event) => setTaxNumber(event.target.value)}
@@ -290,7 +326,7 @@ export function CustomerForm({ onCreateCustomer }: CustomerFormProps) {
           disabled={isSaving}
           className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60"
         >
-          {isSaving ? "Kaydediliyor..." : "Müşteri Kaydet"}
+          {isSaving ? "Kaydediliyor..." : submitLabel}
         </button>
       </div>
     </form>

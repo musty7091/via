@@ -62,6 +62,8 @@ export type CustomerCreatePayload = {
   notes?: string | null;
 };
 
+export type CustomerUpdatePayload = Partial<CustomerCreatePayload>;
+
 export type CustomerContact = {
   id: number;
   customer_id: number;
