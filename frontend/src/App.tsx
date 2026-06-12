@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { ViaAppLayout } from "./components/layout/ViaAppLayout";
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
 import { EventsPage } from "./features/events/pages/EventsPage";
 import { OffersPage } from "./features/offers/pages/OffersPage";
+import { AgreementsPage } from "./features/agreements/pages/AgreementsPage";
 import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
 import { UserManagementPage } from "./features/userManagement/pages/UserManagementPage";
 import { PartnersPage } from "./features/partners/pages/PartnersPage";
@@ -21,6 +21,7 @@ type AppScreen =
   | "customers"
   | "serviceCatalog"
   | "offers"
+  | "agreements"
   | "events"
   | "partners"
   | "finance"
@@ -32,6 +33,7 @@ const protectedScreens = new Set<AppScreen>([
   "customers",
   "serviceCatalog",
   "offers",
+  "agreements",
   "events",
   "partners",
   "finance",
@@ -47,6 +49,7 @@ function isAppScreen(value: unknown): value is AppScreen {
     value === "customers" ||
     value === "serviceCatalog" ||
     value === "offers" ||
+    value === "agreements" ||
     value === "events" ||
     value === "partners" ||
     value === "finance" ||
@@ -89,7 +92,8 @@ function App() {
   const [screen, setScreen] = useState<AppScreen>(() =>
     getInitialScreenFromUrl(getStoredUser())
   );
-  const [postLoginScreen, setPostLoginScreen] = useState<AppScreen>("dashboard");
+  const [postLoginScreen, setPostLoginScreen] =
+    useState<AppScreen>("dashboard");
 
   function navigate(nextScreen: AppScreen, options?: { replace?: boolean }) {
     setScreen(nextScreen);
@@ -171,57 +175,71 @@ function App() {
     );
   }
 
-  if (currentUser && isProtectedScreen(screen)) {
+  if (screen === "dashboard" && currentUser) {
     return (
-      <ViaAppLayout user={currentUser} onLogout={handleLogout}>
-        {screen === "dashboard" ? (
-          <DashboardPage
-            onOpenCustomers={() => navigate("customers")}
-            onOpenServiceCatalog={() => navigate("serviceCatalog")}
-            onOpenOffers={() => navigate("offers")}
-            onOpenEvents={() => navigate("events")}
-            onOpenPartners={() => navigate("partners")}
-            onOpenFinanceCenter={() => navigate("finance")}
-            onOpenExpenses={() => navigate("expenses")}
-            onOpenUsers={() => navigate("users")}
-          />
-        ) : null}
+      <DashboardPage
+        user={currentUser}
+        onLogout={handleLogout}
+        onOpenCustomers={() => navigate("customers")}
+        onOpenServiceCatalog={() => navigate("serviceCatalog")}
+        onOpenOffers={() => navigate("offers")}
+        onOpenAgreements={() => navigate("agreements")}
+        onOpenEvents={() => navigate("events")}
+        onOpenPartners={() => navigate("partners")}
+        onOpenFinanceCenter={() => navigate("finance")}
+        onOpenExpenses={() => navigate("expenses")}
+        onOpenUsers={() => navigate("users")}
+      />
+    );
+  }
 
-        {screen === "customers" ? (
-          <CustomersPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "customers" && currentUser) {
+    return <CustomersPage onBackToDashboard={() => navigate("dashboard")} />;
+  }
 
-        {screen === "serviceCatalog" ? (
-          <ServiceCatalogPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "serviceCatalog" && currentUser) {
+    return (
+      <ServiceCatalogPage onBackToDashboard={() => navigate("dashboard")} />
+    );
+  }
 
-        {screen === "offers" ? (
-          <OffersPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "offers" && currentUser) {
+    return <OffersPage onBackToDashboard={() => navigate("dashboard")} />;
+  }
 
-        {screen === "events" ? (
-          <EventsPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "agreements" && currentUser) {
+    return (
+      <AgreementsPage
+        onBackToDashboard={() => navigate("dashboard")}
+        onOpenEvents={() => navigate("events")}
+      />
+    );
+  }
 
-        {screen === "partners" ? (
-          <PartnersPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "events" && currentUser) {
+    return <EventsPage onBackToDashboard={() => navigate("dashboard")} />;
+  }
 
-        {screen === "finance" ? (
-          <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "partners" && currentUser) {
+    return <PartnersPage onBackToDashboard={() => navigate("dashboard")} />;
+  }
 
-        {screen === "expenses" ? (
-          <ExpensesPage onBackToDashboard={() => navigate("dashboard")} />
-        ) : null}
+  if (screen === "finance" && currentUser) {
+    return (
+      <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />
+    );
+  }
 
-        {screen === "users" ? (
-          <UserManagementPage
-            currentUser={currentUser}
-            onBackToDashboard={() => navigate("dashboard")}
-          />
-        ) : null}
-      </ViaAppLayout>
+  if (screen === "expenses" && currentUser) {
+    return <ExpensesPage onBackToDashboard={() => navigate("dashboard")} />;
+  }
+
+  if (screen === "users" && currentUser) {
+    return (
+      <UserManagementPage
+        currentUser={currentUser}
+        onBackToDashboard={() => navigate("dashboard")}
+      />
     );
   }
 
@@ -230,7 +248,7 @@ function App() {
       <section className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.28),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.22),_transparent_30%),linear-gradient(180deg,_rgba(15,23,42,0)_0%,_rgba(15,23,42,1)_100%)]" />
 
-        <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6">
+        <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6 sm:px-8 lg:px-10">
           <header className="flex items-center justify-between gap-4">
             <button
               onClick={() => navigate("landing")}
