@@ -12,7 +12,7 @@ class OfferCreate(BaseModel):
     event_date: date | None = None
     valid_until: date | None = None
     invoice_type: str = "without_invoice"
-    vat_rate: float = Field(default=16, ge=0)
+    vat_rate: float = Field(default=0, ge=0)
     currency: str = "TRY"
     advance_payment_amount: float = Field(default=0, ge=0)
     advance_payment_currency: str = "TRY"
@@ -42,6 +42,9 @@ class OfferUpdate(BaseModel):
 
 
 class OfferItemCreate(BaseModel):
+    source_type: str = "manual"
+    artist_id: int | None = None
+    service_item_id: int | None = None
     title: str
     description: str
     program_section: str | None = None

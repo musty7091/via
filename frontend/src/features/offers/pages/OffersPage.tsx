@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 
+import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+import {
+  fetchArtists,
+  fetchTechnicalServices,
+} from "../../serviceCatalog/api/serviceCatalogApi";
+import type {
+  ArtistService,
+  TechnicalService,
+} from "../../serviceCatalog/types/serviceCatalogTypes";
 import {
   cancelOffer,
   convertOfferToAgreement,
@@ -40,13 +49,18 @@ type OffersPageProps = {
   onBackToDashboard: () => void;
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
+const REQUEST_LIMIT = PAGE_SIZE + 1;
 
 export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   const [offers, setOffers] = useState<OfferListItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
   const [packages, setPackages] = useState<PackageOption[]>([]);
+  const [artists, setArtists] = useState<ArtistService[]>([]);
+  const [technicalServices, setTechnicalServices] = useState<TechnicalService[]>(
+    []
+  );
 
   const [selectedOfferId, setSelectedOfferId] = useState<number | null>(null);
   const [offerDetail, setOfferDetail] = useState<OfferDetail | null>(null);
@@ -66,6 +80,18 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   const [isConverting, setIsConverting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
+  function handlePageBack() {
+    if (selectedOfferId) {
+      setSelectedOfferId(null);
+      setOfferDetail(null);
+      setShowEditModal(false);
+      setShowItemModal(false);
+      return;
+    }
+
+    onBackToDashboard();
+  }
+
   async function loadOffers(options?: {
     nextPageIndex?: number;
     nextSearch?: string;
@@ -84,12 +110,12 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
         search: targetSearch,
         status: targetStatusFilter || null,
         skip: targetPageIndex * PAGE_SIZE,
-        limit: PAGE_SIZE,
+        limit: REQUEST_LIMIT,
       });
 
-      setOffers(data);
+      setOffers(data.slice(0, PAGE_SIZE));
       setPageIndex(targetPageIndex);
-      setHasNextPage(data.length === PAGE_SIZE);
+      setHasNextPage(data.length > PAGE_SIZE);
 
       if (options?.nextSelectedOfferId) {
         setSelectedOfferId(options.nextSelectedOfferId);
@@ -143,11 +169,17 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       await importPackageToOffer(created.id, packageId, true);
     }
 
+    setSearch("");
+    setStatusFilter("");
+    setShowCreateModal(false);
+
     await loadOffers({
       nextPageIndex: 0,
       nextSearch: "",
+      nextStatusFilter: "",
       nextSelectedOfferId: created.id,
     });
+
     await loadOfferDetail(created.id);
   }
 
@@ -168,11 +200,15 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       await importPackageToOffer(updated.id, packageId, true);
     }
 
+    setShowEditModal(false);
+
     await loadOffers({
       nextPageIndex: pageIndex,
       nextSearch: search,
+      nextStatusFilter: statusFilter,
       nextSelectedOfferId: updated.id,
     });
+
     await loadOfferDetail(updated.id);
   }
 
@@ -182,6 +218,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
     }
 
     await createOfferItem(selectedOfferId, payload);
+    setShowItemModal(false);
     await loadOfferDetail(selectedOfferId);
   }
 
@@ -233,6 +270,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       await cancelOffer(selectedOfferId);
       setSelectedOfferId(null);
       setOfferDetail(null);
+
       await loadOffers({
         nextPageIndex: 0,
         nextSearch: search,
@@ -264,8 +302,18 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
     setErrorMessage("");
 
     try {
-      await convertOfferToAgreement(selectedOfferId, "Müşteri onayı ile anlaşmaya çevrildi.");
-      await loadOffers();
+      await convertOfferToAgreement(
+        selectedOfferId,
+        "Müşteri onayı ile anlaşmaya çevrildi."
+      );
+
+      await loadOffers({
+        nextPageIndex: pageIndex,
+        nextSearch: search,
+        nextStatusFilter: statusFilter,
+        nextSelectedOfferId: selectedOfferId,
+      });
+
       await loadOfferDetail(selectedOfferId);
     } catch (error) {
       setErrorMessage(
@@ -297,8 +345,18 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       nextSearch: "",
       nextStatusFilter: "",
     });
+
     void fetchCustomers({ isActive: true, limit: 200 }).then(setCustomers);
     void fetchPackages({ isActive: true, limit: 200 }).then(setPackages);
+
+    void fetchArtists({ isActive: true, limit: 200 })
+      .then(setArtists)
+      .catch(() => setArtists([]));
+
+    void fetchTechnicalServices({ isActive: true, limit: 200 })
+      .then(setTechnicalServices)
+      .catch(() => setTechnicalServices([]));
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -311,24 +369,23 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
   }, [selectedOfferId]);
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
-            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
-              Teklif ve Anlaşma
-            </h1>
-          </div>
-
-          <button
-            onClick={onBackToDashboard}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-          >Geri Dön</button>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
+    <ViaPageShell
+      eyebrow="Operasyon Merkezi"
+      title="Teklif / Paket Hazırla"
+      description="Müşteri, mekan, program paketi, teklif kalemleri, ödeme şartları ve müşteri çıktısını tek ekranda yönetin."
+      onBack={handlePageBack}
+      backLabel={selectedOfferId ? "Teklif Listesine Dön" : "Geri Dön"}
+      actions={
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-teal-200"
+        >
+          Yeni Teklif
+        </button>
+      }
+    >
+      <div className="space-y-5">
         <OfferToolbar
           search={search}
           statusFilter={statusFilter}
@@ -338,6 +395,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
           onSearchChange={setSearch}
           onStatusFilterChange={(value) => {
             setStatusFilter(value);
+
             void loadOffers({
               nextPageIndex: 0,
               nextSearch: search,
@@ -354,16 +412,17 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
           onPreviousPage={() =>
             void loadOffers({
               nextPageIndex: Math.max(pageIndex - 1, 0),
+              nextSearch: search,
               nextStatusFilter: statusFilter,
             })
           }
           onNextPage={() =>
             void loadOffers({
               nextPageIndex: pageIndex + 1,
+              nextSearch: search,
               nextStatusFilter: statusFilter,
             })
           }
-          onOpenCreate={() => setShowCreateModal(true)}
         />
 
         {errorMessage ? (
@@ -372,7 +431,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
           </div>
         ) : null}
 
-        <section className="grid gap-5 xl:grid-cols-[390px_1fr]">
+        <section className="grid gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
           <div>
             {isLoadingList ? (
               <div className="rounded-[2rem] bg-white p-8 text-center text-slate-500 shadow-sm">
@@ -387,7 +446,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
             )}
           </div>
 
-          <div>
+          <div className="min-w-0">
             {isLoadingDetail ? (
               <div className="rounded-[2rem] bg-white p-8 text-center text-slate-500 shadow-sm">
                 Detay yükleniyor...
@@ -410,7 +469,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
             )}
           </div>
         </section>
-      </section>
+      </div>
 
       {showCreateModal ? (
         <ModalShell
@@ -451,15 +510,17 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       {showItemModal && selectedOfferId ? (
         <ModalShell
           eyebrow="Teklif Kalemi"
-          title="Manuel Kalem Ekle"
+          title="Teklif Kalemi Ekle"
           onClose={() => setShowItemModal(false)}
         >
           <OfferItemForm
+            artists={artists}
+            technicalServices={technicalServices}
             onSubmit={handleCreateOfferItem}
             onDone={() => setShowItemModal(false)}
           />
         </ModalShell>
       ) : null}
-    </main>
+    </ViaPageShell>
   );
 }
