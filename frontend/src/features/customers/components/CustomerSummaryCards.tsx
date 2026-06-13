@@ -41,11 +41,15 @@ export function CustomerSummaryCards({ summary }: CustomerSummaryCardsProps) {
           key={card.title}
           className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
         >
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
             {card.title}
           </p>
-          <p className="mt-3 text-2xl font-black text-slate-950">{card.value}</p>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+
+          <p className="mt-2 text-2xl font-normal text-slate-950">
+            {card.value}
+          </p>
+
+          <p className="mt-1 text-[11px] leading-6 text-slate-500">
             {card.description}
           </p>
         </article>

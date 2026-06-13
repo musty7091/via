@@ -59,64 +59,23 @@ export function CustomerContactList({
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-4">
+    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-black text-slate-950">
-            Yetkili Kişiler
-          </h3>
+          <h3 className="text-lg font-medium text-slate-950">Yetkili Kişiler</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Teklif, tahsilat ve operasyon görüşmeleri için.
+            Operasyon, finans ve yönetim bağlantıları.
           </p>
         </div>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {contacts.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-            Henüz yetkili kişi eklenmemiş.
-          </p>
-        ) : (
-          contacts.map((contact) => (
-            <article
-              key={contact.id}
-              className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-black text-slate-950">
-                    {contact.full_name}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {contact.title ?? "-"} •{" "}
-                    {getOptionLabel(contactRoleOptions, contact.contact_role)}
-                  </p>
-                </div>
-
-                {contact.is_primary_contact ? (
-                  <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold text-teal-800">
-                    Ana yetkili
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="mt-3 grid gap-1 text-sm text-slate-500 sm:grid-cols-2">
-                <span>{contact.phone ?? "Telefon yok"}</span>
-                <span>{contact.email ?? "E-posta yok"}</span>
-              </div>
-            </article>
-          ))
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit} className="mt-4 rounded-2xl bg-slate-50 p-4">
-        <p className="text-sm font-black text-slate-800">Yeni yetkili ekle</p>
-
-        <div className="mt-3 grid gap-3">
+      <div className="mt-5 grid items-start gap-5 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="grid gap-3">
           <input
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
-            placeholder="Ad soyad"
+            placeholder="Ad Soyad"
+            required
             className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
           />
 
@@ -124,7 +83,7 @@ export function CustomerContactList({
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Görev / Ünvan"
+              placeholder="Ünvan (Örn: Müdür)"
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
             />
 
@@ -161,12 +120,48 @@ export function CustomerContactList({
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
             {isSaving ? "Ekleniyor..." : "Yetkili Ekle"}
           </button>
+        </form>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          {contacts.length === 0 ? (
+            <div className="bg-slate-50 p-6 text-center text-sm font-medium text-slate-500">
+              Kayıtlı kişi yok.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {contacts.map((contact) => (
+                <div key={contact.id} className="bg-white p-4">
+                  <p className="text-sm font-medium text-slate-950">
+                    {contact.full_name}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {getOptionLabel(contactRoleOptions, contact.contact_role)}
+                    {contact.title ? ` • ${contact.title}` : ""}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {contact.phone ? (
+                      <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        {contact.phone}
+                      </span>
+                    ) : null}
+
+                    {contact.email ? (
+                      <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        {contact.email}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </form>
+      </div>
     </section>
   );
 }

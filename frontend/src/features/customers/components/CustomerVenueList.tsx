@@ -58,50 +58,23 @@ export function CustomerVenueList({
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-4">
-      <div>
-        <h3 className="text-lg font-black text-slate-950">Mekânlar</h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Müşteriye bağlı salon, açık alan ve etkinlik mekânları.
-        </p>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        {venues.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-            Henüz mekân eklenmemiş.
+    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-medium text-slate-950">Mekân Bilgileri</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Müşteriye ait operasyon yapılacak alanlar.
           </p>
-        ) : (
-          venues.map((venue) => (
-            <article
-              key={venue.id}
-              className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-            >
-              <p className="font-black text-slate-950">{venue.name}</p>
-              <p className="mt-1 text-sm text-slate-500">
-                {getOptionLabel(venueTypeOptions, venue.venue_type)}
-                {venue.city ? ` • ${venue.city}` : ""}
-                {venue.district ? ` / ${venue.district}` : ""}
-              </p>
-
-              <div className="mt-3 grid gap-1 text-sm text-slate-500 sm:grid-cols-2">
-                <span>Kapasite: {venue.capacity ?? "-"}</span>
-                <span>Yetkili: {venue.contact_name ?? "-"}</span>
-                <span>Telefon: {venue.contact_phone ?? "-"}</span>
-              </div>
-            </article>
-          ))
-        )}
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 rounded-2xl bg-slate-50 p-4">
-        <p className="text-sm font-black text-slate-800">Yeni mekân ekle</p>
-
-        <div className="mt-3 grid gap-3">
+      <div className="mt-5 grid items-start gap-5 md:grid-cols-2">
+        <form onSubmit={handleSubmit} className="grid gap-3">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Mekân adı"
+            placeholder="Mekân / Salon Adı"
+            required
             className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
           />
 
@@ -119,10 +92,11 @@ export function CustomerVenueList({
             </select>
 
             <input
+              type="number"
               value={capacity}
               onChange={(event) => setCapacity(event.target.value)}
-              placeholder="Kapasite"
-              type="number"
+              placeholder="Kapasite (Kişi)"
+              min="1"
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
             />
           </div>
@@ -162,12 +136,46 @@ export function CustomerVenueList({
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
             {isSaving ? "Ekleniyor..." : "Mekân Ekle"}
           </button>
+        </form>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          {venues.length === 0 ? (
+            <div className="bg-slate-50 p-6 text-center text-sm font-medium text-slate-500">
+              Kayıtlı mekân yok.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {venues.map((venue) => (
+                <div key={venue.id} className="bg-white p-4">
+                  <p className="text-sm font-medium text-slate-950">
+                    {venue.name}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {getOptionLabel(venueTypeOptions, venue.venue_type)}
+                    {venue.capacity ? ` • ${venue.capacity} Kişi` : ""}
+                    {venue.city ? ` • ${venue.city}` : ""}
+                  </p>
+
+                  {venue.contact_name || venue.contact_phone ? (
+                    <div className="mt-3 rounded-xl bg-slate-50 p-3 text-[11px] text-slate-600">
+                      <p>
+                        Yetkili: <span className="font-medium">{venue.contact_name ?? "-"}</span>
+                      </p>
+                      <p className="mt-1">
+                        Telefon: <span className="font-medium">{venue.contact_phone ?? "-"}</span>
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </form>
+      </div>
     </section>
   );
 }

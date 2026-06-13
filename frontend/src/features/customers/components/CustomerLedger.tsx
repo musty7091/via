@@ -38,7 +38,7 @@ export function CustomerLedger({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!movementDate || !movementType || !title.trim() || !amount) {
+    if (!movementType || !title.trim() || !amount) {
       return;
     }
 
@@ -51,19 +51,19 @@ export function CustomerLedger({
         direction,
         title: title.trim(),
         description: description.trim() || null,
-        detail_note: detailNote.trim() || null,
-        amount: Number(amount),
+        base_amount: Number(amount),
         currency: "TRY",
         exchange_rate: 1,
         payment_method: paymentMethod || null,
         collected_by_partner_id: collectedByPartnerId
           ? Number(collectedByPartnerId)
           : null,
+        detail_note: detailNote.trim() || null,
+        is_active: true,
       });
 
       setMovementDate(getTodayInputValue());
       setMovementType("");
-      setDirection("debit");
       setTitle("");
       setDescription("");
       setAmount("");
@@ -76,120 +76,28 @@ export function CustomerLedger({
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-4">
-      <div>
-        <h3 className="text-lg font-black text-slate-950">
-          Müşteri Hesap Hareketleri
-        </h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Borç, tahsilat ve kümülatif bakiye takibi.
-        </p>
-      </div>
-
-      <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200">
-        <div className="hidden grid-cols-[110px_1fr_120px_120px_120px] bg-slate-100 px-4 py-3 text-xs font-black uppercase tracking-[0.15em] text-slate-500 lg:grid">
-          <span>Tarih</span>
-          <span>İşlem</span>
-          <span>Borç</span>
-          <span>Alacak</span>
-          <span>Bakiye</span>
-        </div>
-
-        {ledger.length === 0 ? (
-          <p className="p-5 text-sm text-slate-500">
-            Henüz hesap hareketi yok.
+    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-medium text-slate-950">
+            Cari Hareketler (Ledger)
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Müşteriye ait serbest borç ve alacak kayıtları.
           </p>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {ledger.map((movement) => (
-              <article key={movement.id} className="p-4">
-                <div className="grid gap-3 lg:grid-cols-[110px_1fr_120px_120px_120px] lg:items-start">
-                  <div className="text-sm font-bold text-slate-600">
-                    {formatDate(movement.movement_date)}
-                  </div>
-
-                  <div>
-                    <p className="font-black text-slate-950">
-                      {movement.title}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {getOptionLabel(
-                        ledgerMovementTypeOptions,
-                        movement.movement_type
-                      )}
-                      {movement.description ? ` • ${movement.description}` : ""}
-                    </p>
-                  </div>
-
-                  <div className="text-sm font-black text-slate-950">
-                    {movement.debit_base_amount > 0
-                      ? formatMoney(movement.debit_base_amount)
-                      : "-"}
-                  </div>
-
-                  <div className="text-sm font-black text-slate-950">
-                    {movement.credit_base_amount > 0
-                      ? formatMoney(movement.credit_base_amount)
-                      : "-"}
-                  </div>
-
-                  <div className="text-sm font-black text-teal-700">
-                    {formatMoney(movement.running_balance_base_amount)}
-                  </div>
-                </div>
-
-                <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-                  <span className="font-bold text-slate-700">Detay: </span>
-                  {movement.detail_note || "Açıklama yok."}
-                  {movement.collected_by_partner_name
-                    ? ` | Tahsilatı yapan: ${movement.collected_by_partner_name}`
-                    : ""}
-                  {movement.payment_method
-                    ? ` | Ödeme yöntemi: ${getOptionLabel(
-                        paymentMethodOptions,
-                        movement.payment_method
-                      )}`
-                    : ""}
-                  {movement.document_no
-                    ? ` | Belge No: ${movement.document_no}`
-                    : ""}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-4 rounded-2xl bg-slate-50 p-4"
-      >
-        <p className="text-sm font-black text-slate-800">
-          Manuel hesap hareketi ekle
-        </p>
-
-        <div className="mt-3 grid gap-3">
-          <div className="grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[1fr_2fr]">
+        <form onSubmit={handleSubmit} className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <input
               type="date"
               value={movementDate}
               onChange={(event) => setMovementDate(event.target.value)}
+              required
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
             />
-
-            <select
-              value={movementType}
-              onChange={(event) => setMovementType(event.target.value)}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              required
-            >
-              <option value="">İşlem türü seçin</option>
-              {ledgerMovementTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
 
             <select
               value={direction}
@@ -198,40 +106,56 @@ export function CustomerLedger({
               }
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
             >
-              <option value="debit">Borç</option>
-              <option value="credit">Alacak / Tahsilat</option>
+              <option value="debit">Müşteriye Borç Yaz (+)</option>
+              <option value="credit">Müşteriden Tahsil Et (-)</option>
             </select>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-[1fr_minmax(0,1.5fr)]">
+            <select
+              value={movementType}
+              onChange={(event) => setMovementType(event.target.value)}
+              required
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            >
+              <option value="">Hareket Türü Seç</option>
+              {ledgerMovementTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="İşlem başlığı"
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
               required
-            />
-
-            <input
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Etkinlik / açıklama"
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="Tutar"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Açıklama (opsiyonel)"
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
-              required
             />
 
+            <input
+              type="number"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="Tutar (₺)"
+              min="0"
+              step="0.01"
+              required
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
             <select
               value={paymentMethod}
               onChange={(event) => setPaymentMethod(event.target.value)}
@@ -268,12 +192,69 @@ export function CustomerLedger({
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+            className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
           >
-            {isSaving ? "Ekleniyor..." : "Hareket Ekle"}
+            {isSaving ? "İşleniyor..." : "Hareketi Ekle"}
           </button>
+        </form>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          <div className="hidden grid-cols-[100px_minmax(0,1fr)_120px] gap-4 bg-slate-50 px-4 py-3 text-[10px] font-medium uppercase tracking-widest text-slate-400 sm:grid">
+            <span>Tarih / Tür</span>
+            <span>Açıklama</span>
+            <span className="text-right">Tutar</span>
+          </div>
+
+          {ledger.length === 0 ? (
+            <div className="p-6 text-center text-sm font-medium text-slate-500">
+              Henüz cari hareket yok.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {ledger.map((movement) => (
+                <div
+                  key={movement.id}
+                  className="grid gap-3 bg-white p-4 sm:grid-cols-[100px_minmax(0,1fr)_120px]"
+                >
+                  <div className="self-center">
+                    <p className="text-[11px] font-medium text-slate-500">
+                      {formatDate(movement.movement_date)}
+                    </p>
+                    <p className="truncate text-xs font-medium text-slate-500">
+                      {getOptionLabel(
+                        ledgerMovementTypeOptions,
+                        movement.movement_type
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="min-w-0 self-center">
+                    <p className="text-sm font-medium text-slate-950">
+                      {movement.title}
+                    </p>
+                    {movement.description ? (
+                      <p className="mt-1 truncate text-[11px] text-slate-500">
+                        {movement.description}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="self-center text-left sm:text-right">
+                    <span className="text-right font-medium">
+                      {movement.direction === "debit" ? (
+                        <span className="text-rose-600">+ </span>
+                      ) : (
+                        <span className="text-emerald-600">- </span>
+                      )}
+                      {formatMoney(movement.base_amount)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </form>
+      </div>
     </section>
   );
 }

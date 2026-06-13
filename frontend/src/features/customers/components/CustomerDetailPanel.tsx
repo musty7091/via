@@ -47,18 +47,18 @@ export function CustomerDetailPanel({
   return (
     <div className="space-y-4">
       <section className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-300">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-300">
+            <p className="text-xs font-medium uppercase tracking-[0.25em] text-teal-300">
               Müşteri Kartı
             </p>
-            <h2 className="mt-3 text-3xl font-black">{customer.name}</h2>
+            <h2 className="mt-3 text-3xl font-normal">{customer.name}</h2>
           </div>
 
           <button
             type="button"
             onClick={onOpenEditCustomer}
-            className="rounded-full bg-white px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-100"
+            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-slate-100"
           >
             Müşteri Bilgilerini Düzenle
           </button>

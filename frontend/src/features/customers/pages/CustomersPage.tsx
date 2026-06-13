@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 
-import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+import type { AuthUser } from "../../../types/auth";
+import MainLayout from "../../../components/MainLayout";
 import {
   createCustomer,
   createCustomerContact,
@@ -31,12 +32,18 @@ import type {
 
 type CustomersPageProps = {
   onBackToDashboard: () => void;
+  user?: AuthUser;
+  onLogout?: () => void;
 };
 
 const PAGE_SIZE = 6;
 const REQUEST_LIMIT = PAGE_SIZE + 1;
 
-export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
+export function CustomersPage({
+  onBackToDashboard,
+  user,
+  onLogout,
+}: CustomersPageProps) {
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [customerSummaries, setCustomerSummaries] = useState<
     Record<number, CustomerLedgerSummary | null>
@@ -275,74 +282,104 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     null;
 
   return (
-    <ViaPageShell
-      eyebrow="Operasyon Merkezi"
-      title="Müşteri ve Mekanlar"
-      description="Müşteri kayıtları, yetkili kişiler, mekan bilgileri ve müşteri cari hareketlerini tek alanda yönetin."
-      onBack={handlePageBack}
-      backLabel={selectedCustomerId ? "Müşteri Listesine Dön" : "Geri Dön"}
-      actions={
-        <button
-          type="button"
-          onClick={() => setShowCreatePanel(true)}
-          className="rounded-full bg-teal-400 px-6 py-2.5 text-sm font-medium text-teal-950 shadow-sm transition hover:bg-teal-300"
-        >
-          Yeni Müşteri
-        </button>
-      }
+    <MainLayout
+      userName={user?.full_name ?? "Yönetici"}
+      onLogout={onLogout}
+      // DİKKAT: onBack={handlePageBack} kısmını Header'da görünmemesi için iptal ettik!
     >
-      <div className="space-y-5">
-        <CustomerSelector
-          customers={customers}
-          selectedCustomerId={selectedCustomerId}
-          selectedCustomerName={selectedCustomerName}
-          search={search}
-          pageIndex={pageIndex}
-          hasNextPage={hasNextPage}
-          isLoading={isLoadingCustomers}
-          isOpen={isSelectorOpen}
-          onToggleOpen={() => setIsSelectorOpen((value) => !value)}
-          onSearchChange={setSearch}
-          onSearchSubmit={handleSearchSubmit}
-          onSelectCustomer={handleSelectCustomer}
-          onPreviousPage={() =>
-            void loadCustomers({
-              nextPageIndex: Math.max(pageIndex - 1, 0),
-              keepDropdownOpen: true,
-            })
-          }
-          onNextPage={() =>
-            void loadCustomers({
-              nextPageIndex: pageIndex + 1,
-              keepDropdownOpen: true,
-            })
-          }
-        />
-
-        {errorMessage ? (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
-            {errorMessage}
+      <div className="flex flex-col h-auto md:h-[calc(100vh-9.5rem)] w-full">
+        
+        {/* SABİT BAŞLIK ALANI */}
+        <div className="flex-none flex flex-col space-y-5">
+          <div className="flex flex-col gap-3">
+            
+            {/* GERİ DÖN BUTONU - Katalog Sayfasındaki Standart Yerinde */}
+            <div className="flex">
+              <button
+                onClick={handlePageBack}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-normal text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+              >
+                <span aria-hidden="true">←</span> {selectedCustomerId ? "Müşteri Listesine Dön" : "Geri Dön"}
+              </button>
+            </div>
+            
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-normal uppercase tracking-widest text-teal-600">
+                  OPERASYON MERKEZİ
+                </p>
+                <h1 className="mt-2 text-3xl font-normal text-slate-800">
+                  Müşteri ve Mekanlar
+                </h1>
+                <p className="mt-2 text-sm font-normal text-slate-500 max-w-2xl">
+                  Müşteri kayıtları, yetkili kişiler, mekan bilgileri ve müşteri cari hareketlerini tek alanda yönetin.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreatePanel(true)}
+                className="rounded-full bg-slate-900 px-6 py-2.5 text-sm font-normal text-white shadow-sm transition hover:bg-slate-800 shrink-0"
+              >
+                Yeni Müşteri
+              </button>
+            </div>
           </div>
-        ) : null}
 
-        {selectedCustomerId ? (
-          <CustomerDetailPanel
-            bundle={bundle}
-            isLoading={isLoadingDetail}
-            onOpenEditCustomer={() => setShowEditPanel(true)}
-            onCreateContact={handleCreateContact}
-            onCreateVenue={handleCreateVenue}
-            onCreateMovement={handleCreateMovement}
-          />
-        ) : (
-          <CustomerEmptyState
+          {errorMessage ? (
+            <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-normal text-red-900">
+              {errorMessage}
+            </div>
+          ) : null}
+        </div>
+
+        {/* KAYDIRILABİLİR İÇERİK ALANI */}
+        <div className="flex-1 min-h-0 mt-5 overflow-y-auto pr-2 pb-6 space-y-5">
+          <CustomerSelector
             customers={customers}
-            customerSummaries={customerSummaries}
-            onOpenSelector={() => setIsSelectorOpen(true)}
-            onOpenCreatePanel={() => setShowCreatePanel(true)}
+            selectedCustomerId={selectedCustomerId}
+            selectedCustomerName={selectedCustomerName}
+            search={search}
+            pageIndex={pageIndex}
+            hasNextPage={hasNextPage}
+            isLoading={isLoadingCustomers}
+            isOpen={isSelectorOpen}
+            onToggleOpen={() => setIsSelectorOpen((value) => !value)}
+            onSearchChange={setSearch}
+            onSearchSubmit={handleSearchSubmit}
             onSelectCustomer={handleSelectCustomer}
+            onPreviousPage={() =>
+              void loadCustomers({
+                nextPageIndex: Math.max(pageIndex - 1, 0),
+                keepDropdownOpen: true,
+              })
+            }
+            onNextPage={() =>
+              void loadCustomers({
+                nextPageIndex: pageIndex + 1,
+                keepDropdownOpen: true,
+              })
+            }
           />
-        )}
+
+          {selectedCustomerId ? (
+            <CustomerDetailPanel
+              bundle={bundle}
+              isLoading={isLoadingDetail}
+              onOpenEditCustomer={() => setShowEditPanel(true)}
+              onCreateContact={handleCreateContact}
+              onCreateVenue={handleCreateVenue}
+              onCreateMovement={handleCreateMovement}
+            />
+          ) : (
+            <CustomerEmptyState
+              customers={customers}
+              customerSummaries={customerSummaries}
+              onOpenSelector={() => setIsSelectorOpen(true)}
+              onOpenCreatePanel={() => setShowCreatePanel(true)}
+              onSelectCustomer={handleSelectCustomer}
+            />
+          )}
+        </div>
       </div>
 
       {showCreatePanel ? (
@@ -370,7 +407,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
           />
         </CustomerModal>
       ) : null}
-    </ViaPageShell>
+    </MainLayout>
   );
 }
 
@@ -386,11 +423,11 @@ function CustomerModal({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm">
       <div className="flex h-[min(92vh,860px)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
+            <p className="text-xs font-normal uppercase tracking-widest text-teal-600">
               {eyebrow}
             </p>
             <h2 className="mt-1 text-2xl font-normal text-slate-800">{title}</h2>
@@ -399,7 +436,7 @@ function CustomerModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-normal text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
