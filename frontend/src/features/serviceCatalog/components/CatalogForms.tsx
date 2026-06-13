@@ -38,26 +38,26 @@ export function ModalShell({
   children,
 }: ModalShellProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm">
       <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 p-5">
+        <div className="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
+            <p className="text-xs font-medium uppercase tracking-[0.15em] text-teal-600">
               {eyebrow}
             </p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">{title}</h2>
+            <h2 className="mt-1 text-2xl font-normal text-slate-800">{title}</h2>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   );
@@ -122,7 +122,7 @@ export function ArtistForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-5">
       <SelectField
         label="Sanatçı kategorisi"
         value={artistType}
@@ -137,7 +137,7 @@ export function ArtistForm({
         required
       />
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <NumberField label="Maliyet tutarı" value={cost} onChange={setCost} />
 
         <SelectField
@@ -222,7 +222,7 @@ export function TechnicalServiceForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-5">
       <SelectField
         label="Hizmet tipi"
         value={serviceType}
@@ -232,7 +232,7 @@ export function TechnicalServiceForm({
 
       <TextField label="Hizmet adı" value={name} onChange={setName} required />
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <NumberField label="Maliyet tutarı" value={cost} onChange={setCost} />
 
         <SelectField
@@ -313,7 +313,7 @@ export function PackageForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-5">
       <SelectField
         label="Paket tipi"
         value={packageType}
@@ -323,7 +323,7 @@ export function PackageForm({
 
       <TextField label="Paket adı" value={name} onChange={setName} required />
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <NumberField
           label="Varsayılan paket satış fiyatı"
           value={sale}
@@ -397,7 +397,7 @@ export function RiderForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-5">
       <TextField
         label="Rider başlığı"
         value={title}
@@ -413,11 +413,12 @@ export function RiderForm({
         onChange={setDescription}
       />
 
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+      <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
         <input
           type="checkbox"
           checked={isRequired}
           onChange={(event) => setIsRequired(event.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
         />
         Zorunlu hazırlık maddesi
       </label>
@@ -562,7 +563,7 @@ export function PackageItemForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-5">
       <SelectField
         label="Kalem tipi"
         value={componentType}
@@ -609,7 +610,7 @@ export function PackageItemForm({
         />
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <SelectField
           label="Program bölümü"
           value={programSection}
@@ -622,7 +623,7 @@ export function PackageItemForm({
         <NumberField label="Adet" value={quantity} onChange={setQuantity} />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <NumberField
           label="Paket içi birim maliyet"
           value={cost}
@@ -650,7 +651,7 @@ export function PackageItemForm({
         />
       </div>
 
-      <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2">
+      <div className="grid gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-5 md:grid-cols-2">
         <SummaryLine
           label="Toplam maliyet"
           value={formatSimpleMoney(totalCost, costCurrency)}
@@ -661,21 +662,23 @@ export function PackageItemForm({
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
           <input
             type="checkbox"
             checked={isVisibleOnOffer}
             onChange={(event) => setIsVisibleOnOffer(event.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
           />
           Müşteri teklifinde görünsün
         </label>
 
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
           <input
             type="checkbox"
             checked={isOptional}
             onChange={(event) => setIsOptional(event.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
           />
           Opsiyonel kalem
         </label>
@@ -701,13 +704,13 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-bold text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-slate-600">{label}</span>
 
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none ring-teal-500 transition focus:ring-4"
+        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-400"
       />
     </label>
   );
@@ -724,7 +727,7 @@ function NumberField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-bold text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-slate-600">{label}</span>
 
       <input
         type="number"
@@ -732,7 +735,7 @@ function NumberField({
         step="0.01"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none ring-teal-500 transition focus:ring-4"
+        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-400"
       />
     </label>
   );
@@ -751,12 +754,12 @@ function SelectField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-bold text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-slate-600">{label}</span>
 
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none ring-teal-500 transition focus:ring-4"
+        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-400"
       >
         {options.map((option) => (
           <option key={`${label}-${option.value}`} value={option.value}>
@@ -779,13 +782,13 @@ function TextareaField({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-bold text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-slate-600">{label}</span>
 
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={3}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none ring-teal-500 transition focus:ring-4"
+        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-400"
       />
     </label>
   );
@@ -794,10 +797,10 @@ function TextareaField({
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+      <p className="text-xs font-medium uppercase tracking-[0.1em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-lg font-black text-slate-950">{value}</p>
+      <p className="mt-2 text-xl font-medium text-slate-800">{value}</p>
     </div>
   );
 }
@@ -813,7 +816,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={isSaving}
-      className="rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60"
+      className="rounded-full bg-slate-800 px-5 py-3.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50 mt-2"
     >
       {isSaving ? "Kaydediliyor..." : label}
     </button>

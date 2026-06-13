@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+import type { AuthUser } from "../../../types/auth";
+import MainLayout from "../../../components/MainLayout";
 import {
   createArtist,
   createArtistRiderItem,
@@ -13,9 +14,6 @@ import {
   fetchServicePackageDetail,
   fetchServicePackages,
   fetchTechnicalServices,
-  updateArtist,
-  updateServicePackage,
-  updateTechnicalService,
 } from "../api/serviceCatalogApi";
 import {
   ArtistDetail,
@@ -36,27 +34,25 @@ import {
 import type {
   ArtistCreatePayload,
   ArtistService,
-  ArtistUpdatePayload,
   PackageItemCreatePayload,
   RiderCreatePayload,
   RiderItem,
   ServicePackage,
   ServicePackageCreatePayload,
   ServicePackageDetail,
-  ServicePackageUpdatePayload,
   TechnicalService,
   TechnicalServiceCreatePayload,
-  TechnicalServiceUpdatePayload,
 } from "../types/serviceCatalogTypes";
 
 type ServiceCatalogPageProps = {
-  onBackToDashboard: () => void;
+  onBackToDashboard?: () => void;
+  user?: AuthUser;
+  onLogout?: () => void;
 };
 
 type CatalogMode = "artists" | "services" | "packages";
 
-const PAGE_SIZE = 7;
-const REQUEST_LIMIT = PAGE_SIZE + 1;
+const PAGE_SIZE = 20;
 
 const modeConfig = {
   artists: {
@@ -76,14 +72,16 @@ const modeConfig = {
   packages: {
     title: "Program Paketleri",
     description:
-      "Sanatçı ve teknik hizmetlerden oluşan hazır program paketleri.",
-    modeLabel: "program paketi",
+      "DJ + öncü grup + ana grup + dansçı gibi müşteriye sunulacak program paketleri.",
+    modeLabel: "paket",
     createTitle: "Yeni Program Paketi",
   },
 };
 
 export function ServiceCatalogPage({
   onBackToDashboard,
+  user,
+  onLogout
 }: ServiceCatalogPageProps) {
   const [mode, setMode] = useState<CatalogMode>("artists");
   const [search, setSearch] = useState("");
@@ -97,33 +95,17 @@ export function ServiceCatalogPage({
   const [services, setServices] = useState<TechnicalService[]>([]);
   const [packages, setPackages] = useState<ServicePackage[]>([]);
 
-  const [packageArtistOptions, setPackageArtistOptions] = useState<
-    ArtistService[]
-  >([]);
-  const [packageServiceOptions, setPackageServiceOptions] = useState<
-    TechnicalService[]
-  >([]);
-
   const [selectedArtistId, setSelectedArtistId] = useState<number | null>(null);
-  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
-    null
-  );
-  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(
-    null
-  );
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
 
   const [riderItems, setRiderItems] = useState<RiderItem[]>([]);
-  const [packageDetail, setPackageDetail] =
-    useState<ServicePackageDetail | null>(null);
+  const [packageDetail, setPackageDetail] = useState<ServicePackageDetail | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditArtistModal, setShowEditArtistModal] = useState(false);
-  const [showEditServiceModal, setShowEditServiceModal] = useState(false);
-  const [showEditPackageModal, setShowEditPackageModal] = useState(false);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [showPackageItemModal, setShowPackageItemModal] = useState(false);
-  const [removingPackageItemId, setRemovingPackageItemId] =
-    useState<number | null>(null);
+  const [removingPackageItemId, setRemovingPackageItemId] = useState<number | null>(null);
 
   const currentItems = useMemo(() => {
     if (mode === "artists") {
@@ -154,20 +136,6 @@ export function ServiceCatalogPage({
       ? services.find((service) => service.id === selectedServiceId) ?? null
       : null;
 
-  async function loadPackageOptions() {
-    try {
-      const [artistOptions, serviceOptions] = await Promise.all([
-        fetchArtists({ isActive: true, limit: 100 }),
-        fetchTechnicalServices({ isActive: true, limit: 100 }),
-      ]);
-
-      setPackageArtistOptions(artistOptions);
-      setPackageServiceOptions(serviceOptions);
-    } catch {
-      // Paket seçim listeleri yüklenemezse ana katalog ekranını bozmayız.
-    }
-  }
-
   async function loadCurrentList(options?: {
     nextMode?: CatalogMode;
     nextPageIndex?: number;
@@ -187,12 +155,10 @@ export function ServiceCatalogPage({
           search: targetSearch,
           isActive: true,
           skip: targetPageIndex * PAGE_SIZE,
-          limit: REQUEST_LIMIT,
+          limit: PAGE_SIZE,
         });
-
-        setArtists(data.slice(0, PAGE_SIZE));
-        setHasNextPage(data.length > PAGE_SIZE);
-
+        setArtists(data);
+        setHasNextPage(data.length === PAGE_SIZE);
         if (options?.nextSelectedId) {
           setSelectedArtistId(options.nextSelectedId);
         }
@@ -203,12 +169,10 @@ export function ServiceCatalogPage({
           search: targetSearch,
           isActive: true,
           skip: targetPageIndex * PAGE_SIZE,
-          limit: REQUEST_LIMIT,
+          limit: PAGE_SIZE,
         });
-
-        setServices(data.slice(0, PAGE_SIZE));
-        setHasNextPage(data.length > PAGE_SIZE);
-
+        setServices(data);
+        setHasNextPage(data.length === PAGE_SIZE);
         if (options?.nextSelectedId) {
           setSelectedServiceId(options.nextSelectedId);
         }
@@ -219,12 +183,10 @@ export function ServiceCatalogPage({
           search: targetSearch,
           isActive: true,
           skip: targetPageIndex * PAGE_SIZE,
-          limit: REQUEST_LIMIT,
+          limit: PAGE_SIZE,
         });
-
-        setPackages(data.slice(0, PAGE_SIZE));
-        setHasNextPage(data.length > PAGE_SIZE);
-
+        setPackages(data);
+        setHasNextPage(data.length === PAGE_SIZE);
         if (options?.nextSelectedId) {
           setSelectedPackageId(options.nextSelectedId);
         }
@@ -269,7 +231,6 @@ export function ServiceCatalogPage({
     setPageIndex(0);
     setErrorMessage("");
     setPackageDetail(null);
-
     void loadCurrentList({
       nextMode,
       nextPageIndex: 0,
@@ -293,91 +254,32 @@ export function ServiceCatalogPage({
 
   async function handleCreateArtist(payload: ArtistCreatePayload) {
     const created = await createArtist(payload);
-
     await loadCurrentList({
       nextMode: "artists",
       nextPageIndex: 0,
       nextSearch: "",
       nextSelectedId: created.id,
     });
-
-    await loadPackageOptions();
-  }
-
-  async function handleUpdateArtist(payload: ArtistUpdatePayload) {
-    if (!selectedArtistId) {
-      return;
-    }
-
-    const updated = await updateArtist(selectedArtistId, payload);
-
-    await loadCurrentList({
-      nextMode: "artists",
-      nextPageIndex: pageIndex,
-      nextSearch: search,
-      nextSelectedId: updated.id,
-    });
-
-    await loadPackageOptions();
   }
 
   async function handleCreateService(payload: TechnicalServiceCreatePayload) {
     const created = await createTechnicalService(payload);
-
     await loadCurrentList({
       nextMode: "services",
       nextPageIndex: 0,
       nextSearch: "",
       nextSelectedId: created.id,
     });
-
-    await loadPackageOptions();
-  }
-
-  async function handleUpdateService(payload: TechnicalServiceUpdatePayload) {
-    if (!selectedServiceId) {
-      return;
-    }
-
-    const updated = await updateTechnicalService(selectedServiceId, payload);
-
-    await loadCurrentList({
-      nextMode: "services",
-      nextPageIndex: pageIndex,
-      nextSearch: search,
-      nextSelectedId: updated.id,
-    });
-
-    await loadPackageOptions();
   }
 
   async function handleCreatePackage(payload: ServicePackageCreatePayload) {
     const created = await createServicePackage(payload);
-
     await loadCurrentList({
       nextMode: "packages",
       nextPageIndex: 0,
       nextSearch: "",
       nextSelectedId: created.id,
     });
-  }
-
-  async function handleUpdatePackage(payload: ServicePackageUpdatePayload) {
-    if (!selectedPackageId) {
-      return;
-    }
-
-    const updated = await updateServicePackage(selectedPackageId, payload);
-
-    await loadCurrentList({
-      nextMode: "packages",
-      nextPageIndex: pageIndex,
-      nextSearch: search,
-      nextSelectedId: updated.id,
-    });
-
-    const detail = await fetchServicePackageDetail(updated.id);
-    setPackageDetail(detail);
   }
 
   async function handleCreateRider(payload: RiderCreatePayload) {
@@ -406,7 +308,7 @@ export function ServiceCatalogPage({
     }
 
     const confirmed = window.confirm(
-      "Bu paket kalemini kaldırmak istiyor musun? Kayıt tamamen silinmez, pasif hale alınır."
+      "Bu program akışı kalemini kaldırmak istiyor musun? Kayıt tamamen silinmez, pasif hale alınır."
     );
 
     if (!confirmed) {
@@ -422,7 +324,7 @@ export function ServiceCatalogPage({
       setPackageDetail(detail);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Paket kalemi kaldırılamadı."
+        error instanceof Error ? error.message : "Akış kalemi kaldırılamadı."
       );
     } finally {
       setRemovingPackageItemId(null);
@@ -435,8 +337,8 @@ export function ServiceCatalogPage({
       nextPageIndex: 0,
       nextSearch: "",
     });
-
-    void loadPackageOptions();
+    void fetchArtists({ isActive: true, limit: 100 }).then(setArtists);
+    void fetchTechnicalServices({ isActive: true, limit: 100 }).then(setServices);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -448,76 +350,107 @@ export function ServiceCatalogPage({
   const config = modeConfig[mode];
 
   return (
-    <ViaPageShell
-      eyebrow="Operasyon Merkezi"
-      title="Hizmet Kataloğu"
-      description="Sanatçı hizmetleri, teknik / operasyon hizmetleri ve program paketlerini tek katalog yapısı içinde yönetin."
-      onBack={onBackToDashboard}
-    >
-      <div className="space-y-5">
-        <div className="flex gap-2 overflow-x-auto rounded-[2rem] border border-slate-200 bg-white p-2 shadow-sm">
-          {(["artists", "services", "packages"] as CatalogMode[]).map(
-            (item) => (
+    <MainLayout userName={user?.full_name ?? "Yönetici"} onLogout={onLogout}>
+      <div className="flex flex-col h-auto md:h-[calc(100vh-9.5rem)] w-full">
+        
+        {/* === SABİT ÜST KISIM (KAYMAZ) (flex-none) === */}
+        <div className="flex-none flex flex-col space-y-5">
+          
+          {/* Geri Dön Butonu ve Başlık */}
+          <div className="flex flex-col gap-3">
+            {onBackToDashboard && (
+              <div className="flex">
+                <button
+                  onClick={onBackToDashboard}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+                >
+                  <span aria-hidden="true">←</span> Geri Dön
+                </button>
+              </div>
+            )}
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
+                OPERASYON MERKEZİ
+              </p>
+              <h1 className="mt-2 text-3xl font-normal text-slate-800">
+                Hizmet Kataloğu
+              </h1>
+              <p className="mt-2 text-sm text-slate-500">
+                Sanatçı hizmetleri, teknik / operasyon hizmetleri ve program paketlerini tek katalog yapısı içinde yönetin.
+              </p>
+            </div>
+          </div>
+
+          {/* Sekmeler (Tabs) */}
+          <div className="flex w-full items-center gap-2 overflow-x-auto rounded-full border border-slate-200 bg-white p-2 shadow-sm">
+            {(["artists", "services", "packages"] as CatalogMode[]).map((item) => (
               <button
                 key={item}
-                type="button"
                 onClick={() => changeMode(item)}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
+                className={`shrink-0 rounded-full px-6 py-2.5 text-sm font-medium transition-colors ${
                   mode === item
-                    ? "bg-slate-950 text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    ? "bg-slate-900 text-white"
+                    : "bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 {modeConfig[item].title}
               </button>
-            )
-          )}
-        </div>
-
-        <CatalogToolbar
-          title={config.title}
-          description={config.description}
-          search={search}
-          pageIndex={pageIndex}
-          hasNextPage={hasNextPage}
-          isLoading={isLoadingList}
-          onSearchChange={setSearch}
-          onSearchSubmit={() =>
-            void loadCurrentList({
-              nextPageIndex: 0,
-              nextSearch: search,
-            })
-          }
-          onPreviousPage={() =>
-            void loadCurrentList({
-              nextPageIndex: Math.max(pageIndex - 1, 0),
-            })
-          }
-          onNextPage={() =>
-            void loadCurrentList({
-              nextPageIndex: pageIndex + 1,
-            })
-          }
-          onOpenCreate={() => setShowCreateModal(true)}
-        />
-
-        {errorMessage ? (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-            {errorMessage}
+            ))}
           </div>
-        ) : null}
 
-        <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-          <CatalogList
-            mode={mode}
-            items={currentItems}
-            selectedId={selectedId}
-            onSelect={handleSelect}
+          {/* Toolbar (Arama ve Butonlar) */}
+          <CatalogToolbar
+            title=""
+            description=""
+            search={search}
+            pageIndex={pageIndex}
+            hasNextPage={hasNextPage}
+            isLoading={isLoadingList}
+            onSearchChange={setSearch}
+            onSearchSubmit={() =>
+              void loadCurrentList({
+                nextPageIndex: 0,
+                nextSearch: search,
+              })
+            }
+            onPreviousPage={() =>
+              void loadCurrentList({
+                nextPageIndex: Math.max(pageIndex - 1, 0),
+              })
+            }
+            onNextPage={() =>
+              void loadCurrentList({
+                nextPageIndex: pageIndex + 1,
+              })
+            }
+            onOpenCreate={() => setShowCreateModal(true)}
           />
 
-          <div className="min-w-0">
+          {errorMessage ? (
+            <div className="rounded-[1.5rem] border border-red-200 bg-red-50 p-5 text-sm font-medium text-red-900 shadow-sm">
+              {errorMessage}
+            </div>
+          ) : null}
+        </div>
+
+        {/* === KAYDIRILABİLİR İÇERİK ALANI (flex-1) === */}
+        {/* Sadece bu alanın içindeki sütunlar kendi içinde kayacak */}
+        <section className="flex-1 min-h-0 mt-5 grid gap-6 grid-cols-1 md:grid-cols-[390px_1fr]">
+          
+          {/* SOL LİSTE (Kendi İçinde Kayar) */}
+          <div className="h-full overflow-y-auto pr-2 pb-6">
+            <CatalogList
+              mode={mode}
+              items={currentItems}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+            />
+          </div>
+
+          {/* SAĞ DETAY (Kendi İçinde Kayar) */}
+          <div className="h-full overflow-y-auto pr-2 pb-6">
             {isLoadingDetail ? (
-              <div className="rounded-[2rem] bg-white p-8 text-center text-slate-500 shadow-sm">
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500 shadow-sm">
                 Detay yükleniyor...
               </div>
             ) : mode === "artists" && selectedArtist ? (
@@ -525,17 +458,12 @@ export function ServiceCatalogPage({
                 artist={selectedArtist}
                 riderItems={riderItems}
                 onOpenRiderForm={() => setShowRiderModal(true)}
-                onOpenEdit={() => setShowEditArtistModal(true)}
               />
             ) : mode === "services" && selectedService ? (
-              <TechnicalServiceDetail
-                service={selectedService}
-                onOpenEdit={() => setShowEditServiceModal(true)}
-              />
+              <TechnicalServiceDetail service={selectedService} />
             ) : mode === "packages" && packageDetail ? (
               <PackageDetail
                 detail={packageDetail}
-                onOpenEdit={() => setShowEditPackageModal(true)}
                 onOpenItemForm={() => setShowPackageItemModal(true)}
                 onRemoveItem={handleRemovePackageItem}
                 removingItemId={removingPackageItemId}
@@ -547,9 +475,12 @@ export function ServiceCatalogPage({
               />
             )}
           </div>
+
         </section>
+
       </div>
 
+      {/* Modallar */}
       {showCreateModal ? (
         <ModalShell
           eyebrow="Hizmet Kataloğu"
@@ -579,51 +510,6 @@ export function ServiceCatalogPage({
         </ModalShell>
       ) : null}
 
-      {showEditArtistModal && selectedArtist ? (
-        <ModalShell
-          eyebrow="Sanatçı Hizmeti"
-          title="Sanatçı Bilgilerini Düzenle"
-          onClose={() => setShowEditArtistModal(false)}
-        >
-          <ArtistForm
-            initialArtist={selectedArtist}
-            submitLabel="Sanatçı Bilgilerini Güncelle"
-            onSubmit={handleUpdateArtist}
-            onDone={() => setShowEditArtistModal(false)}
-          />
-        </ModalShell>
-      ) : null}
-
-      {showEditServiceModal && selectedService ? (
-        <ModalShell
-          eyebrow="Teknik / Operasyon Hizmeti"
-          title="Hizmet Bilgilerini Düzenle"
-          onClose={() => setShowEditServiceModal(false)}
-        >
-          <TechnicalServiceForm
-            initialService={selectedService}
-            submitLabel="Hizmet Bilgilerini Güncelle"
-            onSubmit={handleUpdateService}
-            onDone={() => setShowEditServiceModal(false)}
-          />
-        </ModalShell>
-      ) : null}
-
-      {showEditPackageModal && packageDetail ? (
-        <ModalShell
-          eyebrow="Program Paketi"
-          title="Paket Bilgilerini Düzenle"
-          onClose={() => setShowEditPackageModal(false)}
-        >
-          <PackageForm
-            initialPackage={packageDetail.package}
-            submitLabel="Paket Bilgilerini Güncelle"
-            onSubmit={handleUpdatePackage}
-            onDone={() => setShowEditPackageModal(false)}
-          />
-        </ModalShell>
-      ) : null}
-
       {showRiderModal && selectedArtistId ? (
         <ModalShell
           eyebrow="Rider Şablonu"
@@ -639,19 +525,19 @@ export function ServiceCatalogPage({
 
       {showPackageItemModal && selectedPackageId ? (
         <ModalShell
-          eyebrow="Program Paketi"
-          title="Paket Kalemi Ekle"
+          eyebrow="Program Akışı"
+          title="Yeni Akış Kalemi"
           onClose={() => setShowPackageItemModal(false)}
         >
           <PackageItemForm
-            artists={packageArtistOptions}
-            services={packageServiceOptions}
-            nextSortOrder={(packageDetail?.items.length ?? 0) + 1}
+            artists={artists}
+            services={services}
+            nextSortOrder={packageDetail?.items.length ?? 0}
             onSubmit={handleCreatePackageItem}
             onDone={() => setShowPackageItemModal(false)}
           />
         </ModalShell>
       ) : null}
-    </ViaPageShell>
+    </MainLayout>
   );
 }
