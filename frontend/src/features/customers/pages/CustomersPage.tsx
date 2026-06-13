@@ -285,7 +285,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         <button
           type="button"
           onClick={() => setShowCreatePanel(true)}
-          className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-teal-200"
+          className="rounded-full bg-teal-400 px-6 py-2.5 text-sm font-medium text-teal-950 shadow-sm transition hover:bg-teal-300"
         >
           Yeni Müşteri
         </button>
@@ -320,7 +320,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         />
 
         {errorMessage ? (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
             {errorMessage}
           </div>
         ) : null}
@@ -388,24 +388,24 @@ function CustomerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
       <div className="flex h-[min(92vh,860px)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 p-5">
+        <div className="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
+            <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
               {eyebrow}
             </p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">{title}</h2>
+            <h2 className="mt-1 text-2xl font-normal text-slate-800">{title}</h2>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   );

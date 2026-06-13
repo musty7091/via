@@ -10,6 +10,7 @@ import { EventDetailPanel } from "../components/EventDetailPanel";
 import { EventEmptyState } from "../components/EventEmptyState";
 import { EventList } from "../components/EventList";
 import { EventToolbar } from "../components/EventToolbar";
+import { MainLayout } from "../../../components/MainLayout";
 import type {
   CustomerOption,
   EventDetail,
@@ -19,11 +20,13 @@ import type {
 
 type EventsPageProps = {
   onBackToDashboard: () => void;
+  userName?: string;
+  onLogout?: () => void;
 };
 
 const PAGE_SIZE = 20;
 
-export function EventsPage({ onBackToDashboard }: EventsPageProps) {
+export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPageProps) {
   const [events, setEvents] = useState<EventListItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -124,24 +127,13 @@ export function EventsPage({ onBackToDashboard }: EventsPageProps) {
   }, [selectedEventId]);
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
-            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
-              Etkinlikler
-            </h1>
-          </div>
-
-          <button
-            onClick={onBackToDashboard}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-          >Geri Dön</button>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
+    <MainLayout
+      title="Etkinlikler"
+      onBack={onBackToDashboard}
+      userName={userName}
+      onLogout={onLogout}
+    >
+      <div className="space-y-5">
         <EventToolbar
           search={search}
           pageIndex={pageIndex}
@@ -205,7 +197,7 @@ export function EventsPage({ onBackToDashboard }: EventsPageProps) {
             )}
           </div>
         </section>
-      </section>
-    </main>
+      </div>
+    </MainLayout>
   );
 }
