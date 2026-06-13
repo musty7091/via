@@ -1,104 +1,73 @@
-import {
-  artistTypeOptions,
-  getOptionLabel,
-  packageTypeOptions,
-  serviceTypeOptions,
-} from "../constants/serviceCatalogConstants";
-import type {
-  ArtistService,
-  ServicePackage,
-  TechnicalService,
-} from "../types/serviceCatalogTypes";
-import { formatMoney } from "./formatters";
+import React from "react";
 
 type CatalogListProps = {
   mode: "artists" | "services" | "packages";
-  items: Array<ArtistService | TechnicalService | ServicePackage>;
+  items: any[];
   selectedId: number | null;
   onSelect: (id: number) => void;
 };
 
-export function CatalogList({
-  mode,
-  items,
-  selectedId,
-  onSelect,
-}: CatalogListProps) {
+export function CatalogList({ mode, items, selectedId, onSelect }: CatalogListProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-6 text-center">
-        <p className="text-sm font-black text-slate-700">Kayıt bulunamadı.</p>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          Arama metnini değiştir veya yeni kayıt oluştur.
-        </p>
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-6 text-center text-sm font-medium text-slate-500 shadow-sm">
+        Kayıt bulunamadı.
       </div>
     );
   }
 
-  return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      {items.map((item) => {
-        const isSelected = selectedId === item.id;
-        const typeLabel = getTypeLabel(mode, item);
-        const saleAmount =
-          "default_sale_amount" in item ? item.default_sale_amount : 0;
-        const saleCurrency =
-          "default_sale_currency" in item ? item.default_sale_currency : "TRY";
+  const formatCurrency = (val: any, cur: string) => {
+    if (!val) return "";
+    try {
+      return new Intl.NumberFormat("tr-TR", {
+        style: "currency",
+        currency: cur || "TRY",
+        minimumFractionDigits: 2,
+      }).format(Number(val));
+    } catch (e) {
+      return `${val} ${cur}`;
+    }
+  };
 
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((item) => {
+        const isSelected = item.id === selectedId;
+        const title = item.full_name || item.title || item.name || "İsimsiz";
+        const category = item.category || item.category_name || item.service_category || "Kategori Yok";
+        const price = item.base_price || item.total_price || item.price;
+        
         return (
           <button
-            key={`${mode}-${item.id}`}
+            key={item.id}
             onClick={() => onSelect(item.id)}
-            className={`w-full border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 ${
-              isSelected ? "bg-teal-50" : "bg-white hover:bg-slate-50"
+            className={`flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all ${
+              isSelected
+                ? "border-teal-400 bg-teal-50 shadow-sm"
+                : "border-slate-200 bg-white hover:border-teal-200 hover:bg-slate-50 shadow-sm"
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black text-slate-950">
-                  {item.name}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">{typeLabel}</p>
-              </div>
-
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                  item.is_active
-                    ? "bg-teal-100 text-teal-800"
-                    : "bg-slate-200 text-slate-600"
-                }`}
-              >
-                {item.is_active ? "Aktif" : "Pasif"}
+            <div className="flex w-full items-start justify-between gap-2">
+              <span className={`text-sm font-medium ${isSelected ? "text-teal-900" : "text-slate-800"}`}>
+                {title}
+              </span>
+              <span className="shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-medium text-teal-800">
+                Aktif
               </span>
             </div>
-
-            <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Teklif: {formatMoney(saleAmount, saleCurrency)}
+            
+            <span className="text-xs font-normal text-slate-500">
+              {category}
+            </span>
+            
+            {price ? (
+              <span className="mt-1 rounded-full border border-slate-100 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-600">
+                {formatCurrency(price, item.currency)}
               </span>
-            </div>
+            ) : null}
           </button>
         );
       })}
     </div>
   );
-}
-
-function getTypeLabel(
-  mode: "artists" | "services" | "packages",
-  item: ArtistService | TechnicalService | ServicePackage
-) {
-  if (mode === "artists" && "artist_type" in item) {
-    return getOptionLabel(artistTypeOptions, item.artist_type);
-  }
-
-  if (mode === "services" && "service_type" in item) {
-    return getOptionLabel(serviceTypeOptions, item.service_type);
-  }
-
-  if (mode === "packages" && "package_type" in item) {
-    return getOptionLabel(packageTypeOptions, item.package_type);
-  }
-
-  return "-";
 }

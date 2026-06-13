@@ -40,20 +40,23 @@ export function CustomerSelector({
 }: CustomerSelectorProps) {
   return (
     <section className="relative rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-        <div className="flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_620px] xl:items-center">
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-teal-700">
             Müşteri Seç
           </p>
-          <h2 className="mt-2 text-xl font-black text-slate-950">
+
+          <h2 className="mt-2 truncate text-2xl font-black text-slate-950">
             {selectedCustomerName ?? "Müşteri seçilmedi"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Müşteriyi arayıp seç; detaylar altta tam genişlikte açılır.
+
+          <p className="mt-1 text-sm leading-6 text-slate-500">
+            Müşteri arayın, seçin ve alt bölümde yetkili kişi, mekan ve cari
+            bilgilerini yönetin.
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-2 lg:w-[520px]">
+        <div className="grid gap-3">
           <div className="flex gap-2">
             <input
               value={search}
@@ -73,28 +76,50 @@ export function CustomerSelector({
             />
 
             <button
+              type="button"
               onClick={onSearchSubmit}
-              className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white"
+              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800"
             >
               Ara
             </button>
 
             <button
+              type="button"
               onClick={onToggleOpen}
-              className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-700"
+              className="rounded-2xl bg-slate-100 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-200"
             >
               {isOpen ? "Gizle" : "Seç"}
             </button>
           </div>
 
-          <p className="text-xs font-semibold text-slate-400">
-            Sayfa {pageIndex + 1} • En fazla 20 kayıt gösterilir.
-          </p>
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-400">
+            <button
+              type="button"
+              disabled={pageIndex === 0 || isLoading}
+              onClick={onPreviousPage}
+              className="rounded-full bg-slate-100 px-3 py-2 text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ← Önceki
+            </button>
+
+            <span className="rounded-full bg-slate-50 px-3 py-2 text-slate-500">
+              Sayfa {pageIndex + 1} • 6 kayıt / sayfa
+            </span>
+
+            <button
+              type="button"
+              disabled={!hasNextPage || isLoading}
+              onClick={onNextPage}
+              className="rounded-full bg-slate-100 px-3 py-2 text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Sonraki →
+            </button>
+          </div>
         </div>
       </div>
 
       {isOpen ? (
-        <div className="absolute left-4 right-4 top-[calc(100%-0.75rem)] z-30 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-2xl shadow-slate-300 lg:left-auto lg:w-[560px]">
+        <div className="absolute left-4 right-4 top-[calc(100%-0.75rem)] z-30 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-2xl shadow-slate-300 xl:left-auto xl:w-[620px]">
           {isLoading ? (
             <div className="p-5 text-sm text-slate-500">
               Müşteriler yükleniyor...
@@ -104,18 +129,17 @@ export function CustomerSelector({
               Kayıt bulunamadı. Arama metnini değiştir veya yeni müşteri oluştur.
             </div>
           ) : (
-            <div className="max-h-[360px] overflow-y-auto">
+            <div className="max-h-[430px] overflow-y-auto">
               {customers.map((customer) => {
                 const isSelected = selectedCustomerId === customer.id;
 
                 return (
                   <button
                     key={customer.id}
+                    type="button"
                     onClick={() => onSelectCustomer(customer.id)}
                     className={`w-full border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 ${
-                      isSelected
-                        ? "bg-teal-50"
-                        : "bg-white hover:bg-slate-50"
+                      isSelected ? "bg-teal-50" : "bg-white hover:bg-slate-50"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -124,7 +148,10 @@ export function CustomerSelector({
                           {customer.name}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
-                          {getOptionLabel(customerTypeOptions, customer.customer_type)}
+                          {getOptionLabel(
+                            customerTypeOptions,
+                            customer.customer_type
+                          )}
                           {customer.city ? ` • ${customer.city}` : ""}
                         </p>
                       </div>
@@ -148,7 +175,8 @@ export function CustomerSelector({
                         {customer.default_currency}
                       </span>
                       <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                        Risk: {getOptionLabel(riskLevelOptions, customer.risk_level)}
+                        Risk:{" "}
+                        {getOptionLabel(riskLevelOptions, customer.risk_level)}
                       </span>
                     </div>
                   </button>
@@ -156,28 +184,6 @@ export function CustomerSelector({
               })}
             </div>
           )}
-
-          <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 p-3">
-            <button
-              disabled={pageIndex === 0 || isLoading}
-              onClick={onPreviousPage}
-              className="rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Önceki
-            </button>
-
-            <span className="text-xs font-bold text-slate-500">
-              20 kayıt / sayfa
-            </span>
-
-            <button
-              disabled={!hasNextPage || isLoading}
-              onClick={onNextPage}
-              className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Sonraki
-            </button>
-          </div>
         </div>
       ) : null}
     </section>

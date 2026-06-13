@@ -2,6 +2,7 @@ import { getStoredToken } from "../../../services/authStorage";
 import type {
   ArtistCreatePayload,
   ArtistService,
+  ArtistUpdatePayload,
   PackageItem,
   PackageItemCreatePayload,
   RiderCreatePayload,
@@ -9,8 +10,10 @@ import type {
   ServicePackage,
   ServicePackageCreatePayload,
   ServicePackageDetail,
+  ServicePackageUpdatePayload,
   TechnicalService,
   TechnicalServiceCreatePayload,
+  TechnicalServiceUpdatePayload,
 } from "../types/serviceCatalogTypes";
 
 const API_BASE_URL =
@@ -51,7 +54,10 @@ function getAuthHeaders() {
   };
 }
 
-function buildUrl(path: string, params?: Record<string, string | number | boolean | null | undefined>) {
+function buildUrl(
+  path: string,
+  params?: Record<string, string | number | boolean | null | undefined>
+) {
   const url = new URL(`${API_BASE_URL}${path}`);
 
   Object.entries(params ?? {}).forEach(([key, value]) => {
@@ -63,7 +69,10 @@ function buildUrl(path: string, params?: Record<string, string | number | boolea
   return url;
 }
 
-async function requestJson<T>(url: URL | string, options?: RequestInit): Promise<T> {
+async function requestJson<T>(
+  url: URL | string,
+  options?: RequestInit
+): Promise<T> {
   const requestUrl =
     typeof url === "string" && url.startsWith("/")
       ? `${API_BASE_URL}${url}`
@@ -111,7 +120,19 @@ export async function createArtist(
   });
 }
 
-export async function fetchArtistRiderItems(artistId: number): Promise<RiderItem[]> {
+export async function updateArtist(
+  artistId: number,
+  payload: ArtistUpdatePayload
+): Promise<ArtistService> {
+  return requestJson<ArtistService>(`/service-catalog/artists/${artistId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchArtistRiderItems(
+  artistId: number
+): Promise<RiderItem[]> {
   return requestJson<RiderItem[]>(`/service-catalog/artists/${artistId}/rider`);
 }
 
@@ -152,6 +173,19 @@ export async function createTechnicalService(
   });
 }
 
+export async function updateTechnicalService(
+  serviceItemId: number,
+  payload: TechnicalServiceUpdatePayload
+): Promise<TechnicalService> {
+  return requestJson<TechnicalService>(
+    `/service-catalog/services/${serviceItemId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
 export async function fetchServicePackages(params?: {
   search?: string;
   packageType?: string;
@@ -179,6 +213,16 @@ export async function createServicePackage(
   });
 }
 
+export async function updateServicePackage(
+  packageId: number,
+  payload: ServicePackageUpdatePayload
+): Promise<ServicePackage> {
+  return requestJson<ServicePackage>(`/service-catalog/packages/${packageId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchServicePackageDetail(
   packageId: number
 ): Promise<ServicePackageDetail> {
@@ -191,10 +235,13 @@ export async function createPackageItem(
   packageId: number,
   payload: PackageItemCreatePayload
 ): Promise<PackageItem> {
-  return requestJson<PackageItem>(`/service-catalog/packages/${packageId}/items`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return requestJson<PackageItem>(
+    `/service-catalog/packages/${packageId}/items`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export async function deletePackageItem(

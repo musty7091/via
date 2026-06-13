@@ -16,16 +16,20 @@ type CustomerLedgerProps = {
   onCreateMovement: (payload: CustomerLedgerMovementCreatePayload) => Promise<void>;
 };
 
+function getTodayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function CustomerLedger({
   ledger,
   onCreateMovement,
 }: CustomerLedgerProps) {
-  const [movementDate, setMovementDate] = useState("2026-06-01");
-  const [movementType, setMovementType] = useState("event_charge");
+  const [movementDate, setMovementDate] = useState(getTodayInputValue());
+  const [movementType, setMovementType] = useState("");
   const [direction, setDirection] = useState<"debit" | "credit">("debit");
-  const [title, setTitle] = useState("Etkinlik bedeli");
-  const [description, setDescription] = useState("Frekans konseri");
-  const [amount, setAmount] = useState("120000");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [collectedByPartnerId, setCollectedByPartnerId] = useState("");
   const [detailNote, setDetailNote] = useState("");
@@ -34,7 +38,7 @@ export function CustomerLedger({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!title.trim() || !amount) {
+    if (!movementDate || !movementType || !title.trim() || !amount) {
       return;
     }
 
@@ -57,7 +61,14 @@ export function CustomerLedger({
           : null,
       });
 
+      setMovementDate(getTodayInputValue());
+      setMovementType("");
+      setDirection("debit");
+      setTitle("");
+      setDescription("");
       setAmount("");
+      setPaymentMethod("");
+      setCollectedByPartnerId("");
       setDetailNote("");
     } finally {
       setIsSaving(false);
@@ -149,7 +160,10 @@ export function CustomerLedger({
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4 rounded-2xl bg-slate-50 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-4 rounded-2xl bg-slate-50 p-4"
+      >
         <p className="text-sm font-black text-slate-800">
           Manuel hesap hareketi ekle
         </p>
@@ -167,7 +181,9 @@ export function CustomerLedger({
               value={movementType}
               onChange={(event) => setMovementType(event.target.value)}
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+              required
             >
+              <option value="">İşlem türü seçin</option>
               {ledgerMovementTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -193,6 +209,7 @@ export function CustomerLedger({
               onChange={(event) => setTitle(event.target.value)}
               placeholder="İşlem başlığı"
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+              required
             />
 
             <input
@@ -206,10 +223,13 @@ export function CustomerLedger({
           <div className="grid gap-3 sm:grid-cols-3">
             <input
               type="number"
+              min="0"
+              step="0.01"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="Tutar"
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-teal-500 transition focus:ring-4"
+              required
             />
 
             <select

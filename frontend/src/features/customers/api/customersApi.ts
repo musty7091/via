@@ -8,6 +8,7 @@ import type {
   CustomerLedgerMovementCreatePayload,
   CustomerLedgerSummary,
   CustomerListItem,
+  CustomerUpdatePayload,
   CustomerVenue,
   CustomerVenueCreatePayload,
 } from "../types/customerTypes";
@@ -90,6 +91,23 @@ export async function createCustomer(
 ): Promise<CustomerDetail> {
   const response = await fetch(`${API_BASE_URL}/customers`, {
     method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json();
+}
+
+export async function updateCustomer(
+  customerId: number,
+  payload: CustomerUpdatePayload
+): Promise<CustomerDetail> {
+  const response = await fetch(`${API_BASE_URL}/customers/${customerId}`, {
+    method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });

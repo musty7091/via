@@ -1,6 +1,16 @@
 import type { OfferPrintView } from "../types/offerTypes";
 import { formatDate, formatMoney, formatTime } from "./formatters";
-import { getOptionLabel, invoiceTypeOptions, programSectionOptions } from "../constants/offerConstants";
+import {
+  getOptionLabel,
+  invoiceTypeOptions,
+  programSectionOptions,
+} from "../constants/offerConstants";
+
+type OfferPrintDocumentType = "offer" | "agreement";
+
+type OfferPrintWindowOptions = {
+  documentType?: OfferPrintDocumentType;
+};
 
 function escapeHtml(value: string | null | undefined) {
   return (value ?? "")
@@ -11,7 +21,27 @@ function escapeHtml(value: string | null | undefined) {
     .replaceAll("'", "&#039;");
 }
 
-export function openOfferPrintWindow(view: OfferPrintView) {
+export function openOfferPrintWindow(
+  view: OfferPrintView,
+  options: OfferPrintWindowOptions = {}
+) {
+  const documentType = options.documentType ?? "offer";
+  const isAgreement = documentType === "agreement";
+
+  const documentMainTitle = isAgreement
+    ? "Etkinlik Program Anlaşması"
+    : "Etkinlik Program Teklifi";
+
+  const documentNumberFallback = isAgreement ? "Anlaşma" : "Teklif";
+  const summaryTitle = isAgreement ? "Anlaşma Özeti" : "Teklif Özeti";
+  const paymentTitle = isAgreement ? "Anlaşma Ödeme Bilgisi" : "Ödeme Bilgisi";
+  const contentTitle = isAgreement
+    ? "Anlaşma Kapsamı ve Hizmet İçeriği"
+    : "Program Akışı ve Hizmet İçeriği";
+  const customerApprovalTitle = isAgreement
+    ? "Müşteri / Yetkili Onayı"
+    : "Müşteri Onayı";
+
   const windowRef = window.open("", "_blank", "width=980,height=1200");
 
   if (!windowRef) {
@@ -27,12 +57,24 @@ export function openOfferPrintWindow(view: OfferPrintView) {
           <td>${escapeHtml(formatTime(line.end_time))}</td>
           <td>
             <strong>${escapeHtml(line.title)}</strong>
-            <div class="muted">${escapeHtml(getOptionLabel(programSectionOptions, line.program_section))}</div>
+            <div class="muted">${escapeHtml(
+              getOptionLabel(programSectionOptions, line.program_section)
+            )}</div>
             <div>${escapeHtml(line.description)}</div>
           </td>
-          <td class="right">${line.show_pricing ? escapeHtml(String(line.quantity)) : ""}</td>
-          <td class="right">${line.show_pricing ? escapeHtml(formatMoney(line.unit_price, line.currency)) : ""}</td>
-          <td class="right">${line.show_pricing ? escapeHtml(formatMoney(line.line_amount, line.currency)) : "Dahil"}</td>
+          <td class="right">${
+            line.show_pricing ? escapeHtml(String(line.quantity)) : ""
+          }</td>
+          <td class="right">${
+            line.show_pricing
+              ? escapeHtml(formatMoney(line.unit_price, line.currency))
+              : ""
+          }</td>
+          <td class="right">${
+            line.show_pricing
+              ? escapeHtml(formatMoney(line.line_amount, line.currency))
+              : "Dahil"
+          }</td>
         </tr>
       `
     )
@@ -42,10 +84,18 @@ export function openOfferPrintWindow(view: OfferPrintView) {
     .map(
       (summary) => `
         <div class="summary-card">
-          <div class="muted">${escapeHtml(summary.currency)} Teklif Özeti</div>
-          <div class="row"><span>Ara Toplam</span><strong>${escapeHtml(formatMoney(summary.visible_amount, summary.currency))}</strong></div>
-          <div class="row"><span>KDV</span><strong>${escapeHtml(formatMoney(summary.vat_amount, summary.currency))}</strong></div>
-          <div class="row total"><span>Genel Toplam</span><strong>${escapeHtml(formatMoney(summary.total_amount, summary.currency))}</strong></div>
+          <div class="muted">${escapeHtml(summary.currency)} ${escapeHtml(
+            summaryTitle
+          )}</div>
+          <div class="row"><span>Ara Toplam</span><strong>${escapeHtml(
+            formatMoney(summary.visible_amount, summary.currency)
+          )}</strong></div>
+          <div class="row"><span>KDV</span><strong>${escapeHtml(
+            formatMoney(summary.vat_amount, summary.currency)
+          )}</strong></div>
+          <div class="row total"><span>Genel Toplam</span><strong>${escapeHtml(
+            formatMoney(summary.total_amount, summary.currency)
+          )}</strong></div>
         </div>
       `
     )
@@ -54,6 +104,7 @@ export function openOfferPrintWindow(view: OfferPrintView) {
   const primaryPaymentSummary = view.summaries.find(
     (summary) => summary.currency === view.advance_payment_currency
   );
+
   const remainingPaymentAmount = Math.max(
     (primaryPaymentSummary?.total_amount ?? 0) - view.advance_payment_amount,
     0
@@ -63,7 +114,7 @@ export function openOfferPrintWindow(view: OfferPrintView) {
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(view.title)}</title>
+  <title>${escapeHtml(documentMainTitle)} - ${escapeHtml(view.title)}</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; background: #f8fafc; }
@@ -72,6 +123,7 @@ export function openOfferPrintWindow(view: OfferPrintView) {
     .brand h1 { margin: 0; font-size: 28px; letter-spacing: 2px; }
     .brand p { margin: 6px 0 0 0; color: #475569; }
     .badge { padding: 8px 12px; background: #ccfbf1; border-radius: 999px; font-weight: 700; color: #0f172a; }
+    .agreement-badge { background: #bbf7d0; }
     .section { margin-top: 22px; }
     h2 { margin: 0 0 10px 0; font-size: 20px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -102,23 +154,35 @@ export function openOfferPrintWindow(view: OfferPrintView) {
     <div class="brand">
       <div>
         <h1>VIA EVENTS</h1>
-        <p>Etkinlik Program Teklifi</p>
+        <p>${escapeHtml(documentMainTitle)}</p>
       </div>
-      <div class="badge">${escapeHtml(view.offer_no ?? "Teklif")}</div>
+      <div class="badge ${isAgreement ? "agreement-badge" : ""}">${escapeHtml(
+        view.offer_no ?? documentNumberFallback
+      )}</div>
     </div>
 
     <div class="section">
       <h2>${escapeHtml(view.title)}</h2>
       <div class="grid">
-        <div class="box"><div class="label">Müşteri</div><div class="value">${escapeHtml(view.customer_name)}</div></div>
-        <div class="box"><div class="label">Mekân</div><div class="value">${escapeHtml(view.venue_name ?? "-")}</div></div>
-        <div class="box"><div class="label">Etkinlik Tarihi</div><div class="value">${escapeHtml(formatDate(view.event_date))}</div></div>
-        <div class="box"><div class="label">Geçerlilik</div><div class="value">${escapeHtml(formatDate(view.valid_until))}</div></div>
+        <div class="box"><div class="label">Müşteri</div><div class="value">${escapeHtml(
+          view.customer_name
+        )}</div></div>
+        <div class="box"><div class="label">Mekân</div><div class="value">${escapeHtml(
+          view.venue_name ?? "-"
+        )}</div></div>
+        <div class="box"><div class="label">Etkinlik Tarihi</div><div class="value">${escapeHtml(
+          formatDate(view.event_date)
+        )}</div></div>
+        <div class="box"><div class="label">${
+          isAgreement ? "Kayıt / Geçerlilik" : "Geçerlilik"
+        }</div><div class="value">${escapeHtml(
+          formatDate(view.valid_until)
+        )}</div></div>
       </div>
     </div>
 
     <div class="section">
-      <h2>Program Akışı ve Hizmet İçeriği</h2>
+      <h2>${escapeHtml(contentTitle)}</h2>
       <table>
         <thead>
           <tr>
@@ -135,32 +199,50 @@ export function openOfferPrintWindow(view: OfferPrintView) {
     </div>
 
     <div class="section">
-      <h2>Teklif Özeti</h2>
+      <h2>${escapeHtml(summaryTitle)}</h2>
       <div class="summaries">${summariesHtml}</div>
       <div class="muted" style="margin-top: 10px;">
-        Fatura durumu: ${escapeHtml(getOptionLabel(invoiceTypeOptions, view.invoice_type))}
-        ${view.invoice_type === "with_invoice" ? ` • KDV oranı: %${escapeHtml(String(view.vat_rate))}` : ""}
+        Fatura durumu: ${escapeHtml(
+          getOptionLabel(invoiceTypeOptions, view.invoice_type)
+        )}
+        ${
+          view.invoice_type === "with_invoice"
+            ? ` • KDV oranı: %${escapeHtml(String(view.vat_rate))}`
+            : ""
+        }
       </div>
     </div>
 
     <div class="section">
-      <h2>Ödeme Bilgisi</h2>
+      <h2>${escapeHtml(paymentTitle)}</h2>
       <div class="box">
-        <div class="row"><span>Ön ödeme</span><strong>${escapeHtml(formatMoney(view.advance_payment_amount, view.advance_payment_currency))}</strong></div>
-        <div class="row"><span>Kalan ödeme</span><strong>${escapeHtml(formatMoney(remainingPaymentAmount, view.advance_payment_currency))}</strong></div>
-        ${view.payment_terms ? `<div class="note" style="margin-top: 10px;">${escapeHtml(view.payment_terms)}</div>` : ""}
+        <div class="row"><span>Ön ödeme</span><strong>${escapeHtml(
+          formatMoney(view.advance_payment_amount, view.advance_payment_currency)
+        )}</strong></div>
+        <div class="row"><span>Kalan ödeme</span><strong>${escapeHtml(
+          formatMoney(remainingPaymentAmount, view.advance_payment_currency)
+        )}</strong></div>
+        ${
+          view.payment_terms
+            ? `<div class="note" style="margin-top: 10px;">${escapeHtml(
+                view.payment_terms
+              )}</div>`
+            : ""
+        }
       </div>
     </div>
 
     ${
       view.customer_visible_notes
-        ? `<div class="section"><h2>Notlar</h2><div class="note">${escapeHtml(view.customer_visible_notes)}</div></div>`
+        ? `<div class="section"><h2>Notlar</h2><div class="note">${escapeHtml(
+            view.customer_visible_notes
+          )}</div></div>`
         : ""
     }
 
     <div class="signature">
       <div class="sign-box">VIA EVENTS Yetkilisi</div>
-      <div class="sign-box">Müşteri Onayı</div>
+      <div class="sign-box">${escapeHtml(customerApprovalTitle)}</div>
     </div>
   </div>
 

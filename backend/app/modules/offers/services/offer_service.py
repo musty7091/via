@@ -5,6 +5,7 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.models.artist import Artist, ServiceItem
 from app.models.customer import Customer
 from app.models.event import Event, EventItem
 from app.models.offer import Offer, OfferItem
@@ -20,7 +21,6 @@ from app.modules.offers.schemas import (
     OfferInternalItemRead,
     OfferInternalSummary,
     OfferItemCreate,
-    OfferItemRead,
     OfferPrintLine,
     OfferPrintView,
     OfferRead,
@@ -32,8 +32,10 @@ from app.modules.offers.schemas import (
 def _as_float(value) -> float:
     if value is None:
         return 0
+
     if isinstance(value, Decimal):
         return float(value)
+
     return float(value)
 
 
@@ -48,7 +50,12 @@ def _validate_choice(field_name: str, value: str | None, allowed: list[str]) -> 
         )
 
 
-def _validate_offer_refs(db: Session, customer_id: int, venue_id: int | None, package_id: int | None) -> None:
+def _validate_offer_refs(
+    db: Session,
+    customer_id: int,
+    venue_id: int | None,
+    package_id: int | None,
+) -> None:
     if db.get(Customer, customer_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -69,7 +76,6 @@ def _validate_offer_refs(db: Session, customer_id: int, venue_id: int | None, pa
 
 
 def _next_offer_no(db: Session) -> str:
-    # Basit ve okunabilir ilk sürüm. İleride yıl/seri bazlı profesyonelleştirilir.
     last_offer = db.query(Offer).order_by(Offer.id.desc()).first()
     next_id = (last_offer.id + 1) if last_offer else 1
     return f"VIA-TEK-{date.today().year}-{next_id:05d}"
@@ -83,9 +89,8 @@ def _recalculate_offer(db: Session, offer: Offer) -> Offer:
     items = offer_repository.list_offer_items(db=db, offer_id=offer.id)
     visible_items = [item for item in items if item.is_visible_on_offer]
 
-    # Teklif toplamı sadece müşteriye görünen satış satırlarından hesaplanır.
-    # Maliyet alanları bu toplamın parçası değildir ve müşteriye asla dönmez.
     currency_totals: dict[str, float] = defaultdict(float)
+
     for item in visible_items:
         currency_totals[item.currency] += _as_float(item.base_amount)
 
@@ -93,6 +98,7 @@ def _recalculate_offer(db: Session, offer: Offer) -> Offer:
     primary_amount = round(currency_totals.get(primary_currency, 0), 4)
 
     vat_amount = 0
+
     if offer.invoice_type == "with_invoice":
         vat_amount = round(primary_amount * (_as_float(offer.vat_rate) / 100), 4)
 
@@ -103,6 +109,7 @@ def _recalculate_offer(db: Session, offer: Offer) -> Offer:
 
     db.commit()
     db.refresh(offer)
+
     return offer
 
 
@@ -139,7 +146,12 @@ def list_offers(
 def create_offer(db: Session, payload: OfferCreate):
     _validate_choice("invoice_type", payload.invoice_type, constants.INVOICE_TYPES)
     _validate_choice("currency", payload.currency, constants.CURRENCIES)
-    _validate_choice("advance_payment_currency", payload.advance_payment_currency, constants.CURRENCIES)
+    _validate_choice(
+        "advance_payment_currency",
+        payload.advance_payment_currency,
+        constants.CURRENCIES,
+    )
+
     _validate_offer_refs(
         db=db,
         customer_id=payload.customer_id,
@@ -172,12 +184,22 @@ def update_offer(db: Session, offer_id: int, payload: OfferUpdate):
     _validate_choice("status", data.get("status"), constants.OFFER_STATUSES)
     _validate_choice("invoice_type", data.get("invoice_type"), constants.INVOICE_TYPES)
     _validate_choice("currency", data.get("currency"), constants.CURRENCIES)
-    _validate_choice("advance_payment_currency", data.get("advance_payment_currency"), constants.CURRENCIES)
+    _validate_choice(
+        "advance_payment_currency",
+        data.get("advance_payment_currency"),
+        constants.CURRENCIES,
+    )
 
     customer_id = data.get("customer_id", offer.customer_id)
     venue_id = data.get("venue_id", offer.venue_id)
     package_id = data.get("package_id", offer.package_id)
-    _validate_offer_refs(db=db, customer_id=customer_id, venue_id=venue_id, package_id=package_id)
+
+    _validate_offer_refs(
+        db=db,
+        customer_id=customer_id,
+        venue_id=venue_id,
+        package_id=package_id,
+    )
 
     updated = offer_repository.update_offer(db=db, offer=offer, data=data)
     return _recalculate_offer(db=db, offer=updated)
@@ -188,6 +210,7 @@ def _to_internal_item_read(item: OfferItem) -> OfferInternalItemRead:
     cost = _as_float(item.internal_total_cost)
 
     internal_profit = 0
+
     if item.currency == item.internal_cost_currency:
         internal_profit = round(revenue - cost, 4)
 
@@ -227,8 +250,10 @@ def _visible_summaries(offer: Offer, items: list[OfferItem]) -> list[OfferSummar
             totals[item.currency] += _as_float(item.base_amount)
 
     summaries = []
+
     for currency, amount in sorted(totals.items()):
         vat_amount = 0
+
         if offer.invoice_type == "with_invoice" and currency == offer.currency:
             vat_amount = round(amount * (_as_float(offer.vat_rate) / 100), 4)
 
@@ -245,7 +270,9 @@ def _visible_summaries(offer: Offer, items: list[OfferItem]) -> list[OfferSummar
 
 
 def _internal_summaries(items: list[OfferItem]) -> list[OfferInternalSummary]:
-    totals: dict[str, dict[str, float]] = defaultdict(lambda: {"revenue": 0, "cost": 0})
+    totals: dict[str, dict[str, float]] = defaultdict(
+        lambda: {"revenue": 0, "cost": 0}
+    )
 
     for item in items:
         if item.currency == item.internal_cost_currency:
@@ -253,12 +280,16 @@ def _internal_summaries(items: list[OfferItem]) -> list[OfferInternalSummary]:
             totals[item.currency]["cost"] += _as_float(item.internal_total_cost)
         else:
             totals[item.currency]["revenue"] += _as_float(item.base_amount)
-            totals[item.internal_cost_currency]["cost"] += _as_float(item.internal_total_cost)
+            totals[item.internal_cost_currency]["cost"] += _as_float(
+                item.internal_total_cost
+            )
 
     summaries = []
+
     for currency, values in sorted(totals.items()):
         revenue = round(values["revenue"], 4)
         cost = round(values["cost"], 4)
+
         summaries.append(
             OfferInternalSummary(
                 currency=currency,
@@ -285,21 +316,96 @@ def get_offer_detail(db: Session, offer_id: int) -> OfferDetail:
 
 def create_offer_item(db: Session, offer_id: int, payload: OfferItemCreate):
     offer = get_offer_or_404(db=db, offer_id=offer_id)
+
+    if offer.status == "agreement":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlaşmaya çevrilmiş teklife bu ekrandan kalem eklenemez.",
+        )
+
+    if offer.status == "cancelled":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="İptal edilmiş teklife kalem eklenemez.",
+        )
+
     _validate_choice("currency", payload.currency, constants.CURRENCIES)
-    _validate_choice("internal_cost_currency", payload.internal_cost_currency, constants.CURRENCIES)
+    _validate_choice(
+        "internal_cost_currency",
+        payload.internal_cost_currency,
+        constants.CURRENCIES,
+    )
+
+    source_type = payload.source_type or "manual"
+
+    if source_type not in ["manual", "artist", "technical_service"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz teklif kalemi kaynağı.",
+        )
 
     data = payload.model_dump()
     data["offer_id"] = offer.id
-    data["source_type"] = "manual"
+    data["source_type"] = source_type
+    data["source_package_item_id"] = None
+
+    if source_type == "artist":
+        if not payload.artist_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sanatçı seçilmeden sanatçı kalemi eklenemez.",
+            )
+
+        artist = db.get(Artist, payload.artist_id)
+
+        if artist is None or not artist.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sanatçı bulunamadı veya pasif durumda.",
+            )
+
+        data["artist_id"] = artist.id
+        data["service_item_id"] = None
+
+    elif source_type == "technical_service":
+        if not payload.service_item_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Teknik hizmet seçilmeden teknik hizmet kalemi eklenemez.",
+            )
+
+        service_item = db.get(ServiceItem, payload.service_item_id)
+
+        if service_item is None or not service_item.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Teknik hizmet bulunamadı veya pasif durumda.",
+            )
+
+        data["artist_id"] = None
+        data["service_item_id"] = service_item.id
+
+    else:
+        data["artist_id"] = None
+        data["service_item_id"] = None
+
     data["base_amount"] = _line_amount(payload.quantity, payload.unit_price)
-    data["internal_total_cost"] = _line_amount(payload.quantity, payload.internal_unit_cost)
+    data["internal_total_cost"] = _line_amount(
+        payload.quantity,
+        payload.internal_unit_cost,
+    )
 
     item = offer_repository.create_offer_item(db=db, data=data)
     _recalculate_offer(db=db, offer=offer)
+
     return _to_internal_item_read(item)
 
 
-def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRequest) -> OfferDetail:
+def import_package_to_offer(
+    db: Session,
+    offer_id: int,
+    payload: ImportPackageRequest,
+) -> OfferDetail:
     offer = get_offer_or_404(db=db, offer_id=offer_id)
     package = db.get(ServicePackage, payload.package_id)
 
@@ -358,6 +464,7 @@ def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRe
         "is_active": True,
         "sort_order": -1000,
     }
+
     offer_repository.create_offer_item(db=db, data=package_total_item)
 
     for package_item in package_items:
@@ -383,12 +490,15 @@ def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRe
             "is_active": True,
             "sort_order": package_item.sort_order,
         }
+
         offer_repository.create_offer_item(db=db, data=data)
 
     offer.package_id = package.id
     offer.currency = package_sale_currency
     offer.advance_payment_currency = package_sale_currency
+
     db.commit()
+
     _recalculate_offer(db=db, offer=offer)
 
     return get_offer_detail(db=db, offer_id=offer.id)
@@ -396,7 +506,11 @@ def import_package_to_offer(db: Session, offer_id: int, payload: ImportPackageRe
 
 def deactivate_offer_item(db: Session, offer_id: int, item_id: int):
     offer = get_offer_or_404(db=db, offer_id=offer_id)
-    item = offer_repository.get_offer_item(db=db, offer_id=offer_id, item_id=item_id)
+    item = offer_repository.get_offer_item(
+        db=db,
+        offer_id=offer_id,
+        item_id=item_id,
+    )
 
     if item is None or not item.is_active:
         raise HTTPException(
@@ -406,6 +520,7 @@ def deactivate_offer_item(db: Session, offer_id: int, item_id: int):
 
     deactivated = offer_repository.deactivate_offer_item(db=db, item=item)
     _recalculate_offer(db=db, offer=offer)
+
     return _to_internal_item_read(deactivated)
 
 
@@ -445,6 +560,7 @@ def _create_event_from_offer_if_needed(db: Session, offer: Offer) -> Event:
         notes=offer.customer_visible_notes,
         is_period_closed=False,
     )
+
     db.add(event)
     db.flush()
 
@@ -466,27 +582,34 @@ def _create_event_from_offer_if_needed(db: Session, offer: Offer) -> Event:
             base_cost_amount=offer_item.internal_total_cost,
             sort_order=offer_item.sort_order,
         )
+
         db.add(event_item)
 
     offer.event_id = event.id
+
     db.commit()
     db.refresh(event)
     db.refresh(offer)
+
     return event
 
 
-def convert_to_agreement(db: Session, offer_id: int, payload: ConvertAgreementRequest):
+def convert_to_agreement(
+    db: Session,
+    offer_id: int,
+    payload: ConvertAgreementRequest,
+):
     offer = get_offer_or_404(db=db, offer_id=offer_id)
-
     event = _create_event_from_offer_if_needed(db=db, offer=offer)
 
     offer.status = "agreement"
     offer.event_id = event.id
     offer.agreement_notes = payload.agreement_notes
+
     db.commit()
     db.refresh(offer)
-    return offer
 
+    return offer
 
 
 def cancel_offer(db: Session, offer_id: int):
@@ -502,8 +625,10 @@ def cancel_offer(db: Session, offer_id: int):
         return offer
 
     offer.status = "cancelled"
+
     db.commit()
     db.refresh(offer)
+
     return offer
 
 

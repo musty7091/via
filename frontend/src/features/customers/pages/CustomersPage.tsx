@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
+import { ViaPageShell } from "../../../components/layout/ViaPageShell";
 import {
   createCustomer,
   createCustomerContact,
@@ -11,6 +12,7 @@ import {
   fetchCustomerLedgerSummary,
   fetchCustomers,
   fetchCustomerVenues,
+  updateCustomer,
 } from "../api/customersApi";
 import { CustomerDetailPanel } from "../components/CustomerDetailPanel";
 import { CustomerEmptyState } from "../components/CustomerEmptyState";
@@ -21,7 +23,9 @@ import type {
   CustomerCreatePayload,
   CustomerDetailBundle,
   CustomerLedgerMovementCreatePayload,
+  CustomerLedgerSummary,
   CustomerListItem,
+  CustomerUpdatePayload,
   CustomerVenueCreatePayload,
 } from "../types/customerTypes";
 
@@ -29,22 +33,74 @@ type CustomersPageProps = {
   onBackToDashboard: () => void;
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 6;
+const REQUEST_LIMIT = PAGE_SIZE + 1;
 
 export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
+  const [customerSummaries, setCustomerSummaries] = useState<
+    Record<number, CustomerLedgerSummary | null>
+  >({});
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
     null
   );
   const [bundle, setBundle] = useState<CustomerDetailBundle | null>(null);
   const [search, setSearch] = useState("");
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(false);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  function handlePageBack() {
+    if (selectedCustomerId) {
+      setSelectedCustomerId(null);
+      setBundle(null);
+      setShowEditPanel(false);
+      setIsSelectorOpen(false);
+      return;
+    }
+
+    onBackToDashboard();
+  }
+
+  async function loadCustomerSummaries(nextCustomers: CustomerListItem[]) {
+    const initialMap: Record<number, CustomerLedgerSummary | null> = {};
+
+    nextCustomers.forEach((customer) => {
+      initialMap[customer.id] = null;
+    });
+
+    setCustomerSummaries(initialMap);
+
+    const results = await Promise.allSettled(
+      nextCustomers.map(async (customer) => {
+        const summary = await fetchCustomerLedgerSummary(customer.id);
+        return {
+          customerId: customer.id,
+          summary,
+        };
+      })
+    );
+
+    const nextMap: Record<number, CustomerLedgerSummary | null> = {};
+
+    results.forEach((result, index) => {
+      const customerId = nextCustomers[index]?.id;
+
+      if (!customerId) {
+        return;
+      }
+
+      nextMap[customerId] =
+        result.status === "fulfilled" ? result.value.summary : null;
+    });
+
+    setCustomerSummaries(nextMap);
+  }
 
   async function loadCustomers(options?: {
     nextSelectedId?: number;
@@ -63,12 +119,16 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         search: targetSearch,
         isActive: true,
         skip: targetPageIndex * PAGE_SIZE,
-        limit: PAGE_SIZE,
+        limit: REQUEST_LIMIT,
       });
 
-      setCustomers(data);
+      const visibleCustomers = data.slice(0, PAGE_SIZE);
+
+      setCustomers(visibleCustomers);
       setPageIndex(targetPageIndex);
-      setHasNextPage(data.length === PAGE_SIZE);
+      setHasNextPage(data.length > PAGE_SIZE);
+
+      void loadCustomerSummaries(visibleCustomers);
 
       if (options?.nextSelectedId) {
         setSelectedCustomerId(options.nextSelectedId);
@@ -106,6 +166,11 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         ledger,
         summary,
       });
+
+      setCustomerSummaries((current) => ({
+        ...current,
+        [customerId]: summary,
+      }));
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Müşteri detayı alınamadı."
@@ -119,12 +184,31 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     const createdCustomer = await createCustomer(payload);
     setSearch("");
     setShowCreatePanel(false);
+
     await loadCustomers({
       nextSelectedId: createdCustomer.id,
       nextPageIndex: 0,
       nextSearch: "",
       keepDropdownOpen: false,
     });
+  }
+
+  async function handleUpdateCustomer(payload: CustomerUpdatePayload) {
+    if (!selectedCustomerId) {
+      return;
+    }
+
+    const updatedCustomer = await updateCustomer(selectedCustomerId, payload);
+    setShowEditPanel(false);
+
+    await loadCustomers({
+      nextSelectedId: updatedCustomer.id,
+      nextPageIndex: pageIndex,
+      nextSearch: search,
+      keepDropdownOpen: false,
+    });
+
+    await loadCustomerDetail(updatedCustomer.id);
   }
 
   async function handleCreateContact(payload: CustomerContactCreatePayload) {
@@ -191,32 +275,23 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
     null;
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
-            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
-              Müşteriler
-            </h1>
-          </div>
-
-          <div className="flex shrink-0 gap-2">
-            <button
-              onClick={() => setShowCreatePanel(true)}
-              className="rounded-full bg-teal-300 px-4 py-2 text-sm font-black text-slate-950"
-            >
-              Yeni Müşteri
-            </button>
-            <button
-              onClick={onBackToDashboard}
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-            >Geri Dön</button>
-          </div>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl space-y-5 px-4 py-5">
+    <ViaPageShell
+      eyebrow="Operasyon Merkezi"
+      title="Müşteri ve Mekanlar"
+      description="Müşteri kayıtları, yetkili kişiler, mekan bilgileri ve müşteri cari hareketlerini tek alanda yönetin."
+      onBack={handlePageBack}
+      backLabel={selectedCustomerId ? "Müşteri Listesine Dön" : "Geri Dön"}
+      actions={
+        <button
+          type="button"
+          onClick={() => setShowCreatePanel(true)}
+          className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-teal-200"
+        >
+          Yeni Müşteri
+        </button>
+      }
+    >
+      <div className="space-y-5">
         <CustomerSelector
           customers={customers}
           selectedCustomerId={selectedCustomerId}
@@ -254,6 +329,7 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
           <CustomerDetailPanel
             bundle={bundle}
             isLoading={isLoadingDetail}
+            onOpenEditCustomer={() => setShowEditPanel(true)}
             onCreateContact={handleCreateContact}
             onCreateVenue={handleCreateVenue}
             onCreateMovement={handleCreateMovement}
@@ -261,40 +337,76 @@ export function CustomersPage({ onBackToDashboard }: CustomersPageProps) {
         ) : (
           <CustomerEmptyState
             customers={customers}
+            customerSummaries={customerSummaries}
             onOpenSelector={() => setIsSelectorOpen(true)}
             onOpenCreatePanel={() => setShowCreatePanel(true)}
             onSelectCustomer={handleSelectCustomer}
           />
         )}
-      </section>
+      </div>
 
       {showCreatePanel ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
-          <div className="flex h-[min(92vh,860px)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 p-5">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
-                  Kayıt Paneli
-                </p>
-                <h2 className="mt-1 text-xl font-black text-slate-950">
-                  Yeni Müşteri
-                </h2>
-              </div>
-
-              <button
-                onClick={() => setShowCreatePanel(false)}
-                className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
-              >
-                Kapat
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5">
-              <CustomerForm onCreateCustomer={handleCreateCustomer} />
-            </div>
-          </div>
-        </div>
+        <CustomerModal
+          eyebrow="Kayıt Paneli"
+          title="Yeni Müşteri"
+          onClose={() => setShowCreatePanel(false)}
+        >
+          <CustomerForm onCreateCustomer={handleCreateCustomer} />
+        </CustomerModal>
       ) : null}
-    </main>
+
+      {showEditPanel && bundle?.customer ? (
+        <CustomerModal
+          eyebrow="Düzenleme Paneli"
+          title="Müşteri Bilgilerini Düzenle"
+          onClose={() => setShowEditPanel(false)}
+        >
+          <CustomerForm
+            initialCustomer={bundle.customer}
+            eyebrow="Müşteri düzenle"
+            title="Müşteri kartını güncelle"
+            submitLabel="Müşteri Bilgilerini Güncelle"
+            onSubmit={handleUpdateCustomer}
+          />
+        </CustomerModal>
+      ) : null}
+    </ViaPageShell>
+  );
+}
+
+function CustomerModal({
+  eyebrow,
+  title,
+  onClose,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
+      <div className="flex h-[min(92vh,860px)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 p-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-teal-700">
+              {eyebrow}
+            </p>
+            <h2 className="mt-1 text-xl font-black text-slate-950">{title}</h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-slate-700"
+          >
+            Kapat
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+      </div>
+    </div>
   );
 }

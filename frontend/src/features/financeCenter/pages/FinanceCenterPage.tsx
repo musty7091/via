@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
+import type { AuthUser } from "../../../types/auth";
+import MainLayout from "../../../components/MainLayout";
 import {
   fetchCustomers,
   createCollection,
@@ -39,8 +41,11 @@ import { EventFinancialClosureSection } from "../components/EventFinancialClosur
 import { PeriodClosingReportSection } from "../components/PeriodClosingReportSection";
 import { ExpenseQuickEntryModal } from "../../expenses/components/ExpenseQuickEntryModal";
 
+// HATA ÇÖZÜMÜ: user ve onLogout yanına "?" ekleyerek bu veriler gelmese bile sistemin çökmesini engelledik.
 type FinanceCenterPageProps = {
-  onBackToDashboard: () => void;
+  onBackToDashboard?: () => void;
+  user?: AuthUser;
+  onLogout?: () => void;
 };
 
 type ActivePanelKey =
@@ -372,21 +377,21 @@ function getDefaultExpenseForm(): ExpenseFormState {
 
 function getToneClasses(tone: QuickAction["tone"]) {
   if (tone === "teal") {
-    return "border-teal-200 bg-white text-slate-950 shadow-sm hover:border-teal-300 hover:bg-teal-50";
+    return "border-teal-200 bg-white text-slate-800 shadow-sm hover:border-teal-300 hover:bg-teal-50";
   }
 
   if (tone === "dark") {
-    return "border-slate-300 bg-white text-slate-950 shadow-sm hover:border-slate-500 hover:bg-slate-50";
+    return "border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50";
   }
 
   if (tone === "amber") {
-    return "border-amber-200 bg-white text-slate-950 shadow-sm hover:border-amber-300 hover:bg-amber-50";
+    return "border-amber-200 bg-white text-slate-800 shadow-sm hover:border-amber-300 hover:bg-amber-50";
   }
 
-  return "border-slate-200 bg-white text-slate-950 shadow-sm hover:border-teal-200 hover:bg-slate-50";
+  return "border-slate-200 bg-white text-slate-800 shadow-sm hover:border-teal-200 hover:bg-slate-50";
 }
 
-export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps) {
+export function FinanceCenterPage({ onBackToDashboard, user, onLogout }: FinanceCenterPageProps) {
   const currentPeriodMonth = useMemo(() => getCurrentPeriodMonth(), []);
   const [summary, setSummary] = useState<FinancialMovementSummary>(defaultSummary);
   const [periodExpenseSummary, setPeriodExpenseSummary] =
@@ -551,40 +556,35 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+    <MainLayout userName={user?.full_name ?? "Yönetici"} onLogout={onLogout}>
+      <div className="flex flex-col h-full w-full">
+        
+        {/* Sayfa Başlığı ve Aktif Dönem */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pt-2">
           <div>
-            <button
-              onClick={onBackToDashboard}
-              className="text-sm font-black text-slate-500 transition hover:text-slate-950"
-            >
-              ← Operasyon Merkezi
-            </button>
-            <div className="mt-2 flex flex-wrap items-end gap-3">
-              <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+            <div className="flex flex-wrap items-end gap-3">
+              <h1 className="text-2xl font-normal tracking-tight sm:text-3xl text-slate-800">
                 Finans Merkezi
               </h1>
-              <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-black text-teal-700">
+              <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
                 Ön Muhasebe Paneli
               </span>
             </div>
           </div>
 
-          <div className="hidden rounded-2xl bg-slate-950 px-4 py-3 text-right text-white sm:block">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-200">
+          <div className="hidden rounded-2xl bg-slate-800 px-5 py-3 text-right text-white sm:block shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-widest text-teal-200 opacity-80">
               Aktif Dönem
             </p>
-            <p className="text-lg font-black">{currentPeriodMonth}</p>
+            <p className="text-lg font-normal">{currentPeriodMonth}</p>
           </div>
         </div>
-      </header>
 
-      <section className="mx-auto max-w-7xl px-5 py-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        {/* Finans Kontrol Paneli Bilgi Kutusu */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-teal-700">
+              <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
                 Finans Kontrol Paneli
               </p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
@@ -592,35 +592,35 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right sm:hidden">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
                 Aktif Dönem
               </p>
-              <p className="text-base font-black text-slate-950">{currentPeriodMonth}</p>
+              <p className="text-base font-normal text-slate-800">{currentPeriodMonth}</p>
             </div>
           </div>
         </div>
 
         {loadError ? (
-          <div className="mt-5 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-amber-950">
-            <p className="font-black">Bilgi</p>
+          <div className="mb-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-amber-900">
+            <p className="font-medium">Bilgi</p>
             <p className="mt-2 text-sm leading-6">{loadError}</p>
           </div>
         ) : null}
 
         {expenseDetailError ? (
-          <div className="mt-5 rounded-[1.5rem] border border-red-200 bg-red-50 p-5 text-red-950">
-            <p className="font-black">Gider Detayı Açılamadı</p>
+          <div className="mb-6 rounded-[1.5rem] border border-red-200 bg-red-50 p-5 text-red-900">
+            <p className="font-medium">Gider Detayı Açılamadı</p>
             <p className="mt-2 text-sm leading-6">{expenseDetailError}</p>
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="mt-5 rounded-[1.5rem] bg-white p-5 text-sm font-bold text-slate-500 shadow-lg shadow-slate-200">
+          <div className="mb-6 rounded-[1.5rem] bg-white p-5 text-sm font-medium text-slate-500 shadow-sm border border-slate-200">
             Finans Merkezi verileri yükleniyor...
           </div>
         ) : null}
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6 mb-6">
           <SummaryCard
             title="Kasa / Banka Net"
             value={formatMoney(cashBalance)}
@@ -659,39 +659,39 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           />
         </div>
 
-        <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-6">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
                 Hızlı İşlemler
               </p>
-              <h3 className="mt-1 text-xl font-black">Muhasebe işlemleri</h3>
+              <h3 className="mt-1 text-xl font-normal text-slate-800">Muhasebe işlemleri</h3>
             </div>
-            <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-2 text-xs font-black text-teal-700">
+            <span className="rounded-full border border-teal-100 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700">
               Kritik işlemlerde onay sorulur
             </span>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {quickActions.map((action) => (
               <button
                 key={action.title}
                 type="button"
                 onClick={() => handleQuickAction(action)}
-                className={`group rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md ${getToneClasses(
+                className={`group rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 ${getToneClasses(
                   action.tone
                 )}`}
               >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-base font-black text-white transition group-hover:bg-teal-700">
+                <div className="flex items-start gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-800 text-base font-normal text-white transition group-hover:bg-teal-600">
                     {action.icon}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-base font-black leading-5">{action.title}</p>
+                    <p className="text-base font-medium text-slate-800 leading-5">{action.title}</p>
                     <p className="mt-2 text-xs leading-5 text-slate-500">{action.description}</p>
                   </div>
                 </div>
-                <p className="mt-3 border-t border-slate-100 pt-3 text-[11px] font-bold leading-5 text-slate-400">
+                <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] font-medium leading-5 text-slate-400">
                   {action.helper}
                 </p>
               </button>
@@ -699,24 +699,24 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           </div>
         </section>
 
-        <section id="finance-movements-section" className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section id="finance-movements-section" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-6">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
                 Son Finans Hareketleri
               </p>
-              <h3 className="mt-1 text-xl font-black">Denetim izi</h3>
+              <h3 className="mt-1 text-xl font-normal text-slate-800">Denetim izi</h3>
               <p className="mt-2 text-sm leading-6 text-slate-500">
                 Tahsilat, ödeme, gider, devir ve iptal hareketlerinin sayfalı son kayıtları.
               </p>
             </div>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-600">
               {summary.total_count} toplam kayıt
             </span>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-            <div className="hidden grid-cols-[150px_1.1fr_2fr_160px] gap-4 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-500 md:grid">
+          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+            <div className="hidden grid-cols-[150px_1.1fr_2fr_160px] gap-4 bg-slate-50 px-5 py-3 text-xs font-medium uppercase tracking-widest text-slate-500 md:grid">
               <span>Tarih / Tür</span>
               <span>İşlem</span>
               <span>Açıklama</span>
@@ -724,30 +724,30 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
             </div>
 
             {movements.length === 0 ? (
-              <div className="p-4">
+              <div className="p-5">
                 <EmptyState text="Henüz finans hareketi bulunmuyor." />
               </div>
             ) : (
               movements.map((movement) => (
                 <div
                   key={movement.id}
-                  className="grid gap-3 border-t border-slate-100 px-4 py-4 text-sm md:grid-cols-[150px_1.1fr_2fr_160px] md:items-center"
+                  className="grid gap-3 border-t border-slate-100 px-5 py-4 text-sm md:grid-cols-[150px_1.1fr_2fr_160px] md:items-center"
                 >
                   <div>
-                    <p className="font-black text-slate-950">{movement.movement_date}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
+                    <p className="font-medium text-slate-800">{movement.movement_date}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-400">
                       {getMovementLabel(movement.movement_type)}
                     </p>
                   </div>
                   <div>
-                    <p className="font-black text-slate-950">{movement.title}</p>
+                    <p className="font-medium text-slate-800">{movement.title}</p>
                   </div>
                   <p className="leading-6 text-slate-500">
                     {movement.description ?? "Açıklama yok."}
                   </p>
                   <div className="md:text-right">
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                         movement.direction === "in"
                           ? "bg-teal-50 text-teal-700"
                           : "bg-rose-50 text-rose-700"
@@ -762,8 +762,8 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
             )}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-bold text-slate-500">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-slate-500">
               Sayfa {movementPage} / {movementTotalPages}
             </p>
             <div className="flex gap-2">
@@ -771,7 +771,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
                 type="button"
                 disabled={movementPage <= 1}
                 onClick={() => setMovementPage((previous) => Math.max(1, previous - 1))}
-                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-600 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Önceki
               </button>
@@ -779,14 +779,15 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
                 type="button"
                 disabled={movementPage >= movementTotalPages}
                 onClick={() => setMovementPage((previous) => Math.min(movementTotalPages, previous + 1))}
-                className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full bg-slate-800 px-5 py-2 text-sm font-medium text-white transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Sonraki
               </button>
             </div>
           </div>
         </section>
-      </section>
+        
+      </div>
 
       {selectedAction ? (
         <ActionWarningModal
@@ -805,7 +806,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
         />
       ) : null}
 
-            {showSupplierPaymentModal ? (
+      {showSupplierPaymentModal ? (
         <SupplierPaymentQuickActionModal
           onClose={() => setShowSupplierPaymentModal(false)}
           onSaved={async () => {
@@ -841,7 +842,7 @@ export function FinanceCenterPage({ onBackToDashboard }: FinanceCenterPageProps)
           onCancelled={handleExpenseCancelled}
         />
       ) : null}
-    </main>
+    </MainLayout>
   );
 }
 
@@ -867,19 +868,19 @@ function FinanceDetailModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
-      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[2rem] bg-slate-100 p-4 text-slate-950 shadow-2xl sm:p-6">
-        <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-start justify-between gap-4 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 backdrop-blur">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[2rem] bg-slate-50 p-4 text-slate-800 shadow-2xl sm:p-6">
+        <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-start justify-between gap-4 rounded-[1.5rem] border border-slate-200 bg-white/95 p-5 backdrop-blur">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-widest text-teal-600">
               Detaylı Finans İşlemi
             </p>
-            <h3 className="mt-2 text-2xl font-black">{title}</h3>
+            <h3 className="mt-2 text-2xl font-normal text-slate-800">{title}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white"
+            className="rounded-full bg-slate-800 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
           >
             Kapat
           </button>
@@ -901,7 +902,7 @@ type SummaryCardProps = {
 function SummaryCard({ title, value, description, tone }: SummaryCardProps) {
   const accentClasses =
     tone === "dark"
-      ? "bg-slate-950"
+      ? "bg-slate-800"
       : tone === "teal"
         ? "bg-teal-500"
         : tone === "amber"
@@ -913,15 +914,15 @@ function SummaryCard({ title, value, description, tone }: SummaryCardProps) {
       ? "text-teal-700"
       : tone === "amber"
         ? "text-amber-700"
-        : "text-slate-950";
+        : "text-slate-800";
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className={`h-1.5 w-12 rounded-full ${accentClasses}`} />
-      <p className="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+      <p className="mt-4 text-[11px] font-medium uppercase tracking-widest text-slate-400">
         {title}
       </p>
-      <p className={`mt-3 text-2xl font-black tracking-tight ${valueClasses}`}>{value}</p>
+      <p className={`mt-3 text-2xl font-normal tracking-tight ${valueClasses}`}>{value}</p>
       <p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>
     </article>
   );
@@ -929,7 +930,7 @@ function SummaryCard({ title, value, description, tone }: SummaryCardProps) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-bold text-slate-500">
+    <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-medium text-slate-500 text-center">
       {text}
     </div>
   );
@@ -1072,23 +1073,23 @@ function ExpenseRecordsSection({
   }
 
   return (
-    <section className="mt-6 rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="mt-6 rounded-[2rem] bg-white p-6 shadow-sm border border-slate-200">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">
+          <p className="text-sm font-medium uppercase tracking-widest text-slate-400">
             Genel Gider Kayıtları
           </p>
-          <h3 className="mt-1 text-2xl font-black">Genel gider takip ekranı</h3>
+          <h3 className="mt-1 text-xl font-normal text-slate-800">Genel gider takip ekranı</h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Bu liste genel dönem ve sezonluk gider kayıtları içindir. Etkinliğe özel giderler etkinlik finans/kârlılık ekranında yönetilir.
           </p>
         </div>
         {isOpen ? (
-          <div className="rounded-[1.25rem] border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-950">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
+          <div className="rounded-2xl border border-teal-100 bg-teal-50 px-4 py-3 text-right text-slate-800">
+            <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
               Filtrelenmiş Aktif Toplam
             </p>
-            <p className="text-lg font-black">{formatMoney(activeTotal)}</p>
+            <p className="text-lg font-medium">{formatMoney(activeTotal)}</p>
           </div>
         ) : null}
         <button
@@ -1101,7 +1102,7 @@ function ExpenseRecordsSection({
             scrollToElementById("finance-expense-records-section");
           }
         }}
-          className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+          className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-xs font-medium text-slate-600 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 mt-2"
         >
           {isOpen ? "Kapat ▲" : "Detayı Aç ▼"}
         </button>
@@ -1123,13 +1124,13 @@ function ExpenseRecordsSection({
 
       <div className="mt-5 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_1fr_1.4fr_0.8fr]">
         <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             Ay
           </span>
           <select
             value={periodFilter}
             onChange={(event) => changePeriodFilter(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
           >
             <option value="all">Tüm Aylar</option>
             {periodOptions.map((period) => (
@@ -1141,7 +1142,7 @@ function ExpenseRecordsSection({
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             Gider Kaynağı
           </span>
           <select
@@ -1149,7 +1150,7 @@ function ExpenseRecordsSection({
             onChange={(event) =>
               changeSourceFilter(event.target.value as "general" | "event" | "all")
             }
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
           >
             <option value="general">Genel + Sezonluk</option>
             <option value="event">Etkinliğe Özel</option>
@@ -1158,7 +1159,7 @@ function ExpenseRecordsSection({
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             Gider Türü
           </span>
           <select
@@ -1166,7 +1167,7 @@ function ExpenseRecordsSection({
             onChange={(event) =>
               changeScopeFilter(event.target.value as "all" | "period" | "season")
             }
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
           >
             <option value="all">Tümü</option>
             <option value="period">Normal Dönem</option>
@@ -1175,7 +1176,7 @@ function ExpenseRecordsSection({
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             Durum
           </span>
           <select
@@ -1183,7 +1184,7 @@ function ExpenseRecordsSection({
             onChange={(event) =>
               changeStatusFilter(event.target.value as "active" | "cancelled" | "all")
             }
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
           >
             <option value="active">Aktif</option>
             <option value="cancelled">İptal Edilen</option>
@@ -1192,25 +1193,25 @@ function ExpenseRecordsSection({
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             Arama
           </span>
           <input
             value={searchText}
             onChange={(event) => changeSearchText(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
             placeholder="Başlık, belge no, açıklama ara"
           />
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             Sayfa
           </span>
           <select
             value={pageSize}
             onChange={(event) => changePageSize(Number(event.target.value))}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
           >
             <option value={5}>5 kayıt</option>
             <option value={10}>10 kayıt</option>
@@ -1227,7 +1228,7 @@ function ExpenseRecordsSection({
           visibleExpenses.map((expense) => (
             <div
               key={expense.id}
-              className={`rounded-[1.25rem] border p-4 ${
+              className={`rounded-2xl border p-4 ${
                 expense.is_cancelled
                   ? "border-red-100 bg-red-50"
                   : "border-slate-100 bg-slate-50"
@@ -1236,9 +1237,9 @@ function ExpenseRecordsSection({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-black">{expense.title}</p>
+                    <p className="font-medium text-slate-800">{expense.title}</p>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${
                         expense.is_allocated
                           ? "bg-teal-100 text-teal-800"
                           : "bg-slate-200 text-slate-700"
@@ -1247,7 +1248,7 @@ function ExpenseRecordsSection({
                       {getExpenseScopeLabel(expense)}
                     </span>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${
                         expense.is_cancelled
                           ? "bg-red-100 text-red-800"
                           : "bg-emerald-100 text-emerald-800"
@@ -1257,7 +1258,7 @@ function ExpenseRecordsSection({
                     </span>
                   </div>
 
-                  <p className="mt-2 text-xs font-bold text-slate-500">
+                  <p className="mt-2 text-xs font-medium text-slate-500">
                     {formatDate(expense.expense_date)} · Belge: {expense.document_no ?? "-"}
                   </p>
 
@@ -1267,14 +1268,14 @@ function ExpenseRecordsSection({
                 </div>
 
                 <div className="text-right">
-                  <p className="text-lg font-black">
+                  <p className="text-lg font-medium text-slate-800">
                     {formatMoney(expense.base_amount, expense.currency)}
                   </p>
                   <button
                     type="button"
                     onClick={() => onOpenDetail(expense.id)}
                     disabled={isDetailLoading}
-                    className="mt-3 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+                    className="mt-3 rounded-full bg-slate-800 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
                   >
                     Detay Aç
                   </button>
@@ -1285,8 +1286,8 @@ function ExpenseRecordsSection({
         )}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] bg-slate-50 p-4">
-        <p className="text-sm font-bold text-slate-500">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 border border-slate-100 p-4">
+        <p className="text-sm font-medium text-slate-500">
           {filteredExpenses.length === 0
             ? "Kayıt yok"
             : `${pageStartIndex + 1} - ${Math.min(
@@ -1300,18 +1301,18 @@ function ExpenseRecordsSection({
             type="button"
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             disabled={safeCurrentPage <= 1}
-            className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow disabled:opacity-40"
+            className="rounded-full bg-white border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 shadow-sm disabled:opacity-40"
           >
             Önceki
           </button>
-          <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700">
+          <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700">
             {safeCurrentPage} / {totalPages}
           </span>
           <button
             type="button"
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
             disabled={safeCurrentPage >= totalPages}
-            className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 shadow disabled:opacity-40"
+            className="rounded-full bg-white border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 shadow-sm disabled:opacity-40"
           >
             Sonraki
           </button>
@@ -1325,11 +1326,11 @@ function ExpenseRecordsSection({
 
 function MiniMetric({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-[1.25rem] bg-slate-50 p-4">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+      <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
         {title}
       </p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
+      <p className="mt-2 text-2xl font-normal text-slate-800">{value}</p>
     </div>
   );
 }
@@ -1342,18 +1343,18 @@ function ActionWarningModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
-      <div className="w-full max-w-xl rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6">
+      <div className="w-full max-w-xl rounded-[2rem] bg-white p-7 text-slate-800 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-widest text-teal-600">
               İşlem Öncesi Uyarı
             </p>
-            <h3 className="mt-2 text-2xl font-black">{action.warningTitle}</h3>
+            <h3 className="mt-2 text-2xl font-normal">{action.warningTitle}</h3>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
@@ -1363,20 +1364,20 @@ function ActionWarningModal({
           {action.warningMessage}
         </p>
 
-        <div className="mt-6 rounded-[1.25rem] bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+        <div className="mt-6 rounded-2xl bg-amber-50 border border-amber-100 p-5 text-sm leading-6 text-amber-900">
           Bu işlem formu sonraki adımda bağlanacak. Gider faturası formu ve gider kayıt listesi artık canlı çalışıyor.
         </div>
 
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
             Vazgeç
           </button>
           <button
             onClick={onClose}
-            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white"
+            className="rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700"
           >
             Anladım
           </button>
@@ -1486,17 +1487,17 @@ function ExpenseModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6">
       <form
         onSubmit={handleSubmit}
-        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl"
+        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-7 text-slate-800 shadow-2xl"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-widest text-teal-600">
               Gider İşlemi
             </p>
-            <h3 className="mt-2 text-2xl font-black">Gider Faturası Gir</h3>
+            <h3 className="mt-2 text-2xl font-normal">Gider Faturası Gir</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               Normal dönem gideri ya da sezonluk gider olarak kaydedebilirsin.
             </p>
@@ -1504,7 +1505,7 @@ function ExpenseModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
@@ -1514,14 +1515,14 @@ function ExpenseModal({
           <button
             type="button"
             onClick={() => updateForm("expenseScope", "period")}
-            className={`rounded-[1.25rem] border p-4 text-left ${
+            className={`rounded-2xl border p-5 text-left transition ${
               form.expenseScope === "period"
-                ? "border-slate-950 bg-slate-950 text-white"
-                : "border-slate-200 bg-slate-50 text-slate-950"
+                ? "border-slate-800 bg-slate-800 text-white shadow-md"
+                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
             }`}
           >
-            <p className="font-black">Genel Dönem Gideri</p>
-            <p className="mt-2 text-sm leading-6 opacity-70">
+            <p className="font-medium text-base">Genel Dönem Gideri</p>
+            <p className="mt-2 text-sm leading-6 opacity-80">
               Gider sadece seçilen ayın sonucuna dahil edilir.
             </p>
           </button>
@@ -1529,14 +1530,14 @@ function ExpenseModal({
           <button
             type="button"
             onClick={() => updateForm("expenseScope", "season")}
-            className={`rounded-[1.25rem] border p-4 text-left ${
+            className={`rounded-2xl border p-5 text-left transition ${
               form.expenseScope === "season"
-                ? "border-teal-300 bg-teal-300 text-slate-950"
-                : "border-slate-200 bg-slate-50 text-slate-950"
+                ? "border-teal-500 bg-teal-500 text-white shadow-md"
+                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
             }`}
           >
-            <p className="font-black">Sezonluk Gider</p>
-            <p className="mt-2 text-sm leading-6 opacity-70">
+            <p className="font-medium text-base">Sezonluk Gider</p>
+            <p className="mt-2 text-sm leading-6 opacity-80">
               Gider başlangıç ayından sezon sonuna kadar aylara bölünür.
             </p>
           </button>
@@ -1547,7 +1548,7 @@ function ExpenseModal({
             <input
               value={form.title}
               onChange={(event) => updateForm("title", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="Örn: Sezon reklam gideri"
             />
           </FormField>
@@ -1557,7 +1558,7 @@ function ExpenseModal({
               type="date"
               value={form.expenseDate}
               onChange={(event) => updateForm("expenseDate", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
             />
           </FormField>
 
@@ -1568,7 +1569,7 @@ function ExpenseModal({
               step="0.01"
               value={form.amount}
               onChange={(event) => updateForm("amount", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="0.00"
             />
           </FormField>
@@ -1578,7 +1579,7 @@ function ExpenseModal({
               <select
                 value={form.currency}
                 onChange={(event) => updateForm("currency", event.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               >
                 <option value="TRY">TRY</option>
                 <option value="EUR">EUR</option>
@@ -1593,7 +1594,7 @@ function ExpenseModal({
                 step="0.000001"
                 value={form.exchangeRate}
                 onChange={(event) => updateForm("exchangeRate", event.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               />
             </FormField>
           </div>
@@ -1604,7 +1605,7 @@ function ExpenseModal({
                 type="month"
                 value={form.allocationEndMonth}
                 onChange={(event) => updateForm("allocationEndMonth", event.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               />
             </FormField>
           ) : null}
@@ -1613,7 +1614,7 @@ function ExpenseModal({
             <input
               value={form.documentNo}
               onChange={(event) => updateForm("documentNo", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="Fatura / belge no"
             />
           </FormField>
@@ -1624,7 +1625,7 @@ function ExpenseModal({
             <textarea
               value={form.description}
               onChange={(event) => updateForm("description", event.target.value)}
-              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-teal-400"
+              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="Gider açıklaması"
             />
           </FormField>
@@ -1633,22 +1634,22 @@ function ExpenseModal({
             <textarea
               value={form.notes}
               onChange={(event) => updateForm("notes", event.target.value)}
-              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-teal-400"
+              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="İç not"
             />
           </FormField>
         </div>
 
-        <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4">
-          <p className="text-sm font-black text-slate-700">İşlem Özeti</p>
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+          <p className="text-sm font-medium text-slate-800">İşlem Özeti</p>
           {form.expenseScope === "period" ? (
-            <p className="mt-2 text-sm leading-6 text-slate-500">
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               Bu gider <strong>{formatPeriodMonth(startMonth)}</strong> dönemine
               normal gider olarak yazılacak. Toplam etki:{" "}
               <strong>{formatMoney(baseAmount, form.currency)}</strong>
             </p>
           ) : (
-            <p className="mt-2 text-sm leading-6 text-slate-500">
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               Bu sezonluk gider <strong>{formatPeriodMonth(startMonth)}</strong> -{" "}
               <strong>{formatPeriodMonth(endMonth)}</strong> arasında{" "}
               <strong>{Math.max(monthCount, 0)} aya</strong> bölünecek. Her aya düşen
@@ -1658,8 +1659,8 @@ function ExpenseModal({
         </div>
 
         {isConfirming ? (
-          <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-amber-950">
-            <p className="font-black">
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+            <p className="font-medium">
               {form.expenseScope === "season"
                 ? "Sezonluk Gider Aylara Dağıtılacak"
                 : "Genel Dönem Gideri Kaydedilecek"}
@@ -1674,7 +1675,7 @@ function ExpenseModal({
         ) : null}
 
         {formError ? (
-          <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
             {formError}
           </div>
         ) : null}
@@ -1683,14 +1684,14 @@ function ExpenseModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             disabled={isSaving}
           >
             Vazgeç
           </button>
           <button
             type="submit"
-            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+            className="rounded-full bg-slate-800 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
             disabled={isSaving}
           >
             {isSaving
@@ -1717,14 +1718,14 @@ function ExpenseDetailModal({
   const expense = detail.expense;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-7 text-slate-800 shadow-2xl">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-widest text-teal-600">
               Gider Detayı
             </p>
-            <h3 className="mt-2 text-2xl font-black">{expense.title}</h3>
+            <h3 className="mt-2 text-2xl font-normal">{expense.title}</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               {getExpenseScopeLabel(expense)} · {formatDate(expense.expense_date)}
             </p>
@@ -1732,7 +1733,7 @@ function ExpenseDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
@@ -1745,46 +1746,46 @@ function ExpenseDetailModal({
           <DetailMetric title="Durum" value={getExpenseStatusLabel(expense)} />
         </div>
 
-        <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4">
-          <p className="text-sm font-black text-slate-700">Açıklama</p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+          <p className="text-sm font-medium text-slate-800">Açıklama</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
             {expense.description ?? "Açıklama yok."}
           </p>
-          <p className="mt-3 text-xs font-bold text-slate-400">
+          <p className="mt-3 text-xs font-medium text-slate-400">
             Belge No: {expense.document_no ?? "-"}
           </p>
         </div>
 
         {expense.is_allocated ? (
-          <div className="mt-5 rounded-[1.25rem] border border-teal-100 bg-teal-50 p-4">
+          <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-black text-teal-900">Sezonluk Gider Dağılımı</p>
-                <p className="mt-1 text-xs font-bold text-teal-700">
+                <p className="text-sm font-medium text-teal-900">Sezonluk Gider Dağılımı</p>
+                <p className="mt-1 text-xs font-medium text-teal-700">
                   {formatPeriodMonth(expense.allocation_start_month)} -{" "}
                   {formatPeriodMonth(expense.allocation_end_month)}
                 </p>
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-teal-800">
+              <span className="rounded-full bg-white border border-teal-200 px-3 py-1.5 text-xs font-medium text-teal-800 shadow-sm">
                 {detail.allocations.length} ay
               </span>
             </div>
 
-            <div className="mt-4 overflow-hidden rounded-2xl border border-teal-100 bg-white">
+            <div className="mt-4 overflow-hidden rounded-xl border border-teal-100 bg-white shadow-sm">
               {detail.allocations.length === 0 ? (
-                <div className="p-4 text-sm font-bold text-slate-500">
+                <div className="p-4 text-sm font-medium text-slate-500">
                   Dağılım kaydı bulunmuyor.
                 </div>
               ) : (
                 detail.allocations.map((allocation) => (
                   <div
                     key={allocation.id}
-                    className="flex items-center justify-between border-b border-teal-50 px-4 py-3 last:border-b-0"
+                    className="flex items-center justify-between border-b border-teal-50 px-5 py-3 last:border-b-0"
                   >
-                    <span className="text-sm font-black">
+                    <span className="text-sm font-medium text-slate-700">
                       {formatPeriodMonth(allocation.period_month)}
                     </span>
-                    <span className="text-sm font-black text-teal-800">
+                    <span className="text-sm font-medium text-teal-800">
                       {formatMoney(allocation.allocated_base_amount)}
                     </span>
                   </div>
@@ -1795,8 +1796,8 @@ function ExpenseDetailModal({
         ) : null}
 
         {expense.is_cancelled ? (
-          <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-red-950">
-            <p className="font-black">Bu gider iptal edilmiş.</p>
+          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">
+            <p className="font-medium">Bu gider iptal edilmiş.</p>
             <p className="mt-2 text-sm leading-6">
               {expense.cancellation_reason ?? "İptal nedeni girilmemiş."}
             </p>
@@ -1808,7 +1809,7 @@ function ExpenseDetailModal({
             <button
               type="button"
               onClick={() => onCancelRequest(expense)}
-              className="rounded-full bg-red-100 px-5 py-3 text-sm font-black text-red-800"
+              className="rounded-full border border-red-200 bg-red-50 px-6 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
             >
               Gideri İptal Et
             </button>
@@ -1816,7 +1817,7 @@ function ExpenseDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white"
+            className="rounded-full bg-slate-800 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700"
           >
             Tamam
           </button>
@@ -1828,11 +1829,11 @@ function ExpenseDetailModal({
 
 function DetailMetric({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-[1.25rem] bg-slate-50 p-4">
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <p className="text-xs font-medium uppercase tracking-widest text-slate-400">
         {title}
       </p>
-      <p className="mt-2 text-lg font-black">{value}</p>
+      <p className="mt-2 text-lg font-normal text-slate-800">{value}</p>
     </div>
   );
 }
@@ -1871,31 +1872,31 @@ function CancelExpenseModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 px-4 py-6">
-      <div className="w-full max-w-xl rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 px-4 py-6">
+      <div className="w-full max-w-xl rounded-[2rem] bg-white p-7 text-slate-800 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-red-700">
+            <p className="text-sm font-medium uppercase tracking-widest text-red-600">
               Gider İptali
             </p>
-            <h3 className="mt-2 text-2xl font-black">{expense.title}</h3>
+            <h3 className="mt-2 text-2xl font-normal">{expense.title}</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
         </div>
 
-        <div className="mt-5 rounded-[1.25rem] bg-red-50 p-4 text-sm leading-6 text-red-950">
+        <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm leading-6 text-red-900">
           Bu işlem gider kaydını iptal eder. Sezonluk gider ise dağılım kayıtları da iptal mantığına göre kapatılır.
           Devam etmek için iptal nedenini yaz.
         </div>
 
         <label className="mt-5 block">
-          <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
             İptal Nedeni
           </span>
           <textarea
@@ -1904,13 +1905,13 @@ function CancelExpenseModal({
               setReason(event.target.value);
               setError(null);
             }}
-            className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-red-400"
+            className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-red-400"
             placeholder="Örn: Hatalı fatura kaydı girildi."
           />
         </label>
 
         {error ? (
-          <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
             {error}
           </div>
         ) : null}
@@ -1919,7 +1920,7 @@ function CancelExpenseModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             disabled={isSaving}
           >
             Vazgeç
@@ -1927,7 +1928,7 @@ function CancelExpenseModal({
           <button
             type="button"
             onClick={handleCancel}
-            className="rounded-full bg-red-700 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+            className="rounded-full bg-red-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
             disabled={isSaving}
           >
             {isSaving ? "İptal ediliyor..." : "Onayla ve İptal Et"}
@@ -2236,17 +2237,17 @@ function CollectionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4 py-6">
       <form
         onSubmit={handleSubmit}
-        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 text-slate-950 shadow-2xl"
+        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-7 text-slate-800 shadow-2xl"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-widest text-teal-600">
               Tahsilat İşlemi
             </p>
-            <h3 className="mt-2 text-2xl font-black">Tahsilat Gir</h3>
+            <h3 className="mt-2 text-2xl font-normal">Tahsilat Gir</h3>
             <p className="mt-2 text-sm leading-6 text-slate-500">
               Önce müşteri seç, sonra o müşteriye ait etkinliği ve ödeme planını belirle.
             </p>
@@ -2254,33 +2255,33 @@ function CollectionModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600"
+            className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
           >
             Kapat
           </button>
         </div>
 
         {isLoadingBaseData ? (
-          <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4 text-sm font-bold text-slate-500">
+          <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-5 text-sm font-medium text-slate-500">
             Tahsilat formu hazırlanıyor...
           </div>
         ) : null}
 
-        <div className="mt-5 rounded-[1.75rem] border border-red-100 bg-red-50 p-5">
+        <div className="mt-6 rounded-3xl border border-red-100 bg-red-50 p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-red-700">
+              <p className="text-xs font-medium uppercase tracking-widest text-red-600">
                 Bu Müşteriden Toplam Alacağınız
               </p>
-              <p className="mt-2 text-sm font-bold text-red-900">
+              <p className="mt-2 text-sm font-medium text-red-900">
                 {selectedCustomer ? selectedCustomer.name : "Müşteri seçilmedi"}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-4xl font-black tracking-tight text-red-700 sm:text-5xl">
+              <p className="text-4xl font-normal tracking-tight text-red-700 sm:text-5xl">
                 {isLoadingCustomerBalance ? "..." : formatMoney(customerReceivableBaseAmount)}
               </p>
-              <p className="mt-1 text-xs font-bold text-red-600">
+              <p className="mt-2 text-xs font-medium text-red-600 opacity-80">
                 Açık etkinlik ve ödeme planı bakiyeleri toplamı
               </p>
             </div>
@@ -2292,7 +2293,7 @@ function CollectionModal({
             <select
               value={form.customerId}
               onChange={(event) => updateForm("customerId", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
             >
               {customers.length === 0 ? (
                 <option value="">Müşteri bulunamadı</option>
@@ -2311,7 +2312,7 @@ function CollectionModal({
             <select
               value={form.eventId}
               onChange={(event) => updateForm("eventId", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               disabled={!form.customerId || customerEvents.length === 0}
             >
               {customerEvents.length === 0 ? (
@@ -2330,7 +2331,7 @@ function CollectionModal({
             <select
               value={form.paymentPlanId}
               onChange={(event) => updateForm("paymentPlanId", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               disabled={!eventPayments || isLoadingEventPayments}
             >
               <option value="">Plana bağlama / serbest tahsilat</option>
@@ -2351,7 +2352,7 @@ function CollectionModal({
               type="date"
               value={form.collectionDate}
               onChange={(event) => updateForm("collectionDate", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
             />
           </FormField>
 
@@ -2362,7 +2363,7 @@ function CollectionModal({
               step="0.01"
               value={form.amount}
               onChange={(event) => updateForm("amount", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="0.00"
             />
           </FormField>
@@ -2372,7 +2373,7 @@ function CollectionModal({
               <select
                 value={form.currency}
                 onChange={(event) => updateForm("currency", event.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               >
                 <option value="TRY">TRY</option>
                 <option value="EUR">EUR</option>
@@ -2387,7 +2388,7 @@ function CollectionModal({
                 step="0.000001"
                 value={form.exchangeRate}
                 onChange={(event) => updateForm("exchangeRate", event.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+                className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               />
             </FormField>
           </div>
@@ -2396,7 +2397,7 @@ function CollectionModal({
             <select
               value={form.paymentMethod}
               onChange={(event) => updateForm("paymentMethod", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
             >
               <option value="cash">Nakit</option>
               <option value="bank_transfer">Banka Havalesi</option>
@@ -2412,7 +2413,7 @@ function CollectionModal({
               onChange={(event) =>
                 updateForm("receivedLocation", event.target.value as "company" | "partner")
               }
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
             >
               <option value="company">Şirket Kasası / Bankası</option>
               <option value="partner">Ortak Üzerinde</option>
@@ -2424,7 +2425,7 @@ function CollectionModal({
               <select
                 value={form.receivedByPartnerId}
                 onChange={(event) => updateForm("receivedByPartnerId", event.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-teal-400"
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               >
                 <option value="">Ortak seç</option>
                 {partners.map((partner) => (
@@ -2440,7 +2441,7 @@ function CollectionModal({
             <input
               value={form.documentNo}
               onChange={(event) => updateForm("documentNo", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-bold outline-none focus:border-teal-400"
+              className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="Makbuz / dekont no"
             />
           </FormField>
@@ -2451,34 +2452,34 @@ function CollectionModal({
             <textarea
               value={form.notes}
               onChange={(event) => updateForm("notes", event.target.value)}
-              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-teal-400"
+              className="min-h-28 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-teal-400"
               placeholder="Tahsilat notu"
             />
           </FormField>
         </div>
 
-        <div className="mt-5 rounded-[1.25rem] bg-slate-50 p-4">
-          <p className="text-sm font-black text-slate-700">İşlem Özeti</p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            {selectedCustomer ? <strong>{selectedCustomer.name}</strong> : "Seçili müşteri"} /{" "}
-            {selectedEvent ? <strong>{selectedEvent.title}</strong> : "seçili etkinlik"} için{" "}
-            <strong>{formatMoney(baseAmount, form.currency)}</strong> tahsilat kaydı oluşturulacak.
+        <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+          <p className="text-sm font-medium text-slate-800">İşlem Özeti</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {selectedCustomer ? <strong className="font-medium text-slate-800">{selectedCustomer.name}</strong> : "Seçili müşteri"} /{" "}
+            {selectedEvent ? <strong className="font-medium text-slate-800">{selectedEvent.title}</strong> : "seçili etkinlik"} için{" "}
+            <strong className="font-medium text-slate-800">{formatMoney(baseAmount, form.currency)}</strong> tahsilat kaydı oluşturulacak.
             Tahsilat yeri:{" "}
-            <strong>
+            <strong className="font-medium text-slate-800">
               {form.receivedLocation === "partner" ? "Ortak üzerinde" : "Şirket kasası / bankası"}
             </strong>
-            . Ödeme yöntemi: <strong>{getPaymentMethodLabel(form.paymentMethod)}</strong>.
+            . Ödeme yöntemi: <strong className="font-medium text-slate-800">{getPaymentMethodLabel(form.paymentMethod)}</strong>.
           </p>
           {selectedPaymentPlan ? (
-            <p className="mt-2 text-xs font-bold text-slate-500">
+            <p className="mt-3 text-xs font-medium text-slate-500 bg-slate-200 inline-block px-3 py-1.5 rounded-full">
               Bağlı ödeme planı: {selectedPaymentPlan.title}
             </p>
           ) : null}
         </div>
 
         {isConfirming ? (
-          <div className="mt-5 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-amber-950">
-            <p className="font-black">Tahsilat Kaydedilecek</p>
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+            <p className="font-medium">Tahsilat Kaydedilecek</p>
             <p className="mt-2 text-sm leading-6">
               Bu işlem seçilen müşterinin seçilen etkinlik alacağını azaltır. Şirket kasasına alındıysa şirket nakdi artar;
               ortak üzerinde kaldıysa ortak üzerindeki şirket parası olarak takip edilir.
@@ -2488,7 +2489,7 @@ function CollectionModal({
         ) : null}
 
         {formError ? (
-          <div className="mt-5 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-900">
+          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">
             {formError}
           </div>
         ) : null}
@@ -2497,14 +2498,14 @@ function CollectionModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-700"
+            className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             disabled={isSaving}
           >
             Vazgeç
           </button>
           <button
             type="submit"
-            className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+            className="rounded-full bg-slate-800 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
             disabled={isSaving || isLoadingBaseData}
           >
             {isSaving
@@ -2528,7 +2529,7 @@ function FormField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+      <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-slate-500">
         {label}
       </span>
       {children}

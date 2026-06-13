@@ -27,6 +27,8 @@ export type ArtistCreatePayload = {
   is_active?: boolean;
 };
 
+export type ArtistUpdatePayload = Partial<ArtistCreatePayload>;
+
 export type RiderItem = {
   id: number;
   artist_id: number;
@@ -74,6 +76,9 @@ export type TechnicalServiceCreatePayload = {
   is_active?: boolean;
 };
 
+export type TechnicalServiceUpdatePayload =
+  Partial<TechnicalServiceCreatePayload>;
+
 export type ServicePackage = {
   id: number;
   package_type: string;
@@ -96,6 +101,8 @@ export type ServicePackageCreatePayload = {
   notes?: string | null;
   is_active?: boolean;
 };
+
+export type ServicePackageUpdatePayload = Partial<ServicePackageCreatePayload>;
 
 export type PackageItem = {
   id: number;

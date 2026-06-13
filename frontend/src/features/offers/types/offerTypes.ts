@@ -39,6 +39,13 @@ export type OfferStatus =
 
 export type InvoiceType = "without_invoice" | "with_invoice";
 
+export type OfferSourceType =
+  | "manual"
+  | "artist"
+  | "technical_service"
+  | "package_total"
+  | "package_component";
+
 export type OfferListItem = {
   id: number;
   event_id: number | null;
@@ -90,7 +97,7 @@ export type OfferUpdatePayload = Partial<OfferCreatePayload>;
 export type OfferItem = {
   id: number;
   offer_id: number;
-  source_type: string;
+  source_type: OfferSourceType;
   source_package_item_id: number | null;
   artist_id: number | null;
   service_item_id: number | null;
@@ -115,6 +122,9 @@ export type OfferItem = {
 };
 
 export type OfferItemCreatePayload = {
+  source_type?: "manual" | "artist" | "technical_service";
+  artist_id?: number | null;
+  service_item_id?: number | null;
   title: string;
   description: string;
   program_section?: string | null;

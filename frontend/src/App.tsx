@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { CustomersPage } from "./features/customers/pages/CustomersPage";
 import { EventsPage } from "./features/events/pages/EventsPage";
 import { OffersPage } from "./features/offers/pages/OffersPage";
+import { AgreementsPage } from "./features/agreements/pages/AgreementsPage";
 import { ServiceCatalogPage } from "./features/serviceCatalog/pages/ServiceCatalogPage";
 import { UserManagementPage } from "./features/userManagement/pages/UserManagementPage";
 import { PartnersPage } from "./features/partners/pages/PartnersPage";
@@ -20,6 +21,7 @@ type AppScreen =
   | "customers"
   | "serviceCatalog"
   | "offers"
+  | "agreements"
   | "events"
   | "partners"
   | "finance"
@@ -31,6 +33,7 @@ const protectedScreens = new Set<AppScreen>([
   "customers",
   "serviceCatalog",
   "offers",
+  "agreements",
   "events",
   "partners",
   "finance",
@@ -46,6 +49,7 @@ function isAppScreen(value: unknown): value is AppScreen {
     value === "customers" ||
     value === "serviceCatalog" ||
     value === "offers" ||
+    value === "agreements" ||
     value === "events" ||
     value === "partners" ||
     value === "finance" ||
@@ -88,7 +92,8 @@ function App() {
   const [screen, setScreen] = useState<AppScreen>(() =>
     getInitialScreenFromUrl(getStoredUser())
   );
-  const [postLoginScreen, setPostLoginScreen] = useState<AppScreen>("dashboard");
+  const [postLoginScreen, setPostLoginScreen] =
+    useState<AppScreen>("dashboard");
 
   function navigate(nextScreen: AppScreen, options?: { replace?: boolean }) {
     setScreen(nextScreen);
@@ -116,13 +121,21 @@ function App() {
       if (!nextScreen) {
         const fallbackScreen: AppScreen = currentUser ? "dashboard" : "landing";
         setScreen(fallbackScreen);
-        window.history.replaceState({ screen: fallbackScreen }, "", screenToUrl(fallbackScreen));
+        window.history.replaceState(
+          { screen: fallbackScreen },
+          "",
+          screenToUrl(fallbackScreen)
+        );
         return;
       }
 
       if (isProtectedScreen(nextScreen) && !currentUser) {
         setScreen("landing");
-        window.history.replaceState({ screen: "landing" }, "", screenToUrl("landing"));
+        window.history.replaceState(
+          { screen: "landing" },
+          "",
+          screenToUrl("landing")
+        );
         return;
       }
 
@@ -134,8 +147,7 @@ function App() {
     return () => {
       window.removeEventListener("popstate", handleBrowserBack);
     };
-  }, [currentUser]);
-
+  }, [currentUser, screen]);
 
   function openLoginFor(targetScreen: AppScreen) {
     setPostLoginScreen(targetScreen);
@@ -171,6 +183,7 @@ function App() {
         onOpenCustomers={() => navigate("customers")}
         onOpenServiceCatalog={() => navigate("serviceCatalog")}
         onOpenOffers={() => navigate("offers")}
+        onOpenAgreements={() => navigate("agreements")}
         onOpenEvents={() => navigate("events")}
         onOpenPartners={() => navigate("partners")}
         onOpenFinanceCenter={() => navigate("finance")}
@@ -194,6 +207,15 @@ function App() {
     return <OffersPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
+  if (screen === "agreements" && currentUser) {
+    return (
+      <AgreementsPage
+        onBackToDashboard={() => navigate("dashboard")}
+        onOpenEvents={() => navigate("events")}
+      />
+    );
+  }
+
   if (screen === "events" && currentUser) {
     return <EventsPage onBackToDashboard={() => navigate("dashboard")} />;
   }
@@ -203,7 +225,9 @@ function App() {
   }
 
   if (screen === "finance" && currentUser) {
-    return <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />;
+    return (
+      <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />
+    );
   }
 
   if (screen === "expenses" && currentUser) {
@@ -238,22 +262,18 @@ function App() {
                 Etkinlik ve Organizasyon Platformu
               </span>
             </button>
-
-            
           </header>
 
           <section className="flex flex-1 items-center py-10">
             <div className="w-full">
               <div className="max-w-4xl">
-                
-
                 <h1 className="text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
                   Etkinlik deneyiminizi birlikte planlayalım.
                 </h1>
 
                 <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-                  Sanatçı tanıtımları, program seçenekleri ve etkinlik hizmetlerini
-                  modern bir vitrinle keşfedin.
+                  Sanatçı tanıtımları, program seçenekleri ve etkinlik
+                  hizmetlerini modern bir vitrinle keşfedin.
                 </p>
               </div>
 
@@ -292,10 +312,9 @@ function App() {
               </div>
 
               <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-teal-200">
-                  <div className="text-center">Bize Ulaşın: 0539 114 90 90</div>
+                <p className="text-center text-sm font-bold uppercase tracking-[0.25em] text-teal-200">
+                  Bize Ulaşın: 0539 114 90 90
                 </p>
-                
               </div>
             </div>
           </section>
@@ -373,7 +392,9 @@ function LandingCenterCard({
       </div>
 
       <div className="mt-7">
-        <p className={`text-xs font-bold uppercase tracking-[0.25em] ${eyebrowClasses}`}>
+        <p
+          className={`text-xs font-bold uppercase tracking-[0.25em] ${eyebrowClasses}`}
+        >
           {eyebrow}
         </p>
         <h2 className="mt-2 text-3xl font-black tracking-tight">{title}</h2>
