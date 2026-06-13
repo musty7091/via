@@ -8,6 +8,7 @@ type DashboardPageProps = {
   onOpenCustomers: () => void;
   onOpenServiceCatalog: () => void;
   onOpenOffers: () => void;
+  onOpenAgreements: () => void;
   onOpenEvents: () => void;
   onOpenPartners: () => void;
   onOpenFinanceCenter: () => void;
@@ -84,6 +85,7 @@ export function DashboardPage({
   onOpenCustomers,
   onOpenServiceCatalog,
   onOpenOffers,
+  onOpenAgreements,
   onOpenEvents,
 }: DashboardPageProps) {
   const workflowSteps: WorkflowStep[] = [
@@ -117,7 +119,7 @@ export function DashboardPage({
       description: "Kabul edilen teklifleri anlaşma sürecinde takip et.",
       actionLabel: "Anlaşmaları aç",
       tone: "emerald",
-      onClick: onOpenOffers,
+      onClick: onOpenAgreements,
     },
     {
       step: "05",
@@ -140,8 +142,6 @@ export function DashboardPage({
   return (
     <MainLayout userName={user.full_name} onLogout={onLogout}>
       <div className="flex flex-col h-full w-full">
-        
-        {/* Sayfa Başlığı ve Açıklama Kutusu */}
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-6 flex-none">
           <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
             Operasyon Akışı
@@ -161,7 +161,6 @@ export function DashboardPage({
           </div>
         </div>
 
-        {/* Operasyon Adımları (Grid) */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 pb-6">
           {workflowSteps.map((item) => {
             const toneClass = getWorkflowToneClass(item.tone);
@@ -201,7 +200,6 @@ export function DashboardPage({
             );
           })}
         </div>
-        
       </div>
     </MainLayout>
   );

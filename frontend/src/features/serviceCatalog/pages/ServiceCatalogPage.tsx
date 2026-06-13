@@ -331,6 +331,10 @@ export function ServiceCatalogPage({
     }
   }
 
+  function handleEditNotReady() {
+    window.alert("Düzenleme ekranı sonraki kontrollü adımda bağlanacak.");
+  }
+
   useEffect(() => {
     void loadCurrentList({
       nextMode: "artists",
@@ -352,11 +356,7 @@ export function ServiceCatalogPage({
   return (
     <MainLayout userName={user?.full_name ?? "Yönetici"} onLogout={onLogout}>
       <div className="flex flex-col h-auto md:h-[calc(100vh-9.5rem)] w-full">
-        
-        {/* === SABİT ÜST KISIM (KAYMAZ) (flex-none) === */}
         <div className="flex-none flex flex-col space-y-5">
-          
-          {/* Geri Dön Butonu ve Başlık */}
           <div className="flex flex-col gap-3">
             {onBackToDashboard && (
               <div className="flex">
@@ -368,6 +368,7 @@ export function ServiceCatalogPage({
                 </button>
               </div>
             )}
+
             <div className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm">
               <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
                 OPERASYON MERKEZİ
@@ -381,7 +382,6 @@ export function ServiceCatalogPage({
             </div>
           </div>
 
-          {/* Sekmeler (Tabs) */}
           <div className="flex w-full items-center gap-2 overflow-x-auto rounded-full border border-slate-200 bg-white p-2 shadow-sm">
             {(["artists", "services", "packages"] as CatalogMode[]).map((item) => (
               <button
@@ -398,7 +398,6 @@ export function ServiceCatalogPage({
             ))}
           </div>
 
-          {/* Toolbar (Arama ve Butonlar) */}
           <CatalogToolbar
             title=""
             description=""
@@ -433,11 +432,7 @@ export function ServiceCatalogPage({
           ) : null}
         </div>
 
-        {/* === KAYDIRILABİLİR İÇERİK ALANI (flex-1) === */}
-        {/* Sadece bu alanın içindeki sütunlar kendi içinde kayacak */}
         <section className="flex-1 min-h-0 mt-5 grid gap-6 grid-cols-1 md:grid-cols-[390px_1fr]">
-          
-          {/* SOL LİSTE (Kendi İçinde Kayar) */}
           <div className="h-full overflow-y-auto pr-2 pb-6">
             <CatalogList
               mode={mode}
@@ -447,7 +442,6 @@ export function ServiceCatalogPage({
             />
           </div>
 
-          {/* SAĞ DETAY (Kendi İçinde Kayar) */}
           <div className="h-full overflow-y-auto pr-2 pb-6">
             {isLoadingDetail ? (
               <div className="rounded-[2rem] border border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500 shadow-sm">
@@ -458,12 +452,17 @@ export function ServiceCatalogPage({
                 artist={selectedArtist}
                 riderItems={riderItems}
                 onOpenRiderForm={() => setShowRiderModal(true)}
+                onOpenEdit={handleEditNotReady}
               />
             ) : mode === "services" && selectedService ? (
-              <TechnicalServiceDetail service={selectedService} />
+              <TechnicalServiceDetail
+                service={selectedService}
+                onOpenEdit={handleEditNotReady}
+              />
             ) : mode === "packages" && packageDetail ? (
               <PackageDetail
                 detail={packageDetail}
+                onOpenEdit={handleEditNotReady}
                 onOpenItemForm={() => setShowPackageItemModal(true)}
                 onRemoveItem={handleRemovePackageItem}
                 removingItemId={removingPackageItemId}
@@ -475,12 +474,9 @@ export function ServiceCatalogPage({
               />
             )}
           </div>
-
         </section>
-
       </div>
 
-      {/* Modallar */}
       {showCreateModal ? (
         <ModalShell
           eyebrow="Hizmet Kataloğu"
