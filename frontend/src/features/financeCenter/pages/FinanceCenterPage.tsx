@@ -892,7 +892,7 @@ export function FinanceCenterPage({
                         <CollectionRecordsSection
                           key={collectionQuickOpenKey}
                           quickOpenMode={collectionQuickOpenMode}
-                          onUpdateCompleted={loadDashboard}
+                          onChanged={loadDashboard}
                         />
                       ) : null}
 
@@ -900,14 +900,14 @@ export function FinanceCenterPage({
                         <CarryForwardSettlementSection
                           key={carryForwardFocusKey}
                           carryForwards={carryForwards}
-                          onSettlementCompleted={loadDashboard}
+                          onChanged={loadDashboard}
                         />
                       ) : null}
 
                       {activePanel === "eventClosure" ? (
                         <EventFinancialClosureSection
                           key={eventClosureFocusKey}
-                          onClosureCompleted={loadDashboard}
+                          onChanged={loadDashboard}
                         />
                       ) : null}
 
@@ -915,7 +915,7 @@ export function FinanceCenterPage({
                         <PeriodClosingReportSection
                           key={periodClosingFocusKey}
                           currentPeriodMonth={currentPeriodMonth}
-                          onClosureCompleted={loadDashboard}
+                          onChanged={loadDashboard}
                         />
                       ) : null}
                     </div>
@@ -2567,7 +2567,7 @@ function CollectionModal({
                 <p className="text-3xl sm:text-4xl font-normal tracking-tight text-red-700">
                   {isLoadingCustomerBalance
                     ? "..."
-                    : formatMoney(customerReceivableTotal)}
+                    : formatMoney(customerReceivableBaseAmount)}
                 </p>
                 <p className="mt-1 text-[11px] font-medium text-red-600 opacity-80">
                   Açık etkinlik ve ödeme planı bakiyeleri toplamı

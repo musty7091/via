@@ -51,6 +51,7 @@ export function CustomerLedger({
         direction,
         title: title.trim(),
         description: description.trim() || null,
+        amount: Number(amount),
         base_amount: Number(amount),
         currency: "TRY",
         exchange_rate: 1,
@@ -59,7 +60,6 @@ export function CustomerLedger({
           ? Number(collectedByPartnerId)
           : null,
         detail_note: detailNote.trim() || null,
-        is_active: true,
       });
 
       setMovementDate(getTodayInputValue());

@@ -226,7 +226,11 @@ function App() {
 
   if (screen === "finance" && currentUser) {
     return (
-      <FinanceCenterPage onBackToDashboard={() => navigate("dashboard")} />
+      <FinanceCenterPage
+        user={currentUser}
+        onLogout={handleLogout}
+        onBackToDashboard={() => navigate("dashboard")}
+      />
     );
   }
 

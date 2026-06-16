@@ -4,6 +4,7 @@ export type CustomerListItem = {
   customer_status: string;
   name: string;
   short_name: string | null;
+  tax_number: string | null;
   phone: string | null;
   email: string | null;
   city: string | null;
