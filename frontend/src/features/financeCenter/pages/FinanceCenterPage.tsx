@@ -14,6 +14,7 @@ import {
   fetchExpenseDetail,
   fetchExpenses,
   fetchFinanceSummary,
+  fetchCustomerReceivableTotal,
   fetchOpenCarryForwards,
   fetchPeriodExpenseSummary,
   fetchRecentFinanceMovements,
@@ -411,6 +412,7 @@ export function FinanceCenterPage({
   const [carryForwards, setCarryForwards] = useState<CarryForwardItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRead[]>([]);
   const [liveSupplierPayableTotal, setLiveSupplierPayableTotal] = useState(0);
+  const [liveCustomerReceivableTotal, setLiveCustomerReceivableTotal] = useState(0);
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -464,6 +466,7 @@ export function FinanceCenterPage({
       fetchPeriodExpenseSummary(currentPeriodMonth),
       fetchExpenses(),
       fetchLiveSupplierPayableTotal(),
+      fetchCustomerReceivableTotal(),
     ]);
 
     if (results[0].status === "fulfilled") {
@@ -490,6 +493,12 @@ export function FinanceCenterPage({
       setLiveSupplierPayableTotal(results[5].value);
     }
 
+    if (results[6].status === "fulfilled") {
+      setLiveCustomerReceivableTotal(
+        results[6].value.total_receivable_base_amount ?? 0
+      );
+    }
+
     const rejected = results.filter((item) => item.status === "rejected");
 
     if (rejected.length > 0) {
@@ -511,21 +520,19 @@ export function FinanceCenterPage({
     0
   );
 
-  const partnerCashOnHandTotal = carryForwards
-    .filter((item) => item.carry_type === "partner_cash_on_hand")
-    .reduce(
-      (total, item) => total + Number(item.remaining_base_amount ?? 0),
-      0
-    );
+  // ORTAK ÜZERİNDEKİ PARA: canlı hesaplanır (tüm finans hareketlerinden).
+  // Devreden kalemler buraya EKLENMEZ; dönem kapanışı ortak parası için
+  // ayrı hareket üretmediğinden asıl hareket summary'de zaten durur — aksi
+  // halde çift sayım olurdu. Devreden tutar "Devreden Kalem" kartında görünür.
+  const partnerCashOnHandTotal =
+    summary.partner_cash_in_base_amount - summary.partner_cash_out_base_amount;
 
   const supplierPayableTotal = liveSupplierPayableTotal;
 
-  const customerReceivableTotal = carryForwards
-    .filter((item) => item.carry_type === "customer_receivable")
-    .reduce(
-      (total, item) => total + Number(item.remaining_base_amount ?? 0),
-      0
-    );
+  // BEKLEYEN ALACAK: tüm müşterilerin güncel (canlı) toplam alacağı.
+  // Devreden kalemler eklenmez; kapanış müşteri alacağı için ayrı hareket
+  // üretmediğinden asıl cari hareket zaten bu toplamda durur (çift sayım olmaz).
+  const customerReceivableTotal = liveCustomerReceivableTotal;
 
   const cashBalance =
     summary.company_cash_in_base_amount - summary.company_cash_out_base_amount;

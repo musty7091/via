@@ -98,6 +98,14 @@ export async function fetchFinanceSummary(): Promise<FinancialMovementSummary> {
   return requestJson<FinancialMovementSummary>("/finance/movements/summary");
 }
 
+export async function fetchCustomerReceivableTotal(): Promise<{
+  total_receivable_base_amount: number;
+  total_debit_base_amount: number;
+  total_credit_base_amount: number;
+}> {
+  return requestJson("/finance/customer-receivable-total");
+}
+
 export async function fetchRecentFinanceMovements(params?: {
   skip?: number;
   limit?: number;

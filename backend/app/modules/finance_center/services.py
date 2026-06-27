@@ -187,3 +187,40 @@ def list_cash_accounts(
         )
         .all()
     )
+
+
+def get_total_customer_receivable(db: Session) -> dict:
+    """Tüm müşterilerin güncel (canlı) toplam alacak bakiyesi.
+
+    Müşteri cari hareketlerinde borç (debit) alacağı artırır, tahsilat (credit)
+    azaltır. Toplam alacak = borç toplamı - tahsilat toplamı (iptaller hariç).
+    """
+    from sqlalchemy import func
+
+    from app.models.customer_account_movement import CustomerAccountMovement
+
+    rows = (
+        db.query(
+            CustomerAccountMovement.direction,
+            func.coalesce(func.sum(CustomerAccountMovement.base_amount), 0),
+        )
+        .filter(CustomerAccountMovement.is_cancelled == False)  # noqa: E712
+        .group_by(CustomerAccountMovement.direction)
+        .all()
+    )
+
+    debit = D(0)
+    credit = D(0)
+    for direction, total in rows:
+        if direction == "debit":
+            debit += D(total)
+        elif direction == "credit":
+            credit += D(total)
+
+    receivable = money(debit - credit)
+
+    return {
+        "total_receivable_base_amount": receivable,
+        "total_debit_base_amount": money(debit),
+        "total_credit_base_amount": money(credit),
+    }

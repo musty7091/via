@@ -12,6 +12,7 @@ from app.modules.finance_center.schemas import (
 )
 from app.modules.finance_center.services import (
     get_financial_movements_summary,
+    get_total_customer_receivable,
     list_cash_accounts,
     list_financial_movements,
 )
@@ -96,3 +97,12 @@ def get_financial_movements_summary_view(
         status=status,
         include_cancelled=include_cancelled,
     )
+
+
+@router.get("/customer-receivable-total")
+def get_customer_receivable_total_view(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Tüm müşterilerin güncel toplam alacak bakiyesi (canlı)."""
+    return get_total_customer_receivable(db=db)
