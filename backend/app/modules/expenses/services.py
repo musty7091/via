@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.expense import Expense, ExpenseAllocation
 from app.models.user import User
 from app.modules.expenses.schemas import (
@@ -18,13 +19,13 @@ from app.modules.expenses.schemas import (
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _round_money(value) -> float:
-    return round(_to_float(value), 4)
+    return money(value)
 
 
 def _period_month_from_date(value: date) -> str:
@@ -89,7 +90,7 @@ def _build_allocation_amounts(base_amount: float, month_count: int) -> list[floa
     standard_amount = _round_money(base_amount / month_count)
     amounts: list[float] = []
 
-    running_total = 0.0
+    running_total = D(0)
 
     for index in range(month_count):
         if index == month_count - 1:

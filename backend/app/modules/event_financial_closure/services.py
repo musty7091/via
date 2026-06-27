@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.event import Event
 from app.models.expense import Expense
 from app.models.finance import (
@@ -26,13 +27,13 @@ from app.modules.event_financial_closure.schemas import (
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _round_money(value) -> float:
-    return round(_to_float(value), 4)
+    return money(value)
 
 
 def _get_event_or_404(db: Session, event_id: int) -> Event:
@@ -168,7 +169,7 @@ def _movement_sum(
         .all()
     )
 
-    total = 0.0
+    total = D(0)
 
     for movement in movements:
         field_value = getattr(movement, effect_field)
@@ -300,11 +301,11 @@ def calculate_event_financial_closure_snapshot(
     is_agreement_confirmed = agreement_base_amount > 0
     is_payment_plan_matched = (
         _payment_plan_count(db=db, event_id=event_id) > 0
-        and planned_base_amount + 0.0001 >= agreement_base_amount
+        and planned_base_amount + D("0.0001") >= agreement_base_amount
     )
     is_collection_completed = (
         is_agreement_confirmed
-        and collected_base_amount + 0.0001 >= expected_collection_base_amount
+        and collected_base_amount + D("0.0001") >= expected_collection_base_amount
     )
     are_costs_completed = True
     are_expenses_completed = True
@@ -316,7 +317,7 @@ def calculate_event_financial_closure_snapshot(
     is_profit_calculated = True
     is_partner_share_calculated = False
 
-    distributable_profit_base_amount = 0.0
+    distributable_profit_base_amount = D(0)
 
     if (
         is_collection_completed
@@ -325,7 +326,7 @@ def calculate_event_financial_closure_snapshot(
     ):
         distributable_profit_base_amount = operational_profit_base_amount
 
-    partner_share_base_amount = 0.0
+    partner_share_base_amount = D(0)
 
     supplier_count = _supplier_payable_count(db=db, event_id=event_id)
     expense_count = _expense_count(db=db, event_id=event_id)

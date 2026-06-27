@@ -48,3 +48,4 @@ dist/
 # Temporary
 tmp/
 temp/
+backend/app/static/

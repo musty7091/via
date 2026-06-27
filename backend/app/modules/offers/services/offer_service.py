@@ -2,6 +2,8 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
+from app.utils.money import D, money, percent_of
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -29,14 +31,8 @@ from app.modules.offers.schemas import (
 )
 
 
-def _as_float(value) -> float:
-    if value is None:
-        return 0
-
-    if isinstance(value, Decimal):
-        return float(value)
-
-    return float(value)
+def _dec(value) -> Decimal:
+    return D(value)
 
 
 def _validate_choice(field_name: str, value: str | None, allowed: list[str]) -> None:
@@ -82,30 +78,30 @@ def _next_offer_no(db: Session) -> str:
 
 
 def _line_amount(quantity: float, unit_price: float) -> float:
-    return round(float(quantity) * float(unit_price), 4)
+    return money(D(quantity) * D(unit_price))
 
 
 def _recalculate_offer(db: Session, offer: Offer) -> Offer:
     items = offer_repository.list_offer_items(db=db, offer_id=offer.id)
     visible_items = [item for item in items if item.is_visible_on_offer]
 
-    currency_totals: dict[str, float] = defaultdict(float)
+    currency_totals: dict[str, float] = defaultdict(lambda: D(0))
 
     for item in visible_items:
-        currency_totals[item.currency] += _as_float(item.base_amount)
+        currency_totals[item.currency] += _dec(item.base_amount)
 
     primary_currency = offer.currency or "TRY"
-    primary_amount = round(currency_totals.get(primary_currency, 0), 4)
+    primary_amount = money(currency_totals.get(primary_currency, 0))
 
     vat_amount = 0
 
     if offer.invoice_type == "with_invoice":
-        vat_amount = round(primary_amount * (_as_float(offer.vat_rate) / 100), 4)
+        vat_amount = money(primary_amount * (_dec(offer.vat_rate) / 100))
 
     offer.amount = primary_amount
     offer.base_amount = primary_amount
     offer.vat_amount = vat_amount
-    offer.total_amount = round(primary_amount + vat_amount, 4)
+    offer.total_amount = money(primary_amount + vat_amount)
 
     db.commit()
     db.refresh(offer)
@@ -206,13 +202,13 @@ def update_offer(db: Session, offer_id: int, payload: OfferUpdate):
 
 
 def _to_internal_item_read(item: OfferItem) -> OfferInternalItemRead:
-    revenue = _as_float(item.base_amount)
-    cost = _as_float(item.internal_total_cost)
+    revenue = _dec(item.base_amount)
+    cost = _dec(item.internal_total_cost)
 
     internal_profit = 0
 
     if item.currency == item.internal_cost_currency:
-        internal_profit = round(revenue - cost, 4)
+        internal_profit = money(revenue - cost)
 
     return OfferInternalItemRead(
         id=item.id,
@@ -226,14 +222,14 @@ def _to_internal_item_read(item: OfferItem) -> OfferInternalItemRead:
         program_section=item.program_section,
         start_time=item.start_time,
         end_time=item.end_time,
-        quantity=_as_float(item.quantity),
-        unit_price=_as_float(item.unit_price),
+        quantity=_dec(item.quantity),
+        unit_price=_dec(item.unit_price),
         currency=item.currency,
         base_amount=revenue,
         is_visible_on_offer=item.is_visible_on_offer,
         is_active=item.is_active,
         sort_order=item.sort_order,
-        internal_unit_cost=_as_float(item.internal_unit_cost),
+        internal_unit_cost=_dec(item.internal_unit_cost),
         internal_cost_currency=item.internal_cost_currency,
         internal_total_cost=cost,
         internal_profit=internal_profit,
@@ -243,11 +239,11 @@ def _to_internal_item_read(item: OfferItem) -> OfferInternalItemRead:
 
 
 def _visible_summaries(offer: Offer, items: list[OfferItem]) -> list[OfferSummary]:
-    totals: dict[str, float] = defaultdict(float)
+    totals: dict[str, float] = defaultdict(lambda: D(0))
 
     for item in items:
         if item.is_visible_on_offer:
-            totals[item.currency] += _as_float(item.base_amount)
+            totals[item.currency] += _dec(item.base_amount)
 
     summaries = []
 
@@ -255,14 +251,14 @@ def _visible_summaries(offer: Offer, items: list[OfferItem]) -> list[OfferSummar
         vat_amount = 0
 
         if offer.invoice_type == "with_invoice" and currency == offer.currency:
-            vat_amount = round(amount * (_as_float(offer.vat_rate) / 100), 4)
+            vat_amount = money(amount * (_dec(offer.vat_rate) / 100))
 
         summaries.append(
             OfferSummary(
                 currency=currency,
-                visible_amount=round(amount, 4),
+                visible_amount=money(amount),
                 vat_amount=vat_amount,
-                total_amount=round(amount + vat_amount, 4),
+                total_amount=money(amount + vat_amount),
             )
         )
 
@@ -271,31 +267,31 @@ def _visible_summaries(offer: Offer, items: list[OfferItem]) -> list[OfferSummar
 
 def _internal_summaries(items: list[OfferItem]) -> list[OfferInternalSummary]:
     totals: dict[str, dict[str, float]] = defaultdict(
-        lambda: {"revenue": 0, "cost": 0}
+        lambda: {"revenue": D(0), "cost": D(0)}
     )
 
     for item in items:
         if item.currency == item.internal_cost_currency:
-            totals[item.currency]["revenue"] += _as_float(item.base_amount)
-            totals[item.currency]["cost"] += _as_float(item.internal_total_cost)
+            totals[item.currency]["revenue"] += _dec(item.base_amount)
+            totals[item.currency]["cost"] += _dec(item.internal_total_cost)
         else:
-            totals[item.currency]["revenue"] += _as_float(item.base_amount)
-            totals[item.internal_cost_currency]["cost"] += _as_float(
+            totals[item.currency]["revenue"] += _dec(item.base_amount)
+            totals[item.internal_cost_currency]["cost"] += _dec(
                 item.internal_total_cost
             )
 
     summaries = []
 
     for currency, values in sorted(totals.items()):
-        revenue = round(values["revenue"], 4)
-        cost = round(values["cost"], 4)
+        revenue = money(values["revenue"])
+        cost = money(values["cost"])
 
         summaries.append(
             OfferInternalSummary(
                 currency=currency,
                 revenue_amount=revenue,
                 cost_amount=cost,
-                gross_profit_amount=round(revenue - cost, 4),
+                gross_profit_amount=money(revenue - cost),
             )
         )
 
@@ -428,18 +424,17 @@ def import_package_to_offer(
         .all()
     )
 
-    package_sale_amount = _as_float(package.default_sale_amount)
+    package_sale_amount = _dec(package.default_sale_amount)
     package_sale_currency = package.default_sale_currency or offer.currency or "TRY"
 
     if package_sale_amount <= 0:
-        package_sale_amount = round(
+        package_sale_amount = money(
             sum(
-                _as_float(package_item.total_sale_amount)
+                _dec(package_item.total_sale_amount)
                 for package_item in package_items
                 if package_item.is_visible_on_offer
                 and package_item.unit_sale_currency == package_sale_currency
-            ),
-            4,
+            )
         )
 
     package_total_item = {
@@ -649,10 +644,10 @@ def get_print_view(db: Session, offer_id: int) -> OfferPrintView:
         event_date=offer.event_date,
         valid_until=offer.valid_until,
         invoice_type=offer.invoice_type,
-        vat_rate=_as_float(offer.vat_rate),
+        vat_rate=_dec(offer.vat_rate),
         customer_visible_notes=offer.customer_visible_notes,
         payment_terms=offer.payment_terms,
-        advance_payment_amount=_as_float(offer.advance_payment_amount),
+        advance_payment_amount=_dec(offer.advance_payment_amount),
         advance_payment_currency=offer.advance_payment_currency,
         lines=[
             OfferPrintLine(
@@ -662,10 +657,10 @@ def get_print_view(db: Session, offer_id: int) -> OfferPrintView:
                 program_section=item.program_section,
                 start_time=item.start_time,
                 end_time=item.end_time,
-                quantity=_as_float(item.quantity),
-                unit_price=_as_float(item.unit_price),
+                quantity=_dec(item.quantity),
+                unit_price=_dec(item.unit_price),
                 currency=item.currency,
-                line_amount=_as_float(item.base_amount),
+                line_amount=_dec(item.base_amount),
                 show_pricing=item.source_type != "package_component",
             )
             for item in visible_items

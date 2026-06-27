@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money, money2, rate
 from app.models.finance import CarryForwardItem, EventSupplierPayable, EventSupplierPayment
 from app.models.payment import CashAccount
 from app.models.user import User
@@ -19,13 +20,13 @@ from app.modules.finance_engine.service import (
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _round_money(value) -> float:
-    return round(_to_float(value), 2)
+    return money2(value)
 
 
 def _is_penny_difference(value: float) -> bool:

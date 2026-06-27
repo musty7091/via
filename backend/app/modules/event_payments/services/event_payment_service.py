@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.event import Event
 from app.models.partner import Partner
 from app.models.payment import CashAccount, CashTransfer, Collection, PaymentPlan
@@ -29,9 +30,9 @@ from app.modules.event_payments.schemas import (
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _clean_currency(currency: str | None, default: str = "TRY") -> str:
@@ -42,7 +43,7 @@ def _clean_currency(currency: str | None, default: str = "TRY") -> str:
 
 
 def _calculate_base_amount(amount: float, exchange_rate: float) -> float:
-    return round(float(amount) * float(exchange_rate), 4)
+    return money(D(amount) * D(exchange_rate))
 
 
 def _get_event_or_404(db: Session, event_id: int) -> Event:
@@ -135,7 +136,7 @@ def _update_plan_paid_status(db: Session, plan: PaymentPlan) -> None:
 
     if paid <= 0:
         plan.status = "pending"
-    elif paid + 0.0001 >= total:
+    elif paid + D("0.0001") >= total:
         plan.status = "paid"
     else:
         plan.status = "partial"
@@ -187,11 +188,11 @@ def _build_detail(db: Session, event: Event) -> EventPaymentsDetail:
         event_id=event.id,
         event_total_amount=event_total_amount,
         event_currency=event.agreement_currency,
-        event_base_total_amount=round(event_base_total_amount, 4),
-        planned_base_amount=round(planned_base_amount, 4),
-        collected_base_amount=round(collected_base_amount, 4),
-        remaining_base_amount=round(event_base_total_amount - collected_base_amount, 4),
-        unplanned_base_amount=round(event_base_total_amount - planned_base_amount, 4),
+        event_base_total_amount=money(event_base_total_amount),
+        planned_base_amount=money(planned_base_amount),
+        collected_base_amount=money(collected_base_amount),
+        remaining_base_amount=money(event_base_total_amount - collected_base_amount),
+        unplanned_base_amount=money(event_base_total_amount - planned_base_amount),
     )
 
     cash_transfers = _list_cash_transfers(db=db, event_id=event.id)
@@ -217,13 +218,13 @@ def create_payment_plan(
     event = _get_event_or_404(db=db, event_id=event_id)
 
     currency = _clean_currency(payload.currency, event.agreement_currency)
-    exchange_rate = float(payload.exchange_rate or event.exchange_rate or 1)
+    exchange_rate = D(payload.exchange_rate or event.exchange_rate or 1)
 
     plan = PaymentPlan(
         event_id=event.id,
         title=payload.title.strip(),
         due_date=payload.due_date,
-        amount=float(payload.amount),
+        amount=D(payload.amount),
         currency=currency,
         exchange_rate=exchange_rate,
         base_amount=_calculate_base_amount(payload.amount, exchange_rate),
@@ -255,13 +256,13 @@ def update_payment_plan(
         plan.due_date = data["due_date"]
 
     if "amount" in data and data["amount"] is not None:
-        plan.amount = float(data["amount"])
+        plan.amount = D(data["amount"])
 
     if "currency" in data and data["currency"] is not None:
         plan.currency = _clean_currency(data["currency"], plan.currency)
 
     if "exchange_rate" in data and data["exchange_rate"] is not None:
-        plan.exchange_rate = float(data["exchange_rate"])
+        plan.exchange_rate = D(data["exchange_rate"])
 
     if "notes" in data:
         plan.notes = data["notes"].strip() if data["notes"] else None
@@ -294,7 +295,7 @@ def create_collection(
     _validate_partner(db=db, partner_id=payload.received_by_partner_id)
 
     currency = _clean_currency(payload.currency, event.agreement_currency)
-    exchange_rate = float(payload.exchange_rate or event.exchange_rate or 1)
+    exchange_rate = D(payload.exchange_rate or event.exchange_rate or 1)
     base_amount = _calculate_base_amount(payload.amount, exchange_rate)
 
     collection = Collection(
@@ -304,7 +305,7 @@ def create_collection(
         received_by_user_id=current_user.id,
         received_by_partner_id=payload.received_by_partner_id,
         collection_date=payload.collection_date,
-        amount=float(payload.amount),
+        amount=D(payload.amount),
         currency=currency,
         exchange_rate=exchange_rate,
         base_amount=base_amount,
@@ -422,7 +423,7 @@ def transfer_collection_to_company(
         to_cash_account_id=cash_account.id,
         approved_by_user_id=current_user.id,
         transfer_date=payload.transfer_date,
-        amount=float(collection.amount),
+        amount=D(collection.amount),
         currency=collection.currency,
         exchange_rate=collection.exchange_rate,
         base_amount=collection.base_amount,

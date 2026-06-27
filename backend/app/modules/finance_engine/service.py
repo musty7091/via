@@ -4,13 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.models.finance import EventSupplierPayable, EventSupplierPayment, FinancialMovement
 from app.models.payment import CashTransfer, Collection
+from app.utils.money import D, money, rate as rate_q
 
 
-def _to_float(value) -> float:
-    if value is None:
-        return 0.0
-
-    return float(value)
+def _to_decimal(value):
+    return D(value)
 
 
 def _period_month(value: date | None) -> str | None:
@@ -89,10 +87,10 @@ def create_financial_movement(
         movement_type=movement_type,
         account_area=account_area,
         direction=direction,
-        amount=_to_float(amount),
+        amount=money(amount),
         currency=currency,
-        exchange_rate=_to_float(exchange_rate) or 1,
-        base_amount=_to_float(base_amount),
+        exchange_rate=rate_q(exchange_rate) or D(1),
+        base_amount=money(base_amount),
         customer_effect=customer_effect,
         cash_effect=cash_effect,
         partner_effect=partner_effect,

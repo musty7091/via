@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.artist import Artist, ServiceItem
 from app.models.service_package import ServicePackage
 from app.modules.service_catalog import constants
@@ -151,12 +152,12 @@ def _to_item_read(db: Session, item) -> ServicePackageItemRead:
         service_item = db.get(ServiceItem, item.service_item_id)
         service_item_name = service_item.name if service_item else None
 
-    total_cost = float(item.total_cost_amount)
-    total_sale = float(item.total_sale_amount)
+    total_cost = D(item.total_cost_amount)
+    total_sale = D(item.total_sale_amount)
 
     gross_profit = 0
     if item.unit_cost_currency == item.unit_sale_currency:
-        gross_profit = round(total_sale - total_cost, 4)
+        gross_profit = money(total_sale - total_cost)
 
     return ServicePackageItemRead(
         id=item.id,
@@ -171,10 +172,10 @@ def _to_item_read(db: Session, item) -> ServicePackageItemRead:
         sort_order=item.sort_order,
         start_time=item.start_time,
         end_time=item.end_time,
-        quantity=float(item.quantity),
-        unit_cost_amount=float(item.unit_cost_amount),
+        quantity=D(item.quantity),
+        unit_cost_amount=D(item.unit_cost_amount),
         unit_cost_currency=item.unit_cost_currency,
-        unit_sale_amount=float(item.unit_sale_amount),
+        unit_sale_amount=D(item.unit_sale_amount),
         unit_sale_currency=item.unit_sale_currency,
         total_cost_amount=total_cost,
         total_sale_amount=total_sale,
@@ -197,8 +198,8 @@ def _build_detail(db: Session, package: ServicePackage) -> ServicePackageDetail:
     same_currency_items = [
         item for item in item_reads if item.unit_cost_currency == item.unit_sale_currency == "TRY"
     ]
-    total_cost = round(sum(item.total_cost_amount for item in same_currency_items), 4)
-    total_sale = round(sum(item.total_sale_amount for item in same_currency_items), 4)
+    total_cost = money(sum(item.total_cost_amount for item in same_currency_items))
+    total_sale = money(sum(item.total_sale_amount for item in same_currency_items))
 
     return ServicePackageDetail(
         package=ServicePackageRead.model_validate(package),
@@ -208,7 +209,7 @@ def _build_detail(db: Session, package: ServicePackage) -> ServicePackageDetail:
             item_count=len(item_reads),
             total_cost_amount=total_cost,
             total_sale_amount=total_sale,
-            gross_profit_amount=round(total_sale - total_cost, 4),
+            gross_profit_amount=money(total_sale - total_cost),
         ),
     )
 
@@ -228,15 +229,15 @@ def create_package_item(db: Session, package_id: int, payload: ServicePackageIte
     _validate_package_item_payload(db=db, payload=payload)
 
     title = _build_item_title(db=db, payload=payload)
-    quantity = float(payload.quantity)
-    unit_cost = float(payload.unit_cost_amount)
-    unit_sale = float(payload.unit_sale_amount)
+    quantity = D(payload.quantity)
+    unit_cost = D(payload.unit_cost_amount)
+    unit_sale = D(payload.unit_sale_amount)
 
     data = payload.model_dump()
     data["package_id"] = package.id
     data["title"] = title
-    data["total_cost_amount"] = round(quantity * unit_cost, 4)
-    data["total_sale_amount"] = round(quantity * unit_sale, 4)
+    data["total_cost_amount"] = money(quantity * unit_cost)
+    data["total_sale_amount"] = money(quantity * unit_sale)
 
     created = package_repository.create_package_item(db=db, data=data)
     return _to_item_read(db=db, item=created)

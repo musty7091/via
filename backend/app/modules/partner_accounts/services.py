@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money, money2, rate
 from app.models.event import Event
 from app.models.finance import FinancialMovement
 from app.models.partner import Partner
@@ -30,9 +31,9 @@ PARTNER_EFFECTS = {
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _balance_direction(value: float) -> str:
@@ -72,10 +73,10 @@ def _get_event_title(db: Session, event_id: int | None) -> str | None:
 def _movement_to_amounts(movement: FinancialMovement) -> dict:
     base_amount = _to_float(movement.base_amount)
 
-    company_receivable_debit = 0.0
-    company_receivable_credit = 0.0
-    company_payable_debit = 0.0
-    company_payable_credit = 0.0
+    company_receivable_debit = D(0)
+    company_receivable_credit = D(0)
+    company_payable_debit = D(0)
+    company_payable_credit = D(0)
 
     if movement.partner_effect == RECEIVABLE_INCREASE:
         company_receivable_debit = base_amount
@@ -87,10 +88,10 @@ def _movement_to_amounts(movement: FinancialMovement) -> dict:
         company_payable_debit = base_amount
 
     return {
-        "company_receivable_debit": round(company_receivable_debit, 4),
-        "company_receivable_credit": round(company_receivable_credit, 4),
-        "company_payable_debit": round(company_payable_debit, 4),
-        "company_payable_credit": round(company_payable_credit, 4),
+        "company_receivable_debit": money(company_receivable_debit),
+        "company_receivable_credit": money(company_receivable_credit),
+        "company_payable_debit": money(company_payable_debit),
+        "company_payable_credit": money(company_payable_credit),
     }
 
 
@@ -163,11 +164,11 @@ def get_partner_account_statement(
         date_to=date_to,
     )
 
-    receivable_debit_total = 0.0
-    receivable_credit_total = 0.0
-    payable_credit_total = 0.0
-    payable_debit_total = 0.0
-    net_balance = 0.0
+    receivable_debit_total = D(0)
+    receivable_credit_total = D(0)
+    payable_credit_total = D(0)
+    payable_debit_total = D(0)
+    net_balance = D(0)
 
     items: list[PartnerAccountStatementLine] = []
 
@@ -179,12 +180,11 @@ def get_partner_account_statement(
         payable_debit_total += amounts["company_payable_debit"]
         payable_credit_total += amounts["company_payable_credit"]
 
-        net_balance = round(
+        net_balance = money(
             receivable_debit_total
             - receivable_credit_total
             - payable_credit_total
-            + payable_debit_total,
-            4,
+            + payable_debit_total
         )
 
         items.append(
@@ -208,27 +208,27 @@ def get_partner_account_statement(
                 company_payable_credit_base_amount=amounts["company_payable_credit"],
                 net_balance_base_amount=net_balance,
                 balance_direction=_balance_direction(net_balance),
-                source_amount=round(_to_float(movement.amount), 4),
+                source_amount=money(_to_float(movement.amount)),
                 source_currency=movement.currency,
-                exchange_rate=round(_to_float(movement.exchange_rate), 6),
+                exchange_rate=rate(movement.exchange_rate),
                 document_no=movement.document_no,
                 status=movement.status,
                 notes=movement.notes,
             )
         )
 
-    company_receivable_balance = round(receivable_debit_total - receivable_credit_total, 4)
-    company_payable_balance = round(payable_credit_total - payable_debit_total, 4)
-    net_balance = round(company_receivable_balance - company_payable_balance, 4)
+    company_receivable_balance = money(receivable_debit_total - receivable_credit_total)
+    company_payable_balance = money(payable_credit_total - payable_debit_total)
+    net_balance = money(company_receivable_balance - company_payable_balance)
 
     summary = PartnerAccountStatementSummary(
         partner_id=partner.id,
         partner_name=partner.full_name,
-        total_company_receivable_debit_base_amount=round(receivable_debit_total, 4),
-        total_company_receivable_credit_base_amount=round(receivable_credit_total, 4),
+        total_company_receivable_debit_base_amount=money(receivable_debit_total),
+        total_company_receivable_credit_base_amount=money(receivable_credit_total),
         company_receivable_balance_base_amount=company_receivable_balance,
-        total_company_payable_credit_base_amount=round(payable_credit_total, 4),
-        total_company_payable_debit_base_amount=round(payable_debit_total, 4),
+        total_company_payable_credit_base_amount=money(payable_credit_total),
+        total_company_payable_debit_base_amount=money(payable_debit_total),
         company_payable_balance_base_amount=company_payable_balance,
         net_balance_base_amount=net_balance,
         balance_direction=_balance_direction(net_balance),
@@ -279,10 +279,10 @@ def get_partner_account_balances(
             .all()
         )
 
-        receivable_debit_total = 0.0
-        receivable_credit_total = 0.0
-        payable_debit_total = 0.0
-        payable_credit_total = 0.0
+        receivable_debit_total = D(0)
+        receivable_credit_total = D(0)
+        payable_debit_total = D(0)
+        payable_credit_total = D(0)
         transaction_dates: list[date] = []
 
         for movement in movements:
@@ -293,9 +293,9 @@ def get_partner_account_balances(
             payable_credit_total += amounts["company_payable_credit"]
             transaction_dates.append(movement.movement_date)
 
-        company_receivable_balance = round(receivable_debit_total - receivable_credit_total, 4)
-        company_payable_balance = round(payable_credit_total - payable_debit_total, 4)
-        net_balance = round(company_receivable_balance - company_payable_balance, 4)
+        company_receivable_balance = money(receivable_debit_total - receivable_credit_total)
+        company_payable_balance = money(payable_credit_total - payable_debit_total)
+        net_balance = money(company_receivable_balance - company_payable_balance)
 
         if only_with_balance and abs(net_balance) <= 0.0001:
             continue
@@ -324,9 +324,9 @@ def get_partner_account_balances(
         )
     )
 
-    total_receivable = round(sum(item.company_receivable_balance_base_amount for item in items), 4)
-    total_payable = round(sum(item.company_payable_balance_base_amount for item in items), 4)
-    total_net = round(sum(item.net_balance_base_amount for item in items), 4)
+    total_receivable = money(sum(item.company_receivable_balance_base_amount for item in items))
+    total_payable = money(sum(item.company_payable_balance_base_amount for item in items))
+    total_net = money(sum(item.net_balance_base_amount for item in items))
 
     summary = PartnerAccountBalancesSummary(
         total_partner_count=len(items),

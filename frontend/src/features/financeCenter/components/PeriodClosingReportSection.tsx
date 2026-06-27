@@ -1037,92 +1037,96 @@ export function PeriodClosingReportSection({
                     Bu dönem için etkinlik detayı bulunmuyor.
                   </div>
                 ) : (
-                  <div className="mt-5 overflow-x-auto">
-                    <table className="min-w-[1200px] w-full border-separate border-spacing-y-2 text-left text-sm">
-                      <thead>
-                        <tr className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
-                          <th className="px-3 py-2">Müşteri / Etkinlik</th>
-                          <th className="px-3 py-2">Tarih</th>
-                          <th className="px-3 py-2 text-right">Anlaşma</th>
-                          <th className="px-3 py-2 text-right">Tahsilat</th>
-                          <th className="px-3 py-2 text-right">Kalan Alacak</th>
-                          <th className="px-3 py-2 text-right">Maliyet</th>
-                          <th className="px-3 py-2 text-right">Gider</th>
-                          <th className="px-3 py-2 text-right">Kâr/Zarar</th>
-                          <th className="px-3 py-2">Durum</th>
-                          <th className="px-3 py-2">Ortak Kâr Payları</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {eventPaging.pageItems.map((eventItem) => (
-                          <tr key={eventItem.event_id} className="align-top">
-                            <td className="rounded-l-2xl bg-slate-50 px-3 py-3">
-                              <p className="font-black text-slate-950">
-                                {eventItem.customer_name ?? "Müşteri yok"}
-                              </p>
-                              <p className="mt-1 font-bold text-slate-600">
-                                {eventItem.event_title}
-                              </p>
-                              <p className="mt-1 text-xs font-bold text-slate-400">
-                                {eventItem.event_code ?? `#${eventItem.event_id}`}
-                              </p>
-                              {eventItem.event_notes ? (
-                                <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
-                                  {eventItem.event_notes}
-                                </p>
-                              ) : null}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 font-bold text-slate-600">
+                  <div className="mt-5 space-y-3">
+                    {eventPaging.pageItems.map((eventItem) => (
+                      <article
+                        key={eventItem.event_id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-black text-slate-950">
+                              {eventItem.customer_name ?? "Müşteri yok"}
+                            </p>
+                            <p className="mt-0.5 font-bold text-slate-600">
+                              {eventItem.event_title}
+                            </p>
+                            <p className="mt-0.5 text-xs font-bold text-slate-400">
+                              {eventItem.event_code ?? `#${eventItem.event_id}`} ·{" "}
                               {formatEventDate(eventItem.event_date)}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
-                              {formatMoney(eventItem.agreement_base_amount)}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 text-right font-black text-teal-700">
-                              {formatMoney(eventItem.collected_base_amount)}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 text-right font-black text-amber-700">
-                              {formatMoney(eventItem.remaining_customer_receivable_base_amount)}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
-                              {formatMoney(eventItem.supplier_payable_base_amount)}
-                              {eventItem.remaining_supplier_payable_base_amount > 0 ? (
-                                <p className="mt-1 text-xs font-bold text-rose-600">
-                                  Açık: {formatMoney(eventItem.remaining_supplier_payable_base_amount)}
-                                </p>
-                              ) : null}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
-                              {formatMoney(eventItem.event_expense_base_amount)}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3 text-right font-black">
-                              {formatMoney(eventItem.operational_profit_base_amount)}
-                            </td>
-                            <td className="bg-slate-50 px-3 py-3">
-                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
                                 eventItem.is_financially_approved
                                   ? "bg-teal-100 text-teal-800"
                                   : "bg-amber-100 text-amber-800"
-                              }`}>
-                                {getClosureStatusLabel(eventItem.financial_closure_status)}
-                              </span>
-                              {eventItem.carry_forward_labels.length > 0 ? (
-                                <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
-                                  Devir: {eventItem.carry_forward_labels.join(", ")}
-                                </p>
-                              ) : (
-                                <p className="mt-2 text-xs font-bold text-teal-700">
-                                  Devir yok
-                                </p>
-                              )}
-                            </td>
-                            <td className="rounded-r-2xl bg-slate-50 px-3 py-3 text-xs font-bold leading-5 text-slate-600">
-                              {formatPartnerShares(eventItem.partner_profit_shares)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              }`}
+                            >
+                              {getClosureStatusLabel(eventItem.financial_closure_status)}
+                            </span>
+                            {eventItem.carry_forward_labels.length > 0 ? (
+                              <p className="mt-1 text-xs font-bold text-slate-500">
+                                Devir: {eventItem.carry_forward_labels.join(", ")}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs font-bold text-teal-700">
+                                Devir yok
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                          {[
+                            { label: "Anlaşma", value: eventItem.agreement_base_amount, cls: "text-slate-950" },
+                            { label: "Tahsilat", value: eventItem.collected_base_amount, cls: "text-teal-700" },
+                            { label: "Kalan Alacak", value: eventItem.remaining_customer_receivable_base_amount, cls: "text-amber-700" },
+                            { label: "Maliyet", value: eventItem.supplier_payable_base_amount, cls: "text-slate-950" },
+                            { label: "Gider", value: eventItem.event_expense_base_amount, cls: "text-slate-950" },
+                            {
+                              label: "Kâr/Zarar",
+                              value: eventItem.operational_profit_base_amount,
+                              cls: eventItem.operational_profit_base_amount < 0 ? "text-rose-700" : "text-slate-950",
+                            },
+                          ].map((figure) => (
+                            <div
+                              key={figure.label}
+                              className="rounded-xl border border-slate-100 bg-white px-3 py-2"
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                {figure.label}
+                              </p>
+                              <p className={`mt-1 text-sm font-black ${figure.cls}`}>
+                                {formatMoney(figure.value)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {eventItem.remaining_supplier_payable_base_amount > 0 ? (
+                          <p className="mt-2 text-xs font-bold text-rose-600">
+                            Açık tedarikçi borcu: {formatMoney(eventItem.remaining_supplier_payable_base_amount)}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                            Ortak Kâr Payları
+                          </p>
+                          <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
+                            {formatPartnerShares(eventItem.partner_profit_shares)}
+                          </p>
+                        </div>
+
+                        {eventItem.event_notes ? (
+                          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+                            {eventItem.event_notes}
+                          </p>
+                        ) : null}
+                      </article>
+                    ))}
                   </div>
                 )}
 

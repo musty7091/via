@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money, money2, rate
 from app.models.artist import Artist, ServiceItem
 from app.models.event import Event
 from app.models.finance import EventSupplierPayable, EventSupplierPayment
@@ -20,9 +21,9 @@ from app.modules.supplier_accounts.schemas import (
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _date_from_datetime(value, fallback: date) -> date:
@@ -180,7 +181,7 @@ def get_supplier_account_statement(
                 "title": "Borç oluştu",
                 "description": payable.title,
                 "debit_base_amount": _to_float(payable.base_amount),
-                "credit_base_amount": 0.0,
+                "credit_base_amount": D(0),
                 "source_amount": _to_float(payable.amount),
                 "source_currency": payable.currency,
                 "exchange_rate": _to_float(payable.exchange_rate),
@@ -212,7 +213,7 @@ def get_supplier_account_statement(
                 "transaction_type": "payment_created_cancelled" if payment.is_cancelled else "payment_created",
                 "title": "Ödeme yapıldı" if not payment.is_cancelled else "Ödeme yapıldı (sonradan iptal edildi)",
                 "description": payable.title,
-                "debit_base_amount": 0.0,
+                "debit_base_amount": D(0),
                 "credit_base_amount": _to_float(payment.base_amount),
                 "source_amount": _to_float(payment.amount),
                 "source_currency": payment.currency,
@@ -241,7 +242,7 @@ def get_supplier_account_statement(
                     "title": "Ödeme iptal edildi",
                     "description": payable.title,
                     "debit_base_amount": _to_float(payment.base_amount),
-                    "credit_base_amount": 0.0,
+                    "credit_base_amount": D(0),
                     "source_amount": _to_float(payment.amount),
                     "source_currency": payment.currency,
                     "exchange_rate": _to_float(payment.exchange_rate),
@@ -267,18 +268,18 @@ def get_supplier_account_statement(
         )
     )
 
-    balance = 0.0
-    total_debit = 0.0
-    total_credit = 0.0
+    balance = D(0)
+    total_debit = D(0)
+    total_credit = D(0)
     items: list[SupplierAccountStatementLine] = []
 
     for index, item in enumerate(raw_lines, start=1):
-        debit = round(_to_float(item["debit_base_amount"]), 4)
-        credit = round(_to_float(item["credit_base_amount"]), 4)
+        debit = money(_to_float(item["debit_base_amount"]))
+        credit = money(_to_float(item["credit_base_amount"]))
 
         total_debit += debit
         total_credit += credit
-        balance = round(balance + debit - credit, 4)
+        balance = money(balance + debit - credit)
 
         items.append(
             SupplierAccountStatementLine(
@@ -297,9 +298,9 @@ def get_supplier_account_statement(
                 debit_base_amount=debit,
                 credit_base_amount=credit,
                 balance_base_amount=balance,
-                source_amount=round(_to_float(item["source_amount"]), 4),
+                source_amount=money(_to_float(item["source_amount"])),
                 source_currency=item["source_currency"],
-                exchange_rate=round(_to_float(item["exchange_rate"]), 6),
+                exchange_rate=rate(item["exchange_rate"]),
                 payment_source=item["payment_source"],
                 payment_method=item["payment_method"],
                 document_no=item["document_no"],
@@ -312,9 +313,9 @@ def get_supplier_account_statement(
         supplier_kind=supplier_kind,
         supplier_id=supplier_id,
         supplier_name=supplier_name,
-        total_debit_base_amount=round(total_debit, 4),
-        total_credit_base_amount=round(total_credit, 4),
-        balance_base_amount=round(balance, 4),
+        total_debit_base_amount=money(total_debit),
+        total_credit_base_amount=money(total_credit),
+        balance_base_amount=money(balance),
         open_payable_count=sum(1 for item in payables if item.status == "open"),
         partial_payable_count=sum(1 for item in payables if item.status == "partial"),
         paid_payable_count=sum(1 for item in payables if item.status == "paid"),
@@ -432,9 +433,9 @@ def get_supplier_account_balances(
             include_cancelled=False,
         )
 
-        total_debit = round(sum(_to_float(item.base_amount) for item in payables), 4)
-        total_credit = round(sum(_to_float(item.base_amount) for item in payments), 4)
-        balance = round(total_debit - total_credit, 4)
+        total_debit = money(sum(_to_float(item.base_amount) for item in payables))
+        total_credit = money(sum(_to_float(item.base_amount) for item in payments))
+        balance = money(total_debit - total_credit)
 
         if only_with_balance and abs(balance) <= 0.0001:
             continue
@@ -479,9 +480,9 @@ def get_supplier_account_balances(
         )
     )
 
-    total_debit = round(sum(item.total_debit_base_amount for item in items), 4)
-    total_credit = round(sum(item.total_credit_base_amount for item in items), 4)
-    total_balance = round(sum(item.balance_base_amount for item in items), 4)
+    total_debit = money(sum(item.total_debit_base_amount for item in items))
+    total_credit = money(sum(item.total_credit_base_amount for item in items))
+    total_balance = money(sum(item.balance_base_amount for item in items))
 
     summary = SupplierAccountBalancesSummary(
         kind=kind,

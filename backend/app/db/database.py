@@ -8,11 +8,19 @@ from app.core.config import BASE_DIR, settings
 
 
 def build_database_url() -> str:
-    if settings.database_url == "sqlite:///./via_local.db":
+    raw_url = settings.database_url
+
+    # Yerel varsayılan: SQLite dosyasını mutlak yola çevir
+    if raw_url == "sqlite:///./via_local.db":
         db_path = BASE_DIR / "via_local.db"
         return f"sqlite:///{db_path.as_posix()}"
 
-    return settings.database_url
+    # Render gibi sağlayıcılar bağlantı adresini "postgres://" ile verir;
+    # SQLAlchemy 2.0 "postgresql://" bekler. Otomatik düzelt.
+    if raw_url.startswith("postgres://"):
+        raw_url = raw_url.replace("postgres://", "postgresql://", 1)
+
+    return raw_url
 
 
 DATABASE_URL = build_database_url()
@@ -26,6 +34,7 @@ if DATABASE_URL.startswith("sqlite"):
 engine = create_engine(
     DATABASE_URL,
     connect_args=connect_args,
+    pool_pre_ping=True,
     future=True,
 )
 

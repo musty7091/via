@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.partner import Partner
 from app.modules.customers import constants
 from app.modules.customers.repositories import ledger_repository
@@ -27,9 +28,9 @@ def _validate_choice(field_name: str, value: str | None, allowed_values: list[st
 
 def _calculate_base_amount(amount: float, exchange_rate: float, base_amount: float | None) -> float:
     if base_amount is not None:
-        return round(float(base_amount), 4)
+        return money(D(base_amount))
 
-    return round(float(amount) * float(exchange_rate), 4)
+    return money(D(amount) * D(exchange_rate))
 
 
 def _validate_partner_exists(db: Session, partner_id: int | None) -> None:
@@ -56,16 +57,16 @@ def _build_ledger_read_items(db: Session, movements) -> list[CustomerLedgerMovem
     event_titles = ledger_repository.get_event_titles(db=db, event_ids=event_ids)
     partner_names = ledger_repository.get_partner_names(db=db, partner_ids=partner_ids)
 
-    running_balance = 0.0
+    running_balance = D(0)
     response_items: list[CustomerLedgerMovementRead] = []
 
     for item in movements:
-        base_amount = float(item.base_amount)
-        debit_amount = base_amount if item.direction == "debit" else 0.0
-        credit_amount = base_amount if item.direction == "credit" else 0.0
+        base_amount = D(item.base_amount)
+        debit_amount = base_amount if item.direction == "debit" else D(0)
+        credit_amount = base_amount if item.direction == "credit" else D(0)
 
         if not item.is_cancelled:
-            running_balance = round(running_balance + debit_amount - credit_amount, 4)
+            running_balance = money(running_balance + debit_amount - credit_amount)
 
         response_items.append(
             CustomerLedgerMovementRead(
@@ -81,9 +82,9 @@ def _build_ledger_read_items(db: Session, movements) -> list[CustomerLedgerMovem
                 title=item.title,
                 description=item.description,
                 detail_note=item.detail_note,
-                amount=float(item.amount),
+                amount=D(item.amount),
                 currency=item.currency,
-                exchange_rate=float(item.exchange_rate),
+                exchange_rate=D(item.exchange_rate),
                 base_amount=base_amount,
                 debit_base_amount=debit_amount,
                 credit_base_amount=credit_amount,
@@ -171,12 +172,12 @@ def get_ledger_summary(db: Session, customer_id: int) -> CustomerLedgerSummary:
         include_cancelled=False,
     )
 
-    total_debit = 0.0
-    total_credit = 0.0
+    total_debit = D(0)
+    total_credit = D(0)
     last_movement_date: date | None = None
 
     for item in movements:
-        base_amount = float(item.base_amount)
+        base_amount = D(item.base_amount)
 
         if item.direction == "debit":
             total_debit += base_amount
@@ -186,9 +187,9 @@ def get_ledger_summary(db: Session, customer_id: int) -> CustomerLedgerSummary:
         if last_movement_date is None or item.movement_date > last_movement_date:
             last_movement_date = item.movement_date
 
-    total_debit = round(total_debit, 4)
-    total_credit = round(total_credit, 4)
-    balance = round(total_debit - total_credit, 4)
+    total_debit = money(total_debit)
+    total_credit = money(total_credit)
+    balance = money(total_debit - total_credit)
 
     return CustomerLedgerSummary(
         customer_id=customer_id,

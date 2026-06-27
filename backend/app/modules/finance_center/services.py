@@ -1,14 +1,15 @@
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.finance import FinancialMovement
 from app.models.payment import CashAccount
 
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _base_query(
@@ -129,12 +130,12 @@ def get_financial_movements_summary(
         .all()
     )
 
-    total_in_base_amount = 0.0
-    total_out_base_amount = 0.0
-    company_cash_in_base_amount = 0.0
-    company_cash_out_base_amount = 0.0
-    partner_cash_in_base_amount = 0.0
-    partner_cash_out_base_amount = 0.0
+    total_in_base_amount = D(0)
+    total_out_base_amount = D(0)
+    company_cash_in_base_amount = D(0)
+    company_cash_out_base_amount = D(0)
+    partner_cash_in_base_amount = D(0)
+    partner_cash_out_base_amount = D(0)
 
     for item in items:
         base_amount = _to_float(item.base_amount)
@@ -158,13 +159,13 @@ def get_financial_movements_summary(
 
     return {
         "total_count": len(items),
-        "total_in_base_amount": round(total_in_base_amount, 4),
-        "total_out_base_amount": round(total_out_base_amount, 4),
-        "net_base_amount": round(total_in_base_amount - total_out_base_amount, 4),
-        "company_cash_in_base_amount": round(company_cash_in_base_amount, 4),
-        "company_cash_out_base_amount": round(company_cash_out_base_amount, 4),
-        "partner_cash_in_base_amount": round(partner_cash_in_base_amount, 4),
-        "partner_cash_out_base_amount": round(partner_cash_out_base_amount, 4),
+        "total_in_base_amount": money(total_in_base_amount),
+        "total_out_base_amount": money(total_out_base_amount),
+        "net_base_amount": money(total_in_base_amount - total_out_base_amount),
+        "company_cash_in_base_amount": money(company_cash_in_base_amount),
+        "company_cash_out_base_amount": money(company_cash_out_base_amount),
+        "partner_cash_in_base_amount": money(partner_cash_in_base_amount),
+        "partner_cash_out_base_amount": money(partner_cash_out_base_amount),
     }
 
 def list_cash_accounts(

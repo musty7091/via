@@ -740,9 +740,13 @@ export function FinanceCenterPage({
             </section>
 
             {/* Hareketler / Paneller Alanı */}
-            <div className="grid items-start gap-6 xl:grid-cols-[1fr_minmax(0,1.2fr)]">
-              {/* Sol Sütun: Listeler ve Hareketler */}
-              <div className="flex flex-col gap-6">
+            <div
+              className={`grid items-start gap-6 ${
+                activePanel ? "" : "xl:grid-cols-[1fr_minmax(0,1.2fr)]"
+              }`}
+            >
+              {/* Sol Sütun: Listeler ve Hareketler (panel açıkken gizlenir) */}
+              <div className={`flex flex-col gap-6 ${activePanel ? "hidden" : ""}`}>
                 <section
                   id="finance-movements-section"
                   className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
@@ -862,8 +866,8 @@ export function FinanceCenterPage({
                 />
               </div>
 
-              {/* Sağ Sütun: Dinamik Panel Alanı */}
-              <div className="sticky top-6">
+              {/* Dinamik Panel Alanı (panel açıkken tam genişlik) */}
+              <div className={activePanel ? "" : "sticky top-6"}>
                 {activePanel === null ? (
                   <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
                     <p className="text-sm font-medium text-slate-600">

@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.utils.money import D, money
 from app.models.artist import Artist, ServiceItem
 from app.models.event import Event
 from app.models.finance import EventSupplierPayable, EventSupplierPayment
@@ -28,9 +29,9 @@ from app.modules.supplier_payables.schemas import (
 
 def _to_float(value) -> float:
     if value is None:
-        return 0.0
+        return D(0)
 
-    return float(value)
+    return D(value)
 
 
 def _clean_currency(currency: str | None, default: str = "TRY") -> str:
@@ -41,7 +42,7 @@ def _clean_currency(currency: str | None, default: str = "TRY") -> str:
 
 
 def _calculate_base_amount(amount: float, exchange_rate: float) -> float:
-    return round(float(amount) * float(exchange_rate), 4)
+    return money(D(amount) * D(exchange_rate))
 
 
 def _get_event_or_404(db: Session, event_id: int) -> Event:
@@ -179,16 +180,16 @@ def _update_payable_status(db: Session, payable: EventSupplierPayable) -> None:
         .scalar()
     )
 
-    paid = round(_to_float(paid_base_amount), 4)
-    total = round(_to_float(payable.base_amount), 4)
-    remaining = round(total - paid, 4)
+    paid = money(_to_float(paid_base_amount))
+    total = money(_to_float(payable.base_amount))
+    remaining = money(total - paid)
 
     payable.paid_base_amount = paid
     payable.remaining_base_amount = max(remaining, 0)
 
     if paid <= 0:
         payable.status = "open"
-    elif paid + 0.0001 >= total:
+    elif paid + D("0.0001") >= total:
         payable.status = "paid"
         payable.remaining_base_amount = 0
     else:
@@ -232,9 +233,9 @@ def get_event_supplier_payables_detail(
 
     summary = SupplierPayablesSummary(
         event_id=event_id,
-        total_payable_base_amount=round(total_payable_base_amount, 4),
-        total_paid_base_amount=round(total_paid_base_amount, 4),
-        total_remaining_base_amount=round(total_remaining_base_amount, 4),
+        total_payable_base_amount=money(total_payable_base_amount),
+        total_paid_base_amount=money(total_paid_base_amount),
+        total_remaining_base_amount=money(total_remaining_base_amount),
         open_payable_count=sum(1 for item in payables if item.status == "open"),
         partial_payable_count=sum(1 for item in payables if item.status == "partial"),
         paid_payable_count=sum(1 for item in payables if item.status == "paid"),
@@ -258,7 +259,7 @@ def create_supplier_payable(
     _get_service_item_or_404(db=db, service_item_id=payload.service_item_id)
 
     currency = _clean_currency(payload.currency)
-    exchange_rate = float(payload.exchange_rate or 1)
+    exchange_rate = D(payload.exchange_rate or 1)
     base_amount = _calculate_base_amount(payload.amount, exchange_rate)
 
     payable = EventSupplierPayable(
@@ -269,7 +270,7 @@ def create_supplier_payable(
         title=payload.title.strip(),
         description=payload.description.strip() if payload.description else None,
         due_date=payload.due_date,
-        amount=float(payload.amount),
+        amount=D(payload.amount),
         currency=currency,
         exchange_rate=exchange_rate,
         base_amount=base_amount,
@@ -317,10 +318,10 @@ def create_supplier_payment(
     _get_cash_account_or_404(db=db, cash_account_id=payload.cash_account_id)
 
     currency = _clean_currency(payload.currency, payable.currency)
-    exchange_rate = float(payload.exchange_rate or payable.exchange_rate or 1)
+    exchange_rate = D(payload.exchange_rate or payable.exchange_rate or 1)
     base_amount = _calculate_base_amount(payload.amount, exchange_rate)
 
-    if base_amount > _to_float(payable.remaining_base_amount) + 0.0001:
+    if base_amount > _to_float(payable.remaining_base_amount) + D("0.0001"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Ödeme tutarı kalan borçtan fazla olamaz.",
@@ -333,7 +334,7 @@ def create_supplier_payment(
         paid_by_user_id=current_user.id,
         cash_account_id=payload.cash_account_id,
         payment_date=payload.payment_date,
-        amount=float(payload.amount),
+        amount=D(payload.amount),
         currency=currency,
         exchange_rate=exchange_rate,
         base_amount=base_amount,

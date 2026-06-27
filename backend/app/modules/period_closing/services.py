@@ -13,6 +13,7 @@ from app.models.partner import Partner
 from app.models.period import MonthlyPeriod
 from app.models.user import User
 from app.modules.finance_engine.service import create_financial_movement
+from app.utils.money import D, money
 from app.modules.period_closing.schemas import (
     CarryForwardItemRead,
     PeriodCloseRequest,
@@ -27,15 +28,12 @@ from app.modules.period_closing.schemas import (
 )
 
 
-def _to_float(value) -> float:
-    if value is None:
-        return 0.0
-
-    return float(value)
+def _dec(value):
+    return D(value)
 
 
-def _round_money(value) -> float:
-    return round(_to_float(value), 4)
+def _round_money(value):
+    return money(value)
 
 
 def _parse_period_month(period_month: str) -> tuple[date, date]:
@@ -195,13 +193,13 @@ def _supplier_payables(db: Session, *, event_id: int) -> list[EventSupplierPayab
 
 
 def _supplier_payable_total(db: Session, *, event_id: int) -> float:
-    return _round_money(sum(_to_float(item.base_amount) for item in _supplier_payables(db=db, event_id=event_id)))
+    return _round_money(sum(_dec(item.base_amount) for item in _supplier_payables(db=db, event_id=event_id)))
 
 
 
 def _supplier_payable_remaining_total(db: Session, *, event_id: int) -> float:
     return _round_money(
-        sum(_to_float(item.remaining_base_amount) for item in _supplier_payables(db=db, event_id=event_id))
+        sum(_dec(item.remaining_base_amount) for item in _supplier_payables(db=db, event_id=event_id))
     )
 
 
@@ -272,11 +270,11 @@ def _partner_balances_from_movements(db: Session, *, event_id: int) -> dict[int,
 
         if partner_id not in balances:
             balances[partner_id] = {
-                "partner_cash_on_hand": 0.0,
-                "company_payable_to_partner": 0.0,
+                "partner_cash_on_hand": D(0),
+                "company_payable_to_partner": D(0),
             }
 
-        amount = _to_float(movement.base_amount)
+        amount = _dec(movement.base_amount)
 
         if movement.cash_effect == "increase_partner_cash_on_hand":
             balances[partner_id]["partner_cash_on_hand"] += amount
@@ -397,16 +395,16 @@ def build_period_closing_preview(
     issues: list[PeriodClosingIssue] = []
     event_summaries: list[PeriodClosingEventSummary] = []
 
-    total_revenue = 0.0
-    total_event_cost = 0.0
-    total_event_expense = 0.0
+    total_revenue = D(0)
+    total_event_cost = D(0)
+    total_event_expense = D(0)
     total_general_expense = _sum_general_expenses_for_period(db=db, period_month=period_month)
     total_allocated_expense = _sum_allocated_expenses_for_period(db=db, period_month=period_month)
 
-    customer_receivable_total = 0.0
-    supplier_payable_total = 0.0
-    partner_cash_total = 0.0
-    company_payable_to_partner_total = 0.0
+    customer_receivable_total = D(0)
+    supplier_payable_total = D(0)
+    partner_cash_total = D(0)
+    company_payable_to_partner_total = D(0)
     partner_cash_by_partner: dict[int, float] = {}
     company_payable_to_partner_by_partner: dict[int, float] = {}
     open_event_count = 0
