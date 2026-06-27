@@ -24,7 +24,7 @@ type EventsPageProps = {
   onLogout?: () => void;
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 8;
 
 export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPageProps) {
   const [events, setEvents] = useState<EventListItem[]>([]);
@@ -139,6 +139,7 @@ export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPage
           pageIndex={pageIndex}
           hasNextPage={hasNextPage}
           isLoading={isLoadingList}
+          pageSize={PAGE_SIZE}
           onSearchChange={setSearch}
           onSearchSubmit={() =>
             void loadEvents({

@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+
 import {
   createManagedUser,
   fetchManagedUsers,
@@ -264,24 +266,8 @@ export function UserManagementPage({
 
   if (!isSuperAdmin) {
     return (
-      <main className="min-h-screen bg-slate-100 text-slate-950">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-            <div>
-              <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
-              <h1 className="mt-1 text-xl font-black sm:text-2xl">
-                Kullanıcılar
-              </h1>
-            </div>
-
-            <button
-              onClick={onBackToDashboard}
-              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-            >Geri Dön</button>
-          </div>
-        </header>
-
-        <section className="mx-auto max-w-3xl px-4 py-8">
+      <ViaPageShell title="Kullanıcılar" onBack={onBackToDashboard}>
+        <section className="mx-auto max-w-3xl">
           <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6 text-amber-950">
             <p className="text-sm font-black">Yetki gerekli</p>
             <h2 className="mt-2 text-2xl font-black">
@@ -293,29 +279,13 @@ export function UserManagementPage({
             </p>
           </div>
         </section>
-      </main>
+      </ViaPageShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <img src="/brand/via-logo-horizontal.png" alt="VIA EVENTS" className="h-5 w-auto object-contain" />
-            <h1 className="mt-1 truncate text-xl font-black sm:text-2xl">
-              Kullanıcı ve Yetki Yönetimi
-            </h1>
-          </div>
-
-          <button
-            onClick={onBackToDashboard}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white"
-          >Geri Dön</button>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-6xl space-y-5 px-4 py-5">
+    <ViaPageShell title="Kullanıcı ve Yetki Yönetimi" onBack={onBackToDashboard}>
+      <div className="space-y-5">
         <section className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-300">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-teal-300">
             Sistem Yetkileri
@@ -622,8 +592,8 @@ export function UserManagementPage({
             ) : null}
           </section>
         </section>
-      </section>
-    </main>
+      </div>
+    </ViaPageShell>
   );
 }
 

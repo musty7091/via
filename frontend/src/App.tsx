@@ -9,6 +9,7 @@ import { UserManagementPage } from "./features/userManagement/pages/UserManageme
 import { PartnersPage } from "./features/partners/pages/PartnersPage";
 import { FinanceCenterPage } from "./features/financeCenter/pages/FinanceCenterPage";
 import { ExpensesPage } from "./features/expenses/pages/ExpensesPage";
+import { RiderControlPage } from "./features/riderControl/pages/RiderControlPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
@@ -26,6 +27,7 @@ type AppScreen =
   | "partners"
   | "finance"
   | "expenses"
+  | "rider"
   | "users";
 
 const protectedScreens = new Set<AppScreen>([
@@ -38,6 +40,7 @@ const protectedScreens = new Set<AppScreen>([
   "partners",
   "finance",
   "expenses",
+  "rider",
   "users",
 ]);
 
@@ -54,6 +57,7 @@ function isAppScreen(value: unknown): value is AppScreen {
     value === "partners" ||
     value === "finance" ||
     value === "expenses" ||
+    value === "rider" ||
     value === "users"
   );
 }
@@ -185,6 +189,7 @@ function App() {
         onOpenOffers={() => navigate("offers")}
         onOpenAgreements={() => navigate("agreements")}
         onOpenEvents={() => navigate("events")}
+        onOpenRiderControl={() => navigate("rider")}
         onOpenPartners={() => navigate("partners")}
         onOpenFinanceCenter={() => navigate("finance")}
         onOpenExpenses={() => navigate("expenses")}
@@ -218,6 +223,10 @@ function App() {
 
   if (screen === "events" && currentUser) {
     return <EventsPage onBackToDashboard={() => navigate("dashboard")} />;
+  }
+
+  if (screen === "rider" && currentUser) {
+    return <RiderControlPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "partners" && currentUser) {

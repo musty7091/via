@@ -10,6 +10,7 @@ type DashboardPageProps = {
   onOpenOffers: () => void;
   onOpenAgreements: () => void;
   onOpenEvents: () => void;
+  onOpenRiderControl: () => void;
   onOpenPartners: () => void;
   onOpenFinanceCenter: () => void;
   onOpenUsers: () => void;
@@ -87,6 +88,7 @@ export function DashboardPage({
   onOpenOffers,
   onOpenAgreements,
   onOpenEvents,
+  onOpenRiderControl,
 }: DashboardPageProps) {
   const workflowSteps: WorkflowStep[] = [
     {
@@ -135,7 +137,7 @@ export function DashboardPage({
       description: "Sanatçı şartlarını ve saha hazırlıklarını etkinlik dosyasından yönet.",
       actionLabel: "Kontrol listelerini aç",
       tone: "slate",
-      onClick: onOpenEvents,
+      onClick: onOpenRiderControl,
     },
   ];
 

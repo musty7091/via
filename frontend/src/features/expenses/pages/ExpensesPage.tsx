@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+import { Pagination } from "../../../components/Pagination";
+import { usePagination } from "../../../hooks/usePagination";
+import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+
 import { ExpenseEntryForm } from "../components/ExpenseEntryForm";
 import {
   cancelExpense,
@@ -199,12 +203,18 @@ export function ExpensesPage({ onBackToDashboard }: ExpensesPageProps) {
     [distributedExpenses]
   );
 
-  const activeTabExpenses =
+  const activeTabExpenses: ExpenseRead[] =
     activeTab === "event"
       ? eventExpenses
       : activeTab === "general"
         ? generalExpenses
         : activeDistributedExpenses;
+
+  const expensePaging = usePagination<ExpenseRead>(
+    activeTabExpenses,
+    6,
+    activeTab
+  );
 
   const activeTabTotal = activeTabExpenses.reduce(
     (total, expense) => total + Number(expense.base_amount ?? 0),
@@ -371,33 +381,22 @@ export function ExpensesPage({ onBackToDashboard }: ExpensesPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <div>
-            <button
-              onClick={onBackToDashboard}
-              className="text-sm font-bold text-slate-500 transition hover:text-slate-950"
-            >
-              ← Back Office
-            </button>
-            <h1 className="mt-1 text-2xl font-black sm:text-3xl">Gider Yönetimi</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Etkinlik giderleri, genel aylık giderler ve sezonluk dağıtılmış giderler.
-            </p>
-          </div>
-
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-          >
-            {loading ? "Yükleniyor..." : "Yenile"}
-          </button>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl px-5 py-6">
+    <ViaPageShell
+      title="Gider Yönetimi"
+      description="Etkinlik giderleri, genel aylık giderler ve sezonluk dağıtılmış giderler."
+      onBack={onBackToDashboard}
+      backLabel="Back Office"
+      actions={
+        <button
+          onClick={loadData}
+          disabled={loading}
+          className="rounded-full bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+        >
+          {loading ? "Yükleniyor..." : "Yenile"}
+        </button>
+      }
+    >
+      <div>
         <div className="grid gap-4 lg:grid-cols-4">
           <div className="rounded-[1.5rem] bg-slate-950 p-5 text-white shadow-lg shadow-slate-300 lg:col-span-2">
             <p className="text-sm font-bold text-teal-200">Seçili dönem</p>
@@ -507,7 +506,7 @@ export function ExpensesPage({ onBackToDashboard }: ExpensesPageProps) {
               </div>
             ) : (
               <div className="mt-5 space-y-3">
-                {activeTabExpenses.map((expense) => (
+                {expensePaging.pageItems.map((expense) => (
                   <ExpenseListItem
                     key={expense.id}
                     expense={expense}
@@ -521,6 +520,16 @@ export function ExpensesPage({ onBackToDashboard }: ExpensesPageProps) {
                     onCancel={() => handleCancelExpense(expense)}
                   />
                 ))}
+
+                <Pagination
+                  className="pt-2"
+                  page={expensePaging.page}
+                  totalPages={expensePaging.totalPages}
+                  onChange={expensePaging.setPage}
+                  total={expensePaging.total}
+                  rangeStart={expensePaging.rangeStart}
+                  rangeEnd={expensePaging.rangeEnd}
+                />
               </div>
             )}
           </section>
@@ -592,8 +601,8 @@ export function ExpensesPage({ onBackToDashboard }: ExpensesPageProps) {
             onClose={() => setSelectedDetail(null)}
           />
         ) : null}
-      </section>
-    </main>
+      </div>
+    </ViaPageShell>
   );
 }
 

@@ -3,6 +3,7 @@ type EventToolbarProps = {
   pageIndex: number;
   hasNextPage: boolean;
   isLoading: boolean;
+  pageSize?: number;
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
   onPreviousPage: () => void;
@@ -14,6 +15,7 @@ export function EventToolbar({
   pageIndex,
   hasNextPage,
   isLoading,
+  pageSize = 8,
   onSearchChange,
   onSearchSubmit,
   onPreviousPage,
@@ -65,7 +67,7 @@ export function EventToolbar({
             >
               Önceki
             </button>
-            <span>Sayfa {pageIndex + 1} • 20 kayıt / sayfa</span>
+            <span>Sayfa {pageIndex + 1} • {pageSize} kayıt / sayfa</span>
             <button
               disabled={!hasNextPage || isLoading}
               onClick={onNextPage}
