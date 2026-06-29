@@ -4,6 +4,7 @@ import type { AuthUser } from "../../../types/auth";
 import MainLayout from "../../../components/MainLayout";
 import {
   createArtist,
+  updateArtist,
   createArtistRiderItem,
   createPackageItem,
   createServicePackage,
@@ -103,6 +104,7 @@ export function ServiceCatalogPage({
   const [packageDetail, setPackageDetail] = useState<ServicePackageDetail | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showArtistEditModal, setShowArtistEditModal] = useState(false);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [showPackageItemModal, setShowPackageItemModal] = useState(false);
   const [removingPackageItemId, setRemovingPackageItemId] = useState<number | null>(null);
@@ -335,6 +337,22 @@ export function ServiceCatalogPage({
     window.alert("Düzenleme ekranı sonraki kontrollü adımda bağlanacak.");
   }
 
+  async function handleUpdateArtist(payload: ArtistCreatePayload) {
+    if (!selectedArtistId) {
+      return;
+    }
+
+    await updateArtist(selectedArtistId, payload);
+    setShowArtistEditModal(false);
+    await loadCurrentList({
+      nextMode: "artists",
+      nextPageIndex: pageIndex,
+      nextSearch: search,
+      nextSelectedId: selectedArtistId,
+    });
+    void fetchArtists({ isActive: true, limit: 100 }).then(setArtists);
+  }
+
   useEffect(() => {
     void loadCurrentList({
       nextMode: "artists",
@@ -452,7 +470,7 @@ export function ServiceCatalogPage({
                 artist={selectedArtist}
                 riderItems={riderItems}
                 onOpenRiderForm={() => setShowRiderModal(true)}
-                onOpenEdit={handleEditNotReady}
+                onOpenEdit={() => setShowArtistEditModal(true)}
               />
             ) : mode === "services" && selectedService ? (
               <TechnicalServiceDetail
@@ -476,6 +494,21 @@ export function ServiceCatalogPage({
           </div>
         </section>
       </div>
+
+      {showArtistEditModal && selectedArtist ? (
+        <ModalShell
+          eyebrow="Hizmet Kataloğu"
+          title="Sanatçı Bilgilerini Düzenle"
+          onClose={() => setShowArtistEditModal(false)}
+        >
+          <ArtistForm
+            initialArtist={selectedArtist}
+            submitLabel="Değişiklikleri Kaydet"
+            onSubmit={handleUpdateArtist}
+            onDone={() => setShowArtistEditModal(false)}
+          />
+        </ModalShell>
+      ) : null}
 
       {showCreateModal ? (
         <ModalShell
