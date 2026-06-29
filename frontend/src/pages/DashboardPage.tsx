@@ -89,6 +89,8 @@ export function DashboardPage({
   onOpenAgreements,
   onOpenEvents,
   onOpenRiderControl,
+  onOpenFinanceCenter,
+  onOpenUsers,
 }: DashboardPageProps) {
   const workflowSteps: WorkflowStep[] = [
     {
@@ -201,6 +203,52 @@ export function DashboardPage({
               </button>
             );
           })}
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-6">
+          <p className="text-xs font-medium uppercase tracking-widest text-teal-600">
+            Yönetim
+          </p>
+          <h3 className="mt-2 text-xl font-normal text-slate-800">
+            Finans ve kullanıcı yönetimi
+          </h3>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <button
+              onClick={onOpenFinanceCenter}
+              className="group flex flex-col rounded-3xl border border-teal-200 bg-teal-50 p-6 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
+                ₺
+              </span>
+              <h4 className="mt-4 text-lg font-bold text-teal-950">
+                Finans Merkezi
+              </h4>
+              <p className="mt-1 text-sm leading-6 text-teal-900">
+                Tahsilat, gider, cari, kasa/banka, devir ve dönem kapanışı.
+              </p>
+              <p className="mt-auto pt-5 text-sm font-bold text-teal-700">
+                Finans merkezine git →
+              </p>
+            </button>
+
+            <button
+              onClick={onOpenUsers}
+              className="group flex flex-col rounded-3xl border border-slate-200 bg-slate-50 p-6 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                ⧉
+              </span>
+              <h4 className="mt-4 text-lg font-bold text-slate-900">
+                Kullanıcı Yönetimi
+              </h4>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Yeni kullanıcı oluştur, rol ata ve şifre yönet.
+              </p>
+              <p className="mt-auto pt-5 text-sm font-bold text-slate-700">
+                Kullanıcıları yönet →
+              </p>
+            </button>
+          </div>
         </div>
       </div>
     </MainLayout>
