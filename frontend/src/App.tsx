@@ -11,6 +11,7 @@ import { FinanceCenterPage } from "./features/financeCenter/pages/FinanceCenterP
 import { ExpensesPage } from "./features/expenses/pages/ExpensesPage";
 import { RiderControlPage } from "./features/riderControl/pages/RiderControlPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { canAccessFinance, canManageUsers } from "./lib/permissions";
 import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
 import type { AuthUser } from "./types/auth";
@@ -194,6 +195,8 @@ function App() {
         onOpenFinanceCenter={() => navigate("finance")}
         onOpenExpenses={() => navigate("expenses")}
         onOpenUsers={() => navigate("users")}
+        canAccessFinance={canAccessFinance(currentUser.role)}
+        canManageUsers={canManageUsers(currentUser.role)}
       />
     );
   }
@@ -234,6 +237,14 @@ function App() {
   }
 
   if (screen === "finance" && currentUser) {
+    if (!canAccessFinance(currentUser.role)) {
+      return (
+        <AccessDeniedScreen
+          message="Finans Merkezi'ne erişim yetkiniz yok."
+          onBack={() => navigate("dashboard")}
+        />
+      );
+    }
     return (
       <FinanceCenterPage
         user={currentUser}
@@ -244,10 +255,26 @@ function App() {
   }
 
   if (screen === "expenses" && currentUser) {
+    if (!canAccessFinance(currentUser.role)) {
+      return (
+        <AccessDeniedScreen
+          message="Gider yönetimine erişim yetkiniz yok."
+          onBack={() => navigate("dashboard")}
+        />
+      );
+    }
     return <ExpensesPage onBackToDashboard={() => navigate("dashboard")} />;
   }
 
   if (screen === "users" && currentUser) {
+    if (!canManageUsers(currentUser.role)) {
+      return (
+        <AccessDeniedScreen
+          message="Kullanıcı yönetimine erişim yetkiniz yok."
+          onBack={() => navigate("dashboard")}
+        />
+      );
+    }
     return (
       <UserManagementPage
         currentUser={currentUser}
@@ -427,3 +454,31 @@ function LandingCenterCard({
 }
 
 export default App;
+
+type AccessDeniedScreenProps = {
+  message: string;
+  onBack: () => void;
+};
+
+function AccessDeniedScreen({ message, onBack }: AccessDeniedScreenProps) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-xl font-black text-rose-600">
+          !
+        </div>
+        <h1 className="mt-4 text-xl font-black text-slate-900">Yetkisiz Erişim</h1>
+        <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
+          {message} Bu alan yalnızca yetkili roller içindir.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-6 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white"
+        >
+          ← Panele dön
+        </button>
+      </div>
+    </main>
+  );
+}
