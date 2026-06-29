@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   getOptionLabel,
   invoiceTypeOptions,
@@ -12,6 +14,14 @@ type OfferDetailPanelProps = {
   onOpenItemForm: () => void;
   onOpenEdit: () => void;
   onRemoveItem: (itemId: number) => void;
+  onEditItem: (
+    itemId: number,
+    payload: {
+      quantity: number;
+      unit_price: number;
+      internal_unit_cost: number;
+    }
+  ) => Promise<void>;
   onPrint: () => void;
   onConvertToAgreement: () => void;
   onCancelOffer: () => void;
@@ -25,6 +35,7 @@ export function OfferDetailPanel({
   onOpenItemForm,
   onOpenEdit,
   onRemoveItem,
+  onEditItem,
   onPrint,
   onConvertToAgreement,
   onCancelOffer,
@@ -35,6 +46,49 @@ export function OfferDetailPanel({
   const offer = detail.offer;
   const isAgreement = offer.status === "agreement";
   const isCancelled = offer.status === "cancelled";
+
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editQuantity, setEditQuantity] = useState("");
+  const [editUnitPrice, setEditUnitPrice] = useState("");
+  const [editUnitCost, setEditUnitCost] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  function startEdit(item: {
+    id: number;
+    quantity: number;
+    base_amount: number;
+    internal_total_cost: number;
+  }) {
+    const unitPrice = item.quantity ? item.base_amount / item.quantity : 0;
+    const unitCost = item.quantity
+      ? item.internal_total_cost / item.quantity
+      : 0;
+    setEditingItemId(item.id);
+    setEditQuantity(String(item.quantity));
+    setEditUnitPrice(String(unitPrice));
+    setEditUnitCost(String(unitCost));
+    setEditError(null);
+  }
+
+  async function saveEdit(itemId: number) {
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      await onEditItem(itemId, {
+        quantity: Number(editQuantity) || 0,
+        unit_price: Number(editUnitPrice) || 0,
+        internal_unit_cost: Number(editUnitCost) || 0,
+      });
+      setEditingItemId(null);
+    } catch (error) {
+      setEditError(
+        error instanceof Error ? error.message : "Kalem güncellenemedi."
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   const remainingPaymentAmount =
     offer.advance_payment_currency === offer.currency
@@ -367,7 +421,17 @@ export function OfferDetailPanel({
 
                     <Amount title="Kâr" value={profitText} />
 
-                    <div className="flex items-start xl:justify-end">
+                    <div className="flex items-start gap-2 xl:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(item)}
+                        disabled={
+                          isAgreement || isCancelled || isPackageComponent
+                        }
+                        className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Düzenle
+                      </button>
                       <button
                         type="button"
                         onClick={() => onRemoveItem(item.id)}
@@ -381,6 +445,72 @@ export function OfferDetailPanel({
                         {removingItemId === item.id ? "..." : "Kaldır"}
                       </button>
                     </div>
+
+                    {editingItemId === item.id ? (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:col-span-7">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                          Kalemi düzenle
+                        </p>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                          <label className="text-sm font-bold text-slate-700">
+                            Adet
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={editQuantity}
+                              onChange={(e) => setEditQuantity(e.target.value)}
+                              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"
+                            />
+                          </label>
+                          <label className="text-sm font-bold text-slate-700">
+                            Birim Satış ({item.currency})
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={editUnitPrice}
+                              onChange={(e) => setEditUnitPrice(e.target.value)}
+                              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"
+                            />
+                          </label>
+                          <label className="text-sm font-bold text-slate-700">
+                            Birim Maliyet ({item.internal_cost_currency})
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={editUnitCost}
+                              onChange={(e) => setEditUnitCost(e.target.value)}
+                              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"
+                            />
+                          </label>
+                        </div>
+                        {editError ? (
+                          <p className="mt-2 text-xs font-bold text-rose-600">
+                            {editError}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void saveEdit(item.id)}
+                            disabled={savingEdit}
+                            className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+                          >
+                            {savingEdit ? "Kaydediliyor..." : "Kaydet"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingItemId(null)}
+                            disabled={savingEdit}
+                            className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-300 disabled:opacity-50"
+                          >
+                            Vazgeç
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}

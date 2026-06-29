@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.artist import Artist, ServiceItem
 from app.models.customer import Customer
 from app.models.event import Event, EventItem
+from app.models.finance import EventSupplierPayable
 from app.models.offer import Offer, OfferItem
 from app.models.service_package import ServicePackage, ServicePackageItem
 from app.models.venue import Venue
@@ -23,6 +24,7 @@ from app.modules.offers.schemas import (
     OfferInternalItemRead,
     OfferInternalSummary,
     OfferItemCreate,
+    OfferItemUpdate,
     OfferPrintLine,
     OfferPrintView,
     OfferRead,
@@ -499,6 +501,65 @@ def import_package_to_offer(
     return get_offer_detail(db=db, offer_id=offer.id)
 
 
+def update_offer_item(
+    db: Session,
+    offer_id: int,
+    item_id: int,
+    payload: OfferItemUpdate,
+):
+    offer = get_offer_or_404(db=db, offer_id=offer_id)
+
+    if offer.status == "agreement":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlaşmaya çevrilmiş teklifin kalemleri bu ekrandan düzenlenemez.",
+        )
+
+    if offer.status == "cancelled":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="İptal edilmiş teklifin kalemleri düzenlenemez.",
+        )
+
+    item = offer_repository.get_offer_item(db=db, offer_id=offer_id, item_id=item_id)
+
+    if item is None or not item.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Teklif kalemi bulunamadı.",
+        )
+
+    updates = payload.model_dump(exclude_unset=True)
+
+    if "currency" in updates and updates["currency"] is not None:
+        _validate_choice("currency", updates["currency"], constants.CURRENCIES)
+    if (
+        "internal_cost_currency" in updates
+        and updates["internal_cost_currency"] is not None
+    ):
+        _validate_choice(
+            "internal_cost_currency",
+            updates["internal_cost_currency"],
+            constants.CURRENCIES,
+        )
+
+    # Gönderilen alanları uygula
+    for field, value in updates.items():
+        if value is not None:
+            setattr(item, field, value)
+
+    # Tutarları (satış + iç maliyet) yeniden hesapla
+    item.base_amount = _line_amount(item.quantity, item.unit_price)
+    item.internal_total_cost = _line_amount(item.quantity, item.internal_unit_cost)
+
+    db.commit()
+    db.refresh(item)
+
+    _recalculate_offer(db=db, offer=offer)
+
+    return _to_internal_item_read(item)
+
+
 def deactivate_offer_item(db: Session, offer_id: int, item_id: int):
     offer = get_offer_or_404(db=db, offer_id=offer_id)
     item = offer_repository.get_offer_item(
@@ -580,7 +641,30 @@ def _create_event_from_offer_if_needed(db: Session, offer: Offer) -> Event:
 
         db.add(event_item)
 
-    offer.event_id = event.id
+        # Maliyeti olan sanatçı/hizmet kalemlerinden otomatik tedarikçi borcu
+        # (sanatçı/hizmet borcu) oluştur. Böylece teklifte girilen maliyet,
+        # dönem kapanışındaki "Etkinlik Maliyeti" hesabına da yansır.
+        item_cost = money(offer_item.internal_total_cost)
+        if item_cost > 0:
+            payable_type = "artist" if offer_item.artist_id else "service"
+            db.add(
+                EventSupplierPayable(
+                    event_id=event.id,
+                    artist_id=offer_item.artist_id,
+                    service_item_id=offer_item.service_item_id,
+                    payable_type=payable_type,
+                    title=offer_item.title,
+                    description=offer_item.description,
+                    due_date=event.event_date,
+                    amount=item_cost,
+                    currency=offer_item.internal_cost_currency or "TRY",
+                    exchange_rate=D(1),
+                    base_amount=item_cost,
+                    paid_base_amount=D(0),
+                    remaining_base_amount=item_cost,
+                    status="open",
+                )
+            )
 
     db.commit()
     db.refresh(event)

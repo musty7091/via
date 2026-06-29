@@ -59,6 +59,21 @@ class OfferItemCreate(BaseModel):
     sort_order: int = 0
 
 
+class OfferItemUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    program_section: str | None = None
+    start_time: time | None = None
+    end_time: time | None = None
+    quantity: float | None = Field(default=None, gt=0)
+    unit_price: float | None = Field(default=None, ge=0)
+    currency: str | None = None
+    internal_unit_cost: float | None = Field(default=None, ge=0)
+    internal_cost_currency: str | None = None
+    is_visible_on_offer: bool | None = None
+    sort_order: int | None = None
+
+
 class OfferRead(BaseModel):
     id: int
     event_id: int | None = None

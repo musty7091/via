@@ -11,6 +11,7 @@ from app.modules.offers.schemas import (
     OfferDetail,
     OfferInternalItemRead,
     OfferItemCreate,
+    OfferItemUpdate,
     OfferPrintView,
     OfferRead,
     OfferUpdate,
@@ -76,6 +77,22 @@ def create_offer_item(
     _current_user: User = Depends(get_current_user),
 ):
     return offer_service.create_offer_item(db=db, offer_id=offer_id, payload=payload)
+
+
+@router.patch("/{offer_id}/items/{item_id}", response_model=OfferInternalItemRead)
+def update_offer_item(
+    offer_id: int,
+    item_id: int,
+    payload: OfferItemUpdate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    return offer_service.update_offer_item(
+        db=db,
+        offer_id=offer_id,
+        item_id=item_id,
+        payload=payload,
+    )
 
 
 @router.delete("/{offer_id}/items/{item_id}", response_model=OfferInternalItemRead)

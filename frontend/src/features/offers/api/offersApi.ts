@@ -157,6 +157,17 @@ export async function deleteOfferItem(
   });
 }
 
+export async function updateOfferItem(
+  offerId: number,
+  itemId: number,
+  payload: Partial<OfferItemCreatePayload>
+): Promise<OfferItem> {
+  return requestJson<OfferItem>(`/offers/${offerId}/items/${itemId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function convertOfferToAgreement(
   offerId: number,
   agreementNotes: string | null

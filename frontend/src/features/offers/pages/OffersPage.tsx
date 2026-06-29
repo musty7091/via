@@ -14,6 +14,7 @@ import {
   convertOfferToAgreement,
   createOffer,
   createOfferItem,
+  updateOfferItem,
   deleteOfferItem,
   fetchCustomers,
   fetchCustomerVenues,
@@ -219,6 +220,22 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
 
     await createOfferItem(selectedOfferId, payload);
     setShowItemModal(false);
+    await loadOfferDetail(selectedOfferId);
+  }
+
+  async function handleEditOfferItem(
+    itemId: number,
+    payload: {
+      quantity: number;
+      unit_price: number;
+      internal_unit_cost: number;
+    }
+  ) {
+    if (!selectedOfferId) {
+      return;
+    }
+
+    await updateOfferItem(selectedOfferId, itemId, payload);
     await loadOfferDetail(selectedOfferId);
   }
 
@@ -457,6 +474,7 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
                 onOpenItemForm={() => setShowItemModal(true)}
                 onOpenEdit={() => setShowEditModal(true)}
                 onRemoveItem={handleRemoveItem}
+                onEditItem={handleEditOfferItem}
                 onPrint={handlePrint}
                 onConvertToAgreement={handleConvertToAgreement}
                 onCancelOffer={handleCancelOffer}
