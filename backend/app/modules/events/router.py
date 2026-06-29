@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-from app.modules.events.schemas import EventDetail, EventRead
+from app.modules.events.schemas import EventDetail, EventRead, EventStatusUpdate
 from app.modules.events.services import event_service
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -37,3 +37,18 @@ def get_event_detail(
     _current_user: User = Depends(get_current_user),
 ):
     return event_service.get_event_detail(db=db, event_id=event_id)
+
+
+@router.patch("/{event_id}/status", response_model=EventRead)
+def update_event_status(
+    event_id: int,
+    payload: EventStatusUpdate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Etkinliğin operasyonel durumunu günceller (ör. 'completed' = Tamamlandı)."""
+    return event_service.update_event_status(
+        db=db,
+        event_id=event_id,
+        new_status=payload.status,
+    )

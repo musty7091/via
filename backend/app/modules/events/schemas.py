@@ -3,6 +3,10 @@ from datetime import date, datetime
 from pydantic import BaseModel
 
 
+class EventStatusUpdate(BaseModel):
+    status: str
+
+
 class EventRead(BaseModel):
     id: int
     event_code: str | None = None

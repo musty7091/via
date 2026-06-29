@@ -99,6 +99,17 @@ export async function fetchEventDetail(eventId: number): Promise<EventDetail> {
   return requestJson<EventDetail>(`/events/${eventId}/detail`);
 }
 
+export async function updateEventStatus(
+  eventId: number,
+  status: string
+): Promise<EventListItem> {
+  return requestJson<EventListItem>(`/events/${eventId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function fetchCustomers(params?: {
   search?: string;
   isActive?: boolean | null;

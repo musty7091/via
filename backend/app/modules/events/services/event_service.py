@@ -43,3 +43,28 @@ def get_event_detail(db: Session, event_id: int) -> EventDetail:
         event=EventRead.model_validate(event),
         items=[EventItemRead.model_validate(item) for item in items],
     )
+
+
+# Etkinliğin operasyonel durumu (finansal kapanıştan bağımsızdır)
+ALLOWED_EVENT_STATUSES = {
+    "draft",
+    "planned",
+    "preparation",
+    "completed",
+    "cancelled",
+}
+
+
+def update_event_status(db: Session, event_id: int, new_status: str) -> EventRead:
+    if new_status not in ALLOWED_EVENT_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz etkinlik durumu.",
+        )
+
+    event = get_event_or_404(db=db, event_id=event_id)
+    event.status = new_status
+    db.commit()
+    db.refresh(event)
+
+    return EventRead.model_validate(event)

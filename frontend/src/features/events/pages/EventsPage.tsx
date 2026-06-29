@@ -192,6 +192,12 @@ export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPage
                 detail={eventDetail}
                 customers={customers}
                 venues={venues}
+                onStatusChanged={() => {
+                  if (selectedEventId) {
+                    void loadEventDetail(selectedEventId);
+                  }
+                  void loadEvents();
+                }}
               />
             ) : (
               <EventEmptyState />

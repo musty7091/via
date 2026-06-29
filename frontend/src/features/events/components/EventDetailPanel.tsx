@@ -1,8 +1,11 @@
+import { useState } from "react";
+
 import {
   eventStatusOptions,
   getOptionLabel,
   invoiceTypeOptions,
 } from "../constants/eventConstants";
+import { updateEventStatus } from "../api/eventsApi";
 import type {
   CustomerOption,
   EventCurrencySummary,
@@ -16,14 +19,37 @@ type EventDetailPanelProps = {
   detail: EventDetail;
   customers: CustomerOption[];
   venues: VenueOption[];
+  onStatusChanged?: () => void;
 };
 
 export function EventDetailPanel({
   detail,
   customers,
   venues,
+  onStatusChanged,
 }: EventDetailPanelProps) {
   const event = detail.event;
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  async function handleStatusChange(nextStatus: string) {
+    if (nextStatus === event.status) {
+      return;
+    }
+    setStatusSaving(true);
+    setStatusError(null);
+    try {
+      await updateEventStatus(event.id, nextStatus);
+      onStatusChanged?.();
+    } catch (error) {
+      setStatusError(
+        error instanceof Error ? error.message : "Durum güncellenemedi."
+      );
+    } finally {
+      setStatusSaving(false);
+    }
+  }
+
   const customerName =
     customers.find((customer) => customer.id === event.customer_id)?.name ??
     `Müşteri #${event.customer_id}`;
@@ -65,6 +91,48 @@ export function EventDetailPanel({
             value={event.is_period_closed ? "Kapalı" : "Açık"}
           />
         </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-black text-slate-950">Etkinlik Durumu</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Operasyonel durumdur; finansal kapanıştan bağımsızdır. Etkinlik
+              gerçekleştiğinde <strong>Tamamlandı</strong> olarak işaretle.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={event.status}
+              disabled={statusSaving}
+              onChange={(e) => void handleStatusChange(e.target.value)}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 disabled:opacity-50"
+            >
+              {eventStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {event.status !== "completed" ? (
+              <button
+                type="button"
+                disabled={statusSaving}
+                onClick={() => void handleStatusChange("completed")}
+                className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              >
+                Tamamlandı işaretle
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {statusSaving ? (
+          <p className="mt-2 text-xs font-bold text-slate-400">Kaydediliyor...</p>
+        ) : null}
+        {statusError ? (
+          <p className="mt-2 text-xs font-bold text-rose-600">{statusError}</p>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
