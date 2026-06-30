@@ -228,7 +228,7 @@ function ArtistCard({
           src={artist.image_url}
           alt={artist.name}
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+          className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105 group-hover:opacity-80"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
@@ -243,7 +243,7 @@ function ArtistCard({
           loop
           playsInline
           preload="metadata"
-          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-60"
+          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-[0.85]"
         />
       )}
 
