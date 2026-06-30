@@ -234,7 +234,7 @@ function ArtistCard({
         <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900" />
       )}
 
-      {/* Hover'da oynayan flu video */}
+      {/* Hover'da oynayan yarı saydam video — sanatçı altta görünür kalır */}
       {artist.video_url && (
         <video
           ref={videoRef}
@@ -243,7 +243,7 @@ function ArtistCard({
           loop
           playsInline
           preload="metadata"
-          className="absolute inset-0 h-full w-full scale-110 object-cover opacity-0 blur-[6px] transition-opacity duration-500 group-hover:opacity-100"
+          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-60"
         />
       )}
 
