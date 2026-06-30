@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+import { ReadOnlyBanner } from "../../../components/ReadOnlyBanner";
 import {
   fetchArtists,
   fetchTechnicalServices,
@@ -48,12 +49,16 @@ import type {
 
 type OffersPageProps = {
   onBackToDashboard: () => void;
+  readOnly?: boolean;
 };
 
 const PAGE_SIZE = 5;
 const REQUEST_LIMIT = PAGE_SIZE + 1;
 
-export function OffersPage({ onBackToDashboard }: OffersPageProps) {
+export function OffersPage({
+  onBackToDashboard,
+  readOnly = false,
+}: OffersPageProps) {
   const [offers, setOffers] = useState<OfferListItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -393,16 +398,19 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
       onBack={handlePageBack}
       backLabel={selectedOfferId ? "Teklif Listesine Dön" : "Geri Dön"}
       actions={
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-teal-200"
-        >
-          Yeni Teklif
-        </button>
+        readOnly ? null : (
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 shadow-sm transition hover:bg-teal-200"
+          >
+            Yeni Teklif
+          </button>
+        )
       }
     >
       <div className="space-y-5">
+        {readOnly ? <ReadOnlyBanner /> : null}
         <OfferToolbar
           search={search}
           statusFilter={statusFilter}
@@ -481,9 +489,13 @@ export function OffersPage({ onBackToDashboard }: OffersPageProps) {
                 removingItemId={removingItemId}
                 isConverting={isConverting}
                 isCancelling={isCancelling}
+                readOnly={readOnly}
               />
             ) : (
-              <OfferEmptyState onOpenCreate={() => setShowCreateModal(true)} />
+              <OfferEmptyState
+                onOpenCreate={() => setShowCreateModal(true)}
+                readOnly={readOnly}
+              />
             )}
           </div>
         </section>

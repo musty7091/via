@@ -28,6 +28,7 @@ type OfferDetailPanelProps = {
   removingItemId: number | null;
   isConverting: boolean;
   isCancelling: boolean;
+  readOnly?: boolean;
 };
 
 export function OfferDetailPanel({
@@ -42,10 +43,13 @@ export function OfferDetailPanel({
   removingItemId,
   isConverting,
   isCancelling,
+  readOnly = false,
 }: OfferDetailPanelProps) {
   const offer = detail.offer;
   const isAgreement = offer.status === "agreement";
   const isCancelled = offer.status === "cancelled";
+  // Salt-okur rol veya kilitli teklif: tüm yazma işlemleri kapalı.
+  const writeLocked = isAgreement || isCancelled || readOnly;
 
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editQuantity, setEditQuantity] = useState("");
@@ -146,14 +150,16 @@ export function OfferDetailPanel({
 
         <div className="border-t border-white/10 bg-white/5 p-4">
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onOpenEdit}
-              disabled={isAgreement || isCancelled}
-              className="rounded-full bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Teklifi Düzenle
-            </button>
+            {readOnly ? null : (
+              <button
+                type="button"
+                onClick={onOpenEdit}
+                disabled={writeLocked}
+                className="rounded-full bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Teklifi Düzenle
+              </button>
+            )}
 
             <button
               type="button"
@@ -163,40 +169,44 @@ export function OfferDetailPanel({
               Müşteri Çıktısı / PDF
             </button>
 
-            <button
-              type="button"
-              onClick={onOpenItemForm}
-              disabled={isAgreement || isCancelled}
-              className="rounded-full bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Kalem Ekle
-            </button>
+            {readOnly ? null : (
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenItemForm}
+                  disabled={writeLocked}
+                  className="rounded-full bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Kalem Ekle
+                </button>
 
-            <button
-              type="button"
-              onClick={onConvertToAgreement}
-              disabled={isAgreement || isCancelled || isConverting}
-              className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isAgreement
-                ? "Anlaşmaya Çevrildi"
-                : isConverting
-                  ? "Çevriliyor..."
-                  : "Anlaşmaya Çevir"}
-            </button>
+                <button
+                  type="button"
+                  onClick={onConvertToAgreement}
+                  disabled={writeLocked || isConverting}
+                  className="rounded-full bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isAgreement
+                    ? "Anlaşmaya Çevrildi"
+                    : isConverting
+                      ? "Çevriliyor..."
+                      : "Anlaşmaya Çevir"}
+                </button>
 
-            <button
-              type="button"
-              onClick={onCancelOffer}
-              disabled={isAgreement || isCancelled || isCancelling}
-              className="rounded-full bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isCancelled
-                ? "İptal Edildi"
-                : isCancelling
-                  ? "İptal Ediliyor..."
-                  : "Teklifi İptal Et"}
-            </button>
+                <button
+                  type="button"
+                  onClick={onCancelOffer}
+                  disabled={writeLocked || isCancelling}
+                  className="rounded-full bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isCancelled
+                    ? "İptal Edildi"
+                    : isCancelling
+                      ? "İptal Ediliyor..."
+                      : "Teklifi İptal Et"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -315,14 +325,16 @@ export function OfferDetailPanel({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenItemForm}
-            disabled={isAgreement || isCancelled}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Kalem Ekle
-          </button>
+          {readOnly ? null : (
+            <button
+              type="button"
+              onClick={onOpenItemForm}
+              disabled={writeLocked}
+              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Kalem Ekle
+            </button>
+          )}
         </div>
 
         {sortedItems.length === 0 ? (
@@ -422,28 +434,26 @@ export function OfferDetailPanel({
                     <Amount title="Kâr" value={profitText} />
 
                     <div className="flex items-start gap-2 xl:justify-end">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(item)}
-                        disabled={
-                          isAgreement || isCancelled || isPackageComponent
-                        }
-                        className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Düzenle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemoveItem(item.id)}
-                        disabled={
-                          removingItemId === item.id ||
-                          isAgreement ||
-                          isCancelled
-                        }
-                        className="rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {removingItemId === item.id ? "..." : "Kaldır"}
-                      </button>
+                      {readOnly ? null : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(item)}
+                            disabled={writeLocked || isPackageComponent}
+                            className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Düzenle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onRemoveItem(item.id)}
+                            disabled={removingItemId === item.id || writeLocked}
+                            className="rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {removingItemId === item.id ? "..." : "Kaldır"}
+                          </button>
+                        </>
+                      )}
                     </div>
 
                     {editingItemId === item.id ? (

@@ -12,6 +12,7 @@ type CatalogToolbarProps = {
   onPreviousPage: () => void;
   onNextPage: () => void;
   onOpenCreate: () => void;
+  readOnly?: boolean;
 };
 
 export function CatalogToolbar({
@@ -24,6 +25,7 @@ export function CatalogToolbar({
   onPreviousPage,
   onNextPage,
   onOpenCreate,
+  readOnly = false,
 }: CatalogToolbarProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -48,12 +50,14 @@ export function CatalogToolbar({
           >
             Ara
           </button>
-          <button
-            onClick={onOpenCreate}
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-          >
-            Yeni
-          </button>
+          {readOnly ? null : (
+            <button
+              onClick={onOpenCreate}
+              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+            >
+              Yeni
+            </button>
+          )}
         </div>
       </div>
 

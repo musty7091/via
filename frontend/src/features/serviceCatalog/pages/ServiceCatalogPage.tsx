@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { AuthUser } from "../../../types/auth";
 import MainLayout from "../../../components/MainLayout";
+import { ReadOnlyBanner } from "../../../components/ReadOnlyBanner";
 import {
   createArtist,
   updateArtist,
@@ -49,6 +50,7 @@ type ServiceCatalogPageProps = {
   onBackToDashboard?: () => void;
   user?: AuthUser;
   onLogout?: () => void;
+  readOnly?: boolean;
 };
 
 type CatalogMode = "artists" | "services" | "packages";
@@ -82,7 +84,8 @@ const modeConfig = {
 export function ServiceCatalogPage({
   onBackToDashboard,
   user,
-  onLogout
+  onLogout,
+  readOnly = false,
 }: ServiceCatalogPageProps) {
   const [mode, setMode] = useState<CatalogMode>("artists");
   const [search, setSearch] = useState("");
@@ -398,6 +401,7 @@ export function ServiceCatalogPage({
                 Sanatçı hizmetleri, teknik / operasyon hizmetleri ve program paketlerini tek katalog yapısı içinde yönetin.
               </p>
             </div>
+            {readOnly ? <ReadOnlyBanner /> : null}
           </div>
 
           <div className="flex w-full items-center gap-2 overflow-x-auto rounded-full border border-slate-200 bg-white p-2 shadow-sm">
@@ -441,6 +445,7 @@ export function ServiceCatalogPage({
               })
             }
             onOpenCreate={() => setShowCreateModal(true)}
+            readOnly={readOnly}
           />
 
           {errorMessage ? (
@@ -471,11 +476,13 @@ export function ServiceCatalogPage({
                 riderItems={riderItems}
                 onOpenRiderForm={() => setShowRiderModal(true)}
                 onOpenEdit={() => setShowArtistEditModal(true)}
+                readOnly={readOnly}
               />
             ) : mode === "services" && selectedService ? (
               <TechnicalServiceDetail
                 service={selectedService}
                 onOpenEdit={handleEditNotReady}
+                readOnly={readOnly}
               />
             ) : mode === "packages" && packageDetail ? (
               <PackageDetail
@@ -484,11 +491,13 @@ export function ServiceCatalogPage({
                 onOpenItemForm={() => setShowPackageItemModal(true)}
                 onRemoveItem={handleRemovePackageItem}
                 removingItemId={removingPackageItemId}
+                readOnly={readOnly}
               />
             ) : (
               <CatalogEmptyState
                 modeLabel={config.modeLabel}
                 onOpenCreate={() => setShowCreateModal(true)}
+                readOnly={readOnly}
               />
             )}
           </div>

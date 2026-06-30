@@ -11,7 +11,11 @@ import { FinanceCenterPage } from "./features/financeCenter/pages/FinanceCenterP
 import { ExpensesPage } from "./features/expenses/pages/ExpensesPage";
 import { RiderControlPage } from "./features/riderControl/pages/RiderControlPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { canAccessFinance, canManageUsers } from "./lib/permissions";
+import {
+  canAccessFinance,
+  canManageUsers,
+  isOperationsReadOnly,
+} from "./lib/permissions";
 import { LoginPage } from "./pages/LoginPage";
 import { clearAuthSession, getStoredUser } from "./services/authStorage";
 import type { AuthUser } from "./types/auth";
@@ -201,18 +205,35 @@ function App() {
     );
   }
 
+  const operationsReadOnly = currentUser
+    ? isOperationsReadOnly(currentUser.role)
+    : false;
+
   if (screen === "customers" && currentUser) {
-    return <CustomersPage onBackToDashboard={() => navigate("dashboard")} />;
+    return (
+      <CustomersPage
+        onBackToDashboard={() => navigate("dashboard")}
+        readOnly={operationsReadOnly}
+      />
+    );
   }
 
   if (screen === "serviceCatalog" && currentUser) {
     return (
-      <ServiceCatalogPage onBackToDashboard={() => navigate("dashboard")} />
+      <ServiceCatalogPage
+        onBackToDashboard={() => navigate("dashboard")}
+        readOnly={operationsReadOnly}
+      />
     );
   }
 
   if (screen === "offers" && currentUser) {
-    return <OffersPage onBackToDashboard={() => navigate("dashboard")} />;
+    return (
+      <OffersPage
+        onBackToDashboard={() => navigate("dashboard")}
+        readOnly={operationsReadOnly}
+      />
+    );
   }
 
   if (screen === "agreements" && currentUser) {
@@ -220,16 +241,27 @@ function App() {
       <AgreementsPage
         onBackToDashboard={() => navigate("dashboard")}
         onOpenEvents={() => navigate("events")}
+        readOnly={operationsReadOnly}
       />
     );
   }
 
   if (screen === "events" && currentUser) {
-    return <EventsPage onBackToDashboard={() => navigate("dashboard")} />;
+    return (
+      <EventsPage
+        onBackToDashboard={() => navigate("dashboard")}
+        readOnly={operationsReadOnly}
+      />
+    );
   }
 
   if (screen === "rider" && currentUser) {
-    return <RiderControlPage onBackToDashboard={() => navigate("dashboard")} />;
+    return (
+      <RiderControlPage
+        onBackToDashboard={() => navigate("dashboard")}
+        readOnly={operationsReadOnly}
+      />
+    );
   }
 
   if (screen === "partners" && currentUser) {

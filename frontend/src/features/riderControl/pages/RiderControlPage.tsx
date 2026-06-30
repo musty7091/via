@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Pagination } from "../../../components/Pagination";
 import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+import { ReadOnlyBanner } from "../../../components/ReadOnlyBanner";
 import { usePagination } from "../../../hooks/usePagination";
 import {
   createRiderCheck,
@@ -20,6 +21,7 @@ import type {
 
 type RiderControlPageProps = {
   onBackToDashboard: () => void;
+  readOnly?: boolean;
 };
 
 const STATUS_LABEL: Record<RiderCheckStatus, string> = {
@@ -43,7 +45,7 @@ function formatDate(value: string | null) {
   });
 }
 
-export function RiderControlPage({ onBackToDashboard }: RiderControlPageProps) {
+export function RiderControlPage({ onBackToDashboard, readOnly = false }: RiderControlPageProps) {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [board, setBoard] = useState<RiderCheckBoard | null>(null);
@@ -182,6 +184,7 @@ export function RiderControlPage({ onBackToDashboard }: RiderControlPageProps) {
       description="Sanatçı rider şartlarını ve sahne hazırlıklarını etkinlik bazında kontrol listesine dök, sahada tek tek işaretle."
       onBack={onBackToDashboard}
     >
+      {readOnly ? <ReadOnlyBanner /> : null}
       <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
         {/* SOL: etkinlik listesi */}
         <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -278,13 +281,15 @@ export function RiderControlPage({ onBackToDashboard }: RiderControlPageProps) {
                       {board.artists.length} sanatçı
                     </p>
                   </div>
-                  <button
-                    onClick={handleGenerate}
-                    disabled={busy}
-                    className="rounded-full bg-teal-300 px-5 py-2 text-sm font-black text-slate-950 transition hover:bg-teal-200 disabled:opacity-60"
-                  >
-                    Şablondan Üret
-                  </button>
+                  {readOnly ? null : (
+                    <button
+                      onClick={handleGenerate}
+                      disabled={busy}
+                      className="rounded-full bg-teal-300 px-5 py-2 text-sm font-black text-slate-950 transition hover:bg-teal-200 disabled:opacity-60"
+                    >
+                      Şablondan Üret
+                    </button>
+                  )}
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-4">
@@ -304,24 +309,26 @@ export function RiderControlPage({ onBackToDashboard }: RiderControlPageProps) {
               </div>
 
               {/* Elle ekle */}
-              <div className="flex flex-col gap-2 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
-                <input
-                  value={newTitle}
-                  onChange={(event) => setNewTitle(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void handleAddManual();
-                  }}
-                  placeholder="Elle kontrol maddesi ekle (ör. Jeneratör yedeği)"
-                  className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-teal-300"
-                />
-                <button
-                  onClick={handleAddManual}
-                  disabled={busy || !newTitle.trim()}
-                  className="rounded-full bg-slate-950 px-5 py-2 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-50"
-                >
-                  Ekle
-                </button>
-              </div>
+              {readOnly ? null : (
+                <div className="flex flex-col gap-2 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+                  <input
+                    value={newTitle}
+                    onChange={(event) => setNewTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void handleAddManual();
+                    }}
+                    placeholder="Elle kontrol maddesi ekle (ör. Jeneratör yedeği)"
+                    className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-teal-300"
+                  />
+                  <button
+                    onClick={handleAddManual}
+                    disabled={busy || !newTitle.trim()}
+                    className="rounded-full bg-slate-950 px-5 py-2 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Ekle
+                  </button>
+                </div>
+              )}
 
               {/* Liste */}
               {board.items.length === 0 ? (
@@ -336,6 +343,7 @@ export function RiderControlPage({ onBackToDashboard }: RiderControlPageProps) {
                       key={check.id}
                       check={check}
                       busy={busy}
+                      readOnly={readOnly}
                       problemDraft={problemDrafts[check.id] ?? check.problem_note ?? ""}
                       onProblemDraftChange={(value) =>
                         setProblemDrafts((prev) => ({ ...prev, [check.id]: value }))
@@ -397,6 +405,7 @@ function RiderCheckRow({
   onProblemDraftChange,
   onStatus,
   onDelete,
+  readOnly = false,
 }: {
   check: RiderCheck;
   busy: boolean;
@@ -404,6 +413,7 @@ function RiderCheckRow({
   onProblemDraftChange: (value: string) => void;
   onStatus: (status: RiderCheckStatus) => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }) {
   const borderTone =
     check.status === "done"
@@ -445,43 +455,47 @@ function RiderCheckRow({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <button
-            onClick={() => onStatus("done")}
-            disabled={busy}
-            className={`rounded-full px-3 py-1.5 text-xs font-black transition disabled:opacity-50 ${
-              check.status === "done"
-                ? "bg-emerald-500 text-white"
-                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-            }`}
-          >
-            Tamam
-          </button>
-          <button
-            onClick={() => onStatus("problem")}
-            disabled={busy}
-            className={`rounded-full px-3 py-1.5 text-xs font-black transition disabled:opacity-50 ${
-              check.status === "problem"
-                ? "bg-red-500 text-white"
-                : "bg-red-100 text-red-700 hover:bg-red-200"
-            }`}
-          >
-            Sorun
-          </button>
-          <button
-            onClick={() => onStatus("pending")}
-            disabled={busy}
-            className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-50"
-          >
-            Geri Al
-          </button>
-          <button
-            onClick={onDelete}
-            disabled={busy}
-            title="Sil"
-            className="rounded-full px-2 py-1.5 text-xs font-black text-slate-400 transition hover:text-red-600 disabled:opacity-50"
-          >
-            ✕
-          </button>
+          {readOnly ? null : (
+            <>
+              <button
+                onClick={() => onStatus("done")}
+                disabled={busy}
+                className={`rounded-full px-3 py-1.5 text-xs font-black transition disabled:opacity-50 ${
+                  check.status === "done"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                }`}
+              >
+                Tamam
+              </button>
+              <button
+                onClick={() => onStatus("problem")}
+                disabled={busy}
+                className={`rounded-full px-3 py-1.5 text-xs font-black transition disabled:opacity-50 ${
+                  check.status === "problem"
+                    ? "bg-red-500 text-white"
+                    : "bg-red-100 text-red-700 hover:bg-red-200"
+                }`}
+              >
+                Sorun
+              </button>
+              <button
+                onClick={() => onStatus("pending")}
+                disabled={busy}
+                className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-600 transition hover:bg-slate-200 disabled:opacity-50"
+              >
+                Geri Al
+              </button>
+              <button
+                onClick={onDelete}
+                disabled={busy}
+                title="Sil"
+                className="rounded-full px-2 py-1.5 text-xs font-black text-slate-400 transition hover:text-red-600 disabled:opacity-50"
+              >
+                ✕
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -491,15 +505,18 @@ function RiderCheckRow({
             value={problemDraft}
             onChange={(event) => onProblemDraftChange(event.target.value)}
             placeholder="Sorun notu (ör. sahne mikrofonu eksik)"
-            className="flex-1 rounded-2xl border border-red-200 bg-white px-4 py-2 text-sm outline-none focus:border-red-400"
+            disabled={readOnly}
+            className="flex-1 rounded-2xl border border-red-200 bg-white px-4 py-2 text-sm outline-none focus:border-red-400 disabled:opacity-60"
           />
-          <button
-            onClick={() => onStatus("problem")}
-            disabled={busy}
-            className="rounded-full bg-red-500 px-4 py-2 text-sm font-black text-white transition hover:bg-red-600 disabled:opacity-50"
-          >
-            Notu Kaydet
-          </button>
+          {readOnly ? null : (
+            <button
+              onClick={() => onStatus("problem")}
+              disabled={busy}
+              className="rounded-full bg-red-500 px-4 py-2 text-sm font-black text-white transition hover:bg-red-600 disabled:opacity-50"
+            >
+              Notu Kaydet
+            </button>
+          )}
         </div>
       ) : null}
     </article>

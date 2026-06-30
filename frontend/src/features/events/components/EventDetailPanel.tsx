@@ -20,6 +20,7 @@ type EventDetailPanelProps = {
   customers: CustomerOption[];
   venues: VenueOption[];
   onStatusChanged?: () => void;
+  readOnly?: boolean;
 };
 
 export function EventDetailPanel({
@@ -27,6 +28,7 @@ export function EventDetailPanel({
   customers,
   venues,
   onStatusChanged,
+  readOnly = false,
 }: EventDetailPanelProps) {
   const event = detail.event;
   const [statusSaving, setStatusSaving] = useState(false);
@@ -102,30 +104,36 @@ export function EventDetailPanel({
               gerçekleştiğinde <strong>Tamamlandı</strong> olarak işaretle.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={event.status}
-              disabled={statusSaving}
-              onChange={(e) => void handleStatusChange(e.target.value)}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 disabled:opacity-50"
-            >
-              {eventStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {event.status !== "completed" ? (
-              <button
-                type="button"
+          {readOnly ? (
+            <span className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700">
+              {getOptionLabel(eventStatusOptions, event.status)}
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <select
+                value={event.status}
                 disabled={statusSaving}
-                onClick={() => void handleStatusChange("completed")}
-                className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                onChange={(e) => void handleStatusChange(e.target.value)}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 disabled:opacity-50"
               >
-                Tamamlandı işaretle
-              </button>
-            ) : null}
-          </div>
+                {eventStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {event.status !== "completed" ? (
+                <button
+                  type="button"
+                  disabled={statusSaving}
+                  onClick={() => void handleStatusChange("completed")}
+                  className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                >
+                  Tamamlandı işaretle
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
         {statusSaving ? (
           <p className="mt-2 text-xs font-bold text-slate-400">Kaydediliyor...</p>

@@ -11,6 +11,7 @@ import { EventEmptyState } from "../components/EventEmptyState";
 import { EventList } from "../components/EventList";
 import { EventToolbar } from "../components/EventToolbar";
 import { MainLayout } from "../../../components/MainLayout";
+import { ReadOnlyBanner } from "../../../components/ReadOnlyBanner";
 import type {
   CustomerOption,
   EventDetail,
@@ -22,11 +23,12 @@ type EventsPageProps = {
   onBackToDashboard: () => void;
   userName?: string;
   onLogout?: () => void;
+  readOnly?: boolean;
 };
 
 const PAGE_SIZE = 8;
 
-export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPageProps) {
+export function EventsPage({ onBackToDashboard, userName, onLogout, readOnly = false }: EventsPageProps) {
   const [events, setEvents] = useState<EventListItem[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -134,6 +136,7 @@ export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPage
       onLogout={onLogout}
     >
       <div className="space-y-5">
+        {readOnly ? <ReadOnlyBanner /> : null}
         <EventToolbar
           search={search}
           pageIndex={pageIndex}
@@ -192,6 +195,7 @@ export function EventsPage({ onBackToDashboard, userName, onLogout }: EventsPage
                 detail={eventDetail}
                 customers={customers}
                 venues={venues}
+                readOnly={readOnly}
                 onStatusChanged={() => {
                   if (selectedEventId) {
                     void loadEventDetail(selectedEventId);

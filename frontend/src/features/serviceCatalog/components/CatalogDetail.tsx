@@ -21,6 +21,7 @@ type ArtistDetailProps = {
   riderItems: RiderItem[];
   onOpenRiderForm: () => void;
   onOpenEdit: () => void;
+  readOnly?: boolean;
 };
 
 export function ArtistDetail({
@@ -28,6 +29,7 @@ export function ArtistDetail({
   riderItems,
   onOpenRiderForm,
   onOpenEdit,
+  readOnly = false,
 }: ArtistDetailProps) {
   return (
     <section className="space-y-4">
@@ -38,11 +40,13 @@ export function ArtistDetail({
         description={artist.notes}
       />
 
-      <div className="flex justify-end">
-        <SecondaryActionButton onClick={onOpenEdit}>
-          Sanatçı Bilgilerini Düzenle
-        </SecondaryActionButton>
-      </div>
+      {readOnly ? null : (
+        <div className="flex justify-end">
+          <SecondaryActionButton onClick={onOpenEdit}>
+            Sanatçı Bilgilerini Düzenle
+          </SecondaryActionButton>
+        </div>
+      )}
 
       <MoneyGrid
         cost={artist.default_cost_amount}
@@ -56,6 +60,7 @@ export function ArtistDetail({
         description="Sanatçı için operasyon öncesi kontrol edilecek rider maddeleri."
         buttonLabel="Rider Ekle"
         onAdd={onOpenRiderForm}
+        readOnly={readOnly}
         items={riderItems.map((item) => ({
           id: item.id,
           title: item.title,
@@ -69,11 +74,13 @@ export function ArtistDetail({
 type TechnicalServiceDetailProps = {
   service: TechnicalService;
   onOpenEdit: () => void;
+  readOnly?: boolean;
 };
 
 export function TechnicalServiceDetail({
   service,
   onOpenEdit,
+  readOnly = false,
 }: TechnicalServiceDetailProps) {
   return (
     <section className="space-y-4">
@@ -84,11 +91,13 @@ export function TechnicalServiceDetail({
         description={service.notes}
       />
 
-      <div className="flex justify-end">
-        <SecondaryActionButton onClick={onOpenEdit}>
-          Hizmet Bilgilerini Düzenle
-        </SecondaryActionButton>
-      </div>
+      {readOnly ? null : (
+        <div className="flex justify-end">
+          <SecondaryActionButton onClick={onOpenEdit}>
+            Hizmet Bilgilerini Düzenle
+          </SecondaryActionButton>
+        </div>
+      )}
 
       <MoneyGrid
         cost={service.default_cost_amount}
@@ -106,6 +115,7 @@ type PackageDetailProps = {
   onOpenItemForm: () => void;
   onRemoveItem: (itemId: number) => void;
   removingItemId: number | null;
+  readOnly?: boolean;
 };
 
 export function PackageDetail({
@@ -114,6 +124,7 @@ export function PackageDetail({
   onOpenItemForm,
   onRemoveItem,
   removingItemId,
+  readOnly = false,
 }: PackageDetailProps) {
   const packageCurrency = detail.package.default_sale_currency;
   const packageSaleAmount = detail.package.default_sale_amount;
@@ -134,11 +145,13 @@ export function PackageDetail({
         description={detail.package.description}
       />
 
-      <div className="flex justify-end">
-        <SecondaryActionButton onClick={onOpenEdit}>
-          Paket Bilgilerini Düzenle
-        </SecondaryActionButton>
-      </div>
+      {readOnly ? null : (
+        <div className="flex justify-end">
+          <SecondaryActionButton onClick={onOpenEdit}>
+            Paket Bilgilerini Düzenle
+          </SecondaryActionButton>
+        </div>
+      )}
 
       {/* MOBİL İÇİN: grid-cols-1 (alt alta), MASAÜSTÜ İÇİN: md:grid-cols-3 (yan yana) */}
       <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
@@ -184,13 +197,15 @@ export function PackageDetail({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpenItemForm}
-            className="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-          >
-            Paket Kalemi Ekle
-          </button>
+          {readOnly ? null : (
+            <button
+              type="button"
+              onClick={onOpenItemForm}
+              className="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+            >
+              Paket Kalemi Ekle
+            </button>
+          )}
         </div>
 
         {detail.items.length === 0 ? (
@@ -207,7 +222,7 @@ export function PackageDetail({
               <span>Adet</span>
               <span>Maliyet</span>
               <span>Satış</span>
-              <span className="text-right">Sil</span>
+              <span className="text-right">{readOnly ? "" : "Sil"}</span>
             </div>
 
             {detail.items.map((item) => (
@@ -216,6 +231,7 @@ export function PackageDetail({
                 item={item}
                 onRemoveItem={onRemoveItem}
                 isRemoving={removingItemId === item.id}
+                readOnly={readOnly}
               />
             ))}
           </div>
@@ -229,10 +245,12 @@ function PackageItemRow({
   item,
   onRemoveItem,
   isRemoving,
+  readOnly = false,
 }: {
   item: PackageItem;
   onRemoveItem: (itemId: number) => void;
   isRemoving: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <article className="grid grid-cols-1 md:grid-cols-[42px_74px_minmax(0,1fr)_44px_96px_96px_44px] gap-2 border-b border-slate-100 bg-white px-3 py-4 text-xs last:border-b-0">
@@ -273,15 +291,17 @@ function PackageItemRow({
       </div>
 
       <div className="flex items-center justify-end">
-        <button
-          type="button"
-          title="Kaldır"
-          onClick={() => onRemoveItem(item.id)}
-          disabled={isRemoving}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-60"
-        >
-          {isRemoving ? "…" : "×"}
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            title="Kaldır"
+            onClick={() => onRemoveItem(item.id)}
+            disabled={isRemoving}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+          >
+            {isRemoving ? "…" : "×"}
+          </button>
+        )}
       </div>
     </article>
   );
@@ -374,6 +394,7 @@ function ChecklistSection({
   onAdd,
   items,
   emptyText,
+  readOnly = false,
 }: {
   title: string;
   description: string;
@@ -381,6 +402,7 @@ function ChecklistSection({
   onAdd: () => void;
   items: Array<{ id: number; title: string }>;
   emptyText: string;
+  readOnly?: boolean;
 }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -390,13 +412,15 @@ function ChecklistSection({
           <p className="mt-1 text-sm text-slate-500">{description}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={onAdd}
-          className="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 sm:w-auto w-full"
-        >
-          {buttonLabel}
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 sm:w-auto w-full"
+          >
+            {buttonLabel}
+          </button>
+        )}
       </div>
 
       {items.length === 0 ? (

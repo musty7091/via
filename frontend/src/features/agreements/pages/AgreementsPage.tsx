@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ViaPageShell } from "../../../components/layout/ViaPageShell";
+import { ReadOnlyBanner } from "../../../components/ReadOnlyBanner";
 import { openOfferPrintWindow } from "../../offers/components/offerPrint";
 import {
   fetchAgreementCustomers,
@@ -21,6 +22,7 @@ import type {
 type AgreementsPageProps = {
   onBackToDashboard: () => void;
   onOpenEvents: () => void;
+  readOnly?: boolean;
 };
 
 const PAGE_SIZE = 5;
@@ -29,6 +31,7 @@ const REQUEST_LIMIT = PAGE_SIZE + 1;
 export function AgreementsPage({
   onBackToDashboard,
   onOpenEvents,
+  readOnly = false,
 }: AgreementsPageProps) {
   const [agreements, setAgreements] = useState<AgreementListItem[]>([]);
   const [selectedAgreementId, setSelectedAgreementId] = useState<number | null>(
@@ -191,6 +194,7 @@ export function AgreementsPage({
       backLabel={selectedAgreementId ? "Anlaşma Listesine Dön" : "Geri Dön"}
     >
       <div className="space-y-5">
+        {readOnly ? <ReadOnlyBanner /> : null}
         <section className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm">
           <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
             <input

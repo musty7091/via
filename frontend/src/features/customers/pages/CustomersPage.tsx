@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import type { AuthUser } from "../../../types/auth";
 import MainLayout from "../../../components/MainLayout";
+import { ReadOnlyBanner } from "../../../components/ReadOnlyBanner";
 import {
   createCustomer,
   createCustomerContact,
@@ -34,6 +35,7 @@ type CustomersPageProps = {
   onBackToDashboard: () => void;
   user?: AuthUser;
   onLogout?: () => void;
+  readOnly?: boolean;
 };
 
 const PAGE_SIZE = 6;
@@ -43,6 +45,7 @@ export function CustomersPage({
   onBackToDashboard,
   user,
   onLogout,
+  readOnly = false,
 }: CustomersPageProps) {
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [customerSummaries, setCustomerSummaries] = useState<
@@ -318,11 +321,14 @@ export function CustomersPage({
               <button
                 type="button"
                 onClick={() => setShowCreatePanel(true)}
-                className="rounded-full bg-slate-900 px-6 py-2.5 text-sm font-normal text-white shadow-sm transition hover:bg-slate-800 shrink-0"
+                className={`rounded-full bg-slate-900 px-6 py-2.5 text-sm font-normal text-white shadow-sm transition hover:bg-slate-800 shrink-0 ${
+                  readOnly ? "hidden" : ""
+                }`}
               >
                 Yeni Müşteri
               </button>
             </div>
+            {readOnly ? <ReadOnlyBanner /> : null}
           </div>
 
           {errorMessage ? (
