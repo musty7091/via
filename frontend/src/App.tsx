@@ -216,7 +216,6 @@ function App() {
       />
     );
   }
-  
 
   const operationsReadOnly = currentUser
     ? isOperationsReadOnly(currentUser.role)
@@ -384,7 +383,7 @@ function App() {
                   description="Sanatçı tanıtımları, program seçenekleri ve etkinlik hizmetleri halka açık vitrin alanında sunulur."
                   icon="✦"
                   tone="light"
-                  actionLabel="Etkinlikleri keşfet"
+                  actionLabel="Vitrine gir"
                   onClick={() => navigate("showcase")}
                 />
 
