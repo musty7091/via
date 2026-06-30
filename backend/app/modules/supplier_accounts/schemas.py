@@ -1,6 +1,7 @@
 from datetime import date
 
 from pydantic import BaseModel
+from app.utils.money import Money, OptMoney
 
 
 class SupplierAccountStatementLine(BaseModel):
@@ -21,11 +22,11 @@ class SupplierAccountStatementLine(BaseModel):
     title: str
     description: str | None = None
 
-    debit_base_amount: float
-    credit_base_amount: float
-    balance_base_amount: float
+    debit_base_amount: Money
+    credit_base_amount: Money
+    balance_base_amount: Money
 
-    source_amount: float
+    source_amount: Money
     source_currency: str
     exchange_rate: float
 
@@ -42,9 +43,9 @@ class SupplierAccountStatementSummary(BaseModel):
     supplier_id: int
     supplier_name: str
 
-    total_debit_base_amount: float
-    total_credit_base_amount: float
-    balance_base_amount: float
+    total_debit_base_amount: Money
+    total_credit_base_amount: Money
+    balance_base_amount: Money
 
     open_payable_count: int
     partial_payable_count: int
@@ -63,9 +64,9 @@ class SupplierAccountBalanceItem(BaseModel):
     supplier_name: str
     is_active: bool
 
-    total_debit_base_amount: float
-    total_credit_base_amount: float
-    balance_base_amount: float
+    total_debit_base_amount: Money
+    total_credit_base_amount: Money
+    balance_base_amount: Money
 
     payable_count: int
     payment_count: int
@@ -80,9 +81,9 @@ class SupplierAccountBalanceItem(BaseModel):
 class SupplierAccountBalancesSummary(BaseModel):
     kind: str
     total_supplier_count: int
-    total_debit_base_amount: float
-    total_credit_base_amount: float
-    total_balance_base_amount: float
+    total_debit_base_amount: Money
+    total_credit_base_amount: Money
+    total_balance_base_amount: Money
     positive_balance_supplier_count: int
     zero_balance_supplier_count: int
     negative_balance_supplier_count: int

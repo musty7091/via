@@ -1,6 +1,8 @@
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, Field
+from decimal import Decimal
+from app.utils.money import Money, OptMoney
 
 
 class OfferCreate(BaseModel):
@@ -14,7 +16,7 @@ class OfferCreate(BaseModel):
     invoice_type: str = "without_invoice"
     vat_rate: float = Field(default=0, ge=0)
     currency: str = "TRY"
-    advance_payment_amount: float = Field(default=0, ge=0)
+    advance_payment_amount: Money = Field(default=Decimal("0"), ge=0)
     advance_payment_currency: str = "TRY"
     payment_terms: str | None = None
     customer_visible_notes: str | None = None
@@ -33,7 +35,7 @@ class OfferUpdate(BaseModel):
     invoice_type: str | None = None
     vat_rate: float | None = Field(default=None, ge=0)
     currency: str | None = None
-    advance_payment_amount: float | None = Field(default=None, ge=0)
+    advance_payment_amount: OptMoney = Field(default=None, ge=0)
     advance_payment_currency: str | None = None
     payment_terms: str | None = None
     customer_visible_notes: str | None = None
@@ -51,9 +53,9 @@ class OfferItemCreate(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     quantity: float = Field(default=1, gt=0)
-    unit_price: float = Field(default=0, ge=0)
+    unit_price: Money = Field(default=Decimal("0"), ge=0)
     currency: str = "TRY"
-    internal_unit_cost: float = Field(default=0, ge=0)
+    internal_unit_cost: Money = Field(default=Decimal("0"), ge=0)
     internal_cost_currency: str = "TRY"
     is_visible_on_offer: bool = True
     sort_order: int = 0
@@ -66,9 +68,9 @@ class OfferItemUpdate(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     quantity: float | None = Field(default=None, gt=0)
-    unit_price: float | None = Field(default=None, ge=0)
+    unit_price: OptMoney = Field(default=None, ge=0)
     currency: str | None = None
-    internal_unit_cost: float | None = Field(default=None, ge=0)
+    internal_unit_cost: OptMoney = Field(default=None, ge=0)
     internal_cost_currency: str | None = None
     is_visible_on_offer: bool | None = None
     sort_order: int | None = None
@@ -88,11 +90,11 @@ class OfferRead(BaseModel):
     valid_until: date | None = None
     invoice_type: str
     vat_rate: float
-    amount: float
+    amount: Money
     currency: str
-    vat_amount: float
-    total_amount: float
-    advance_payment_amount: float
+    vat_amount: Money
+    total_amount: Money
+    advance_payment_amount: Money
     advance_payment_currency: str
     payment_terms: str | None = None
     customer_visible_notes: str | None = None
@@ -119,9 +121,9 @@ class OfferItemRead(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     quantity: float
-    unit_price: float
+    unit_price: Money
     currency: str
-    base_amount: float
+    base_amount: Money
     is_visible_on_offer: bool
     is_active: bool
     sort_order: int
@@ -134,24 +136,24 @@ class OfferItemRead(BaseModel):
 
 
 class OfferInternalItemRead(OfferItemRead):
-    internal_unit_cost: float
+    internal_unit_cost: Money
     internal_cost_currency: str
-    internal_total_cost: float
-    internal_profit: float
+    internal_total_cost: Money
+    internal_profit: Money
 
 
 class OfferSummary(BaseModel):
     currency: str
-    visible_amount: float
-    vat_amount: float
-    total_amount: float
+    visible_amount: Money
+    vat_amount: Money
+    total_amount: Money
 
 
 class OfferInternalSummary(BaseModel):
     currency: str
-    revenue_amount: float
-    cost_amount: float
-    gross_profit_amount: float
+    revenue_amount: Money
+    cost_amount: Money
+    gross_profit_amount: Money
 
 
 class OfferDetail(BaseModel):
@@ -169,9 +171,9 @@ class OfferPrintLine(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     quantity: float
-    unit_price: float
+    unit_price: Money
     currency: str
-    line_amount: float
+    line_amount: Money
     show_pricing: bool = True
 
 
@@ -187,7 +189,7 @@ class OfferPrintView(BaseModel):
     vat_rate: float
     customer_visible_notes: str | None = None
     payment_terms: str | None = None
-    advance_payment_amount: float
+    advance_payment_amount: Money
     advance_payment_currency: str
     lines: list[OfferPrintLine]
     summaries: list[OfferSummary]

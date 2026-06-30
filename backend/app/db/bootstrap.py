@@ -9,6 +9,8 @@ mevcut veriler korunur.
 Canlı ortamda (Render vb.) uygulama başlarken otomatik çağrılır.
 """
 
+from pathlib import Path
+
 from sqlalchemy import text
 
 from app.db.database import SessionLocal, engine
@@ -19,6 +21,44 @@ from app.db.init_db import (
     seed_default_partners,
     seed_system_settings,
 )
+
+
+def apply_migrations() -> None:
+    """Alembic migration'larını güvenli şekilde uygular (auto-adopt).
+
+    - Veritabanında henüz Alembic sürümü yoksa: şema zaten create_all ile
+      kurulduğu için Alembic'i mevcut başa (head) SABİTLER (stamp). Böylece
+      create_all ile kurulu mevcut/yeni veritabanları bozulmadan benimsenir.
+    - Sürüm varsa: bekleyen migration'ları UYGULAR (upgrade head). Yani
+      sonradan eklenen sütun/tablo değişiklikleri otomatik işlenir.
+    """
+    try:
+        from alembic import command
+        from alembic.config import Config
+        from alembic.runtime.migration import MigrationContext
+    except Exception:
+        # Alembic kurulu değilse sessizce geç (yerel hızlı başlatma)
+        return
+
+    backend_root = Path(__file__).resolve().parents[2]
+    ini_path = backend_root / "alembic.ini"
+    if not ini_path.exists():
+        return
+
+    cfg = Config(str(ini_path))
+    cfg.set_main_option("script_location", str(backend_root / "alembic"))
+
+    with engine.connect() as conn:
+        current = MigrationContext.configure(conn).get_current_revision()
+
+    if current is None:
+        # Şema create_all ile kurulu; Alembic'i başa sabitle (migration'ları çalıştırma)
+        command.stamp(cfg, "head")
+        print("[bootstrap] Alembic mevcut şemaya sabitlendi (stamp head).")
+    else:
+        # Bekleyen migration'ları uygula
+        command.upgrade(cfg, "head")
+        print("[bootstrap] Alembic migration'ları uygulandı (upgrade head).")
 
 
 # Performans index'leri.
@@ -68,8 +108,11 @@ def ensure_performance_indexes() -> None:
 
 
 def bootstrap() -> None:
-    # Tabloları SİLMEDEN oluştur (varsa atlar)
+    # Tabloları SİLMEDEN oluştur (varsa atlar) — taban şema / hızlı başlangıç
     Base.metadata.create_all(bind=engine)
+
+    # Alembic migration'larını uygula/benimse (versiyonlu şema yönetimi)
+    apply_migrations()
 
     # Performans index'lerini garanti et (mevcut DB'ye de uygulanır)
     ensure_performance_indexes()

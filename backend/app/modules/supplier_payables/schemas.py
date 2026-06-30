@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field, model_validator
+from app.utils.money import Money, OptMoney
 
 
 class SupplierPayableCreate(BaseModel):
@@ -10,7 +11,7 @@ class SupplierPayableCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     due_date: date | None = None
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
     currency: str = Field(default="TRY", min_length=2, max_length=10)
     exchange_rate: float = Field(default=1, gt=0)
     notes: str | None = None
@@ -37,12 +38,12 @@ class SupplierPayableRead(BaseModel):
     description: str | None = None
     due_date: date | None = None
 
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
-    paid_base_amount: float
-    remaining_base_amount: float
+    base_amount: Money
+    paid_base_amount: Money
+    remaining_base_amount: Money
 
     status: str
     is_carried_forward: bool
@@ -64,7 +65,7 @@ class SupplierPaymentCreate(BaseModel):
     paid_by_partner_id: int | None = None
     cash_account_id: int | None = None
     payment_date: date
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
     currency: str = Field(default="TRY", min_length=2, max_length=10)
     exchange_rate: float = Field(default=1, gt=0)
     payment_method: str = Field(default="cash", min_length=2, max_length=50)
@@ -95,10 +96,10 @@ class SupplierPaymentRead(BaseModel):
     cash_account_id: int | None = None
 
     payment_date: date
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
+    base_amount: Money
 
     payment_method: str
     document_no: str | None = None
@@ -116,9 +117,9 @@ class SupplierPaymentRead(BaseModel):
 
 class SupplierPayablesSummary(BaseModel):
     event_id: int
-    total_payable_base_amount: float
-    total_paid_base_amount: float
-    total_remaining_base_amount: float
+    total_payable_base_amount: Money
+    total_paid_base_amount: Money
+    total_remaining_base_amount: Money
     open_payable_count: int
     partial_payable_count: int
     paid_payable_count: int

@@ -1,6 +1,7 @@
 from datetime import date
 
 from pydantic import BaseModel
+from app.utils.money import Money, OptMoney
 
 
 class PartnerAccountStatementLine(BaseModel):
@@ -22,15 +23,15 @@ class PartnerAccountStatementLine(BaseModel):
     title: str
     description: str | None = None
 
-    company_receivable_debit_base_amount: float
-    company_receivable_credit_base_amount: float
-    company_payable_debit_base_amount: float
-    company_payable_credit_base_amount: float
+    company_receivable_debit_base_amount: Money
+    company_receivable_credit_base_amount: Money
+    company_payable_debit_base_amount: Money
+    company_payable_credit_base_amount: Money
 
-    net_balance_base_amount: float
+    net_balance_base_amount: Money
     balance_direction: str
 
-    source_amount: float
+    source_amount: Money
     source_currency: str
     exchange_rate: float
 
@@ -43,15 +44,15 @@ class PartnerAccountStatementSummary(BaseModel):
     partner_id: int
     partner_name: str
 
-    total_company_receivable_debit_base_amount: float
-    total_company_receivable_credit_base_amount: float
-    company_receivable_balance_base_amount: float
+    total_company_receivable_debit_base_amount: Money
+    total_company_receivable_credit_base_amount: Money
+    company_receivable_balance_base_amount: Money
 
-    total_company_payable_credit_base_amount: float
-    total_company_payable_debit_base_amount: float
-    company_payable_balance_base_amount: float
+    total_company_payable_credit_base_amount: Money
+    total_company_payable_debit_base_amount: Money
+    company_payable_balance_base_amount: Money
 
-    net_balance_base_amount: float
+    net_balance_base_amount: Money
     balance_direction: str
 
     line_count: int
@@ -67,9 +68,9 @@ class PartnerAccountBalanceItem(BaseModel):
     partner_name: str
     is_active: bool
 
-    company_receivable_balance_base_amount: float
-    company_payable_balance_base_amount: float
-    net_balance_base_amount: float
+    company_receivable_balance_base_amount: Money
+    company_payable_balance_base_amount: Money
+    net_balance_base_amount: Money
     balance_direction: str
 
     movement_count: int
@@ -80,9 +81,9 @@ class PartnerAccountBalanceItem(BaseModel):
 class PartnerAccountBalancesSummary(BaseModel):
     total_partner_count: int
 
-    total_company_receivable_balance_base_amount: float
-    total_company_payable_balance_base_amount: float
-    total_net_balance_base_amount: float
+    total_company_receivable_balance_base_amount: Money
+    total_company_payable_balance_base_amount: Money
+    total_net_balance_base_amount: Money
 
     partner_owes_company_count: int
     company_owes_partner_count: int

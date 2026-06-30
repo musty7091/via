@@ -1,11 +1,12 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
+from app.utils.money import Money, OptMoney
 
 
 class CarryForwardSettlementRequest(BaseModel):
     settlement_date: date
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
 
     cash_account_id: int | None = None
     payment_method: str = Field(default="cash", max_length=50)
@@ -26,8 +27,8 @@ class CarryForwardSettlementResponse(BaseModel):
     artist_id: int | None = None
     service_item_id: int | None = None
 
-    settled_base_amount: float
-    remaining_base_amount: float
+    settled_base_amount: Money
+    remaining_base_amount: Money
 
     settlement_date: date
     movement_ids: list[int]
@@ -52,11 +53,11 @@ class CarryForwardItemDetail(BaseModel):
     source_reference_type: str | None = None
     source_reference_id: int | None = None
 
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
-    remaining_base_amount: float
+    base_amount: Money
+    remaining_base_amount: Money
 
     carry_reason: str
     approval_note: str | None = None

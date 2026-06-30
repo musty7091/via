@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
+from app.utils.money import Money, OptMoney
 
 
 class ExpenseCreate(BaseModel):
@@ -8,7 +9,7 @@ class ExpenseCreate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
 
     expense_date: date
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
     currency: str = Field(default="TRY", max_length=10)
     exchange_rate: float = Field(default=1, gt=0)
 
@@ -39,10 +40,10 @@ class ExpenseRead(BaseModel):
     description: str | None = None
     expense_date: date
 
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
+    base_amount: Money
 
     is_allocated: bool
     allocation_start_month: str | None = None
@@ -66,7 +67,7 @@ class ExpenseAllocationRead(BaseModel):
     expense_id: int
     expense_title: str | None = None
     period_month: str
-    allocated_base_amount: float
+    allocated_base_amount: Money
     notes: str | None = None
 
     model_config = {
@@ -85,8 +86,8 @@ class ExpenseCancelRequest(BaseModel):
 
 class PeriodExpenseSummary(BaseModel):
     period_month: str
-    direct_general_expense_base_amount: float
-    allocated_expense_base_amount: float
-    total_period_expense_base_amount: float
+    direct_general_expense_base_amount: Money
+    allocated_expense_base_amount: Money
+    total_period_expense_base_amount: Money
     allocation_count: int
     direct_expense_count: int

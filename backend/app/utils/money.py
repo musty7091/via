@@ -20,7 +20,9 @@ kadar Decimal ile doğru hesaplandığı için float gösterimi kuruşuna kadar 
 from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
-from typing import Iterable
+from typing import Annotated, Iterable, Optional
+
+from pydantic import BeforeValidator, PlainSerializer
 
 # Veritabanı para ölçeği: Numeric(18, 4)
 MONEY_QUANT = Decimal("0.0001")
@@ -93,3 +95,33 @@ def is_zero(value: object, tolerance: Decimal = MONEY_QUANT) -> bool:
 def is_positive(value: object, tolerance: Decimal = MONEY_QUANT) -> bool:
     """Tutar anlamlı şekilde pozitif mi?"""
     return D(value) > tolerance
+
+
+# --- Pydantic için para tipi -------------------------------------------------
+# Para alanları içeride Decimal taşır (kayıpsız), JSON'a ise SAYI (number) olarak
+# yazılır; böylece ön yüz string değil sayı alır. Girişte float gelse bile str
+# üzerinden Decimal'e çevrilerek binary float artefaktı engellenir.
+
+def _coerce_money(value: object) -> object:
+    if value is None or isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def _money_to_number(value: object):
+    if value is None:
+        return None
+    return float(value)
+
+
+Money = Annotated[
+    Decimal,
+    BeforeValidator(_coerce_money),
+    PlainSerializer(_money_to_number, return_type=float, when_used="json"),
+]
+
+OptMoney = Annotated[
+    Optional[Decimal],
+    BeforeValidator(_coerce_money),
+    PlainSerializer(_money_to_number, return_type=Optional[float], when_used="json"),
+]

@@ -1,12 +1,13 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
+from app.utils.money import Money, OptMoney
 
 
 class PaymentPlanCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     due_date: date
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
     currency: str = Field(default="TRY", min_length=2, max_length=10)
     exchange_rate: float = Field(default=1, gt=0)
     notes: str | None = None
@@ -15,7 +16,7 @@ class PaymentPlanCreate(BaseModel):
 class PaymentPlanUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     due_date: date | None = None
-    amount: float | None = Field(default=None, gt=0)
+    amount: OptMoney = Field(default=None, gt=0)
     currency: str | None = Field(default=None, min_length=2, max_length=10)
     exchange_rate: float | None = Field(default=None, gt=0)
     notes: str | None = None
@@ -26,11 +27,11 @@ class PaymentPlanRead(BaseModel):
     event_id: int
     title: str
     due_date: date
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
-    paid_base_amount: float
+    base_amount: Money
+    paid_base_amount: Money
     status: str
     notes: str | None = None
     created_at: datetime
@@ -45,7 +46,7 @@ class CollectionCreate(BaseModel):
     payment_plan_id: int | None = None
     received_by_partner_id: int | None = None
     collection_date: date
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
     currency: str = Field(default="TRY", min_length=2, max_length=10)
     exchange_rate: float = Field(default=1, gt=0)
     payment_method: str = Field(default="cash", min_length=2, max_length=50)
@@ -73,10 +74,10 @@ class CashTransferRead(BaseModel):
     to_cash_account_id: int
     approved_by_user_id: int | None = None
     transfer_date: date
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
+    base_amount: Money
     transfer_method: str
     document_no: str | None = None
     status: str
@@ -98,10 +99,10 @@ class CollectionRead(BaseModel):
     received_by_user_id: int | None = None
     received_by_partner_id: int | None = None
     collection_date: date
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
+    base_amount: Money
     payment_method: str
     current_location: str
     is_transferred_to_company: bool
@@ -120,13 +121,13 @@ class CollectionRead(BaseModel):
 
 class EventPaymentSummary(BaseModel):
     event_id: int
-    event_total_amount: float
+    event_total_amount: Money
     event_currency: str
-    event_base_total_amount: float
-    planned_base_amount: float
-    collected_base_amount: float
-    remaining_base_amount: float
-    unplanned_base_amount: float
+    event_base_total_amount: Money
+    planned_base_amount: Money
+    collected_base_amount: Money
+    remaining_base_amount: Money
+    unplanned_base_amount: Money
 
 
 class EventPaymentsDetail(BaseModel):

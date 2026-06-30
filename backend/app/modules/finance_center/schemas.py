@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel
+from app.utils.money import Money, OptMoney
 
 
 class FinancialMovementRead(BaseModel):
@@ -24,10 +25,10 @@ class FinancialMovementRead(BaseModel):
     account_area: str
     direction: str
 
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
+    base_amount: Money
 
     customer_effect: str
     cash_effect: str
@@ -63,13 +64,13 @@ class FinancialMovementListResponse(BaseModel):
 
 class FinancialMovementSummaryResponse(BaseModel):
     total_count: int
-    total_in_base_amount: float
-    total_out_base_amount: float
-    net_base_amount: float
-    company_cash_in_base_amount: float
-    company_cash_out_base_amount: float
-    partner_cash_in_base_amount: float
-    partner_cash_out_base_amount: float
+    total_in_base_amount: Money
+    total_out_base_amount: Money
+    net_base_amount: Money
+    company_cash_in_base_amount: Money
+    company_cash_out_base_amount: Money
+    partner_cash_in_base_amount: Money
+    partner_cash_out_base_amount: Money
 
 class CashAccountRead(BaseModel):
     id: int

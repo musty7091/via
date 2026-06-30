@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel
+from app.utils.money import Money, OptMoney
 
 
 class EventStatusUpdate(BaseModel):
@@ -21,10 +22,10 @@ class EventRead(BaseModel):
     status: str
     invoice_type: str
     vat_rate: float
-    agreement_amount: float
+    agreement_amount: Money
     agreement_currency: str
-    vat_amount: float
-    total_customer_amount: float
+    vat_amount: Money
+    total_customer_amount: Money
     notes: str | None = None
     is_period_closed: bool
     created_at: datetime
@@ -42,13 +43,13 @@ class EventItemRead(BaseModel):
     artist_id: int | None = None
     service_item_id: int | None = None
     description: str | None = None
-    sale_amount: float
+    sale_amount: Money
     sale_currency: str
-    cost_amount: float
+    cost_amount: Money
     cost_currency: str
     exchange_rate: float
-    base_sale_amount: float
-    base_cost_amount: float
+    base_sale_amount: Money
+    base_cost_amount: Money
     sort_order: int
     created_at: datetime
     updated_at: datetime | None = None

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field
+from app.utils.money import Money, OptMoney
 
 
 class FinancialClosureChecklistItem(BaseModel):
@@ -22,24 +23,24 @@ class EventFinancialClosureChecklistResponse(BaseModel):
     blocking_issue_count: int
     warning_count: int
 
-    agreement_base_amount: float
-    planned_base_amount: float
-    period_collected_base_amount: float
-    carried_customer_collection_base_amount: float
-    collected_base_amount: float
-    remaining_customer_receivable_base_amount: float
+    agreement_base_amount: Money
+    planned_base_amount: Money
+    period_collected_base_amount: Money
+    carried_customer_collection_base_amount: Money
+    collected_base_amount: Money
+    remaining_customer_receivable_base_amount: Money
 
-    total_event_cost_base_amount: float
-    total_expense_base_amount: float
-    remaining_supplier_payable_base_amount: float
+    total_event_cost_base_amount: Money
+    total_expense_base_amount: Money
+    remaining_supplier_payable_base_amount: Money
 
-    partner_cash_on_hand_base_amount: float
-    company_receivable_from_partner_base_amount: float
-    company_payable_to_partner_base_amount: float
+    partner_cash_on_hand_base_amount: Money
+    company_receivable_from_partner_base_amount: Money
+    company_payable_to_partner_base_amount: Money
 
-    operational_profit_base_amount: float
-    distributable_profit_base_amount: float
-    partner_share_base_amount: float
+    operational_profit_base_amount: Money
+    distributable_profit_base_amount: Money
+    partner_share_base_amount: Money
 
     is_agreement_confirmed: bool
     is_payment_plan_matched: bool
@@ -74,22 +75,22 @@ class EventFinancialClosureRead(BaseModel):
     closure_version: int
     status: str
 
-    agreement_base_amount: float
-    planned_base_amount: float
-    collected_base_amount: float
-    remaining_customer_receivable_base_amount: float
+    agreement_base_amount: Money
+    planned_base_amount: Money
+    collected_base_amount: Money
+    remaining_customer_receivable_base_amount: Money
 
-    total_event_cost_base_amount: float
-    total_expense_base_amount: float
-    remaining_supplier_payable_base_amount: float
+    total_event_cost_base_amount: Money
+    total_expense_base_amount: Money
+    remaining_supplier_payable_base_amount: Money
 
-    partner_cash_on_hand_base_amount: float
-    company_receivable_from_partner_base_amount: float
-    company_payable_to_partner_base_amount: float
+    partner_cash_on_hand_base_amount: Money
+    company_receivable_from_partner_base_amount: Money
+    company_payable_to_partner_base_amount: Money
 
-    operational_profit_base_amount: float
-    distributable_profit_base_amount: float
-    partner_share_base_amount: float
+    operational_profit_base_amount: Money
+    distributable_profit_base_amount: Money
+    partner_share_base_amount: Money
 
     is_agreement_confirmed: bool
     is_payment_plan_matched: bool

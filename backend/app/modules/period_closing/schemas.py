@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
+from app.utils.money import Money, OptMoney
 
 
 class PeriodClosingPreviewItem(BaseModel):
@@ -12,11 +13,11 @@ class PeriodClosingPreviewItem(BaseModel):
     service_item_id: int | None = None
     source_reference_type: str | None = None
     source_reference_id: int | None = None
-    amount: float
+    amount: Money
     currency: str = "TRY"
     exchange_rate: float = 1
-    base_amount: float
-    remaining_base_amount: float
+    base_amount: Money
+    remaining_base_amount: Money
     carry_reason: str
 
 
@@ -29,17 +30,17 @@ class PeriodClosingPreviewSummary(BaseModel):
     event_count: int
     open_event_count: int
 
-    total_revenue_base_amount: float
-    total_event_cost_base_amount: float
-    total_event_expense_base_amount: float
-    total_general_expense_base_amount: float
-    total_allocated_expense_base_amount: float
-    net_profit_base_amount: float
+    total_revenue_base_amount: Money
+    total_event_cost_base_amount: Money
+    total_event_expense_base_amount: Money
+    total_general_expense_base_amount: Money
+    total_allocated_expense_base_amount: Money
+    net_profit_base_amount: Money
 
-    customer_receivable_base_amount: float
-    supplier_payable_base_amount: float
-    partner_cash_on_hand_base_amount: float
-    company_payable_to_partner_base_amount: float
+    customer_receivable_base_amount: Money
+    supplier_payable_base_amount: Money
+    partner_cash_on_hand_base_amount: Money
+    company_payable_to_partner_base_amount: Money
 
     carry_forward_count: int
     blocking_issue_count: int
@@ -54,7 +55,7 @@ class PeriodClosingEventPartnerShare(BaseModel):
     partner_id: int
     partner_name: str
     ownership_percent: float
-    profit_share_base_amount: float
+    profit_share_base_amount: Money
 
 
 class PeriodClosingEventSummary(BaseModel):
@@ -69,15 +70,15 @@ class PeriodClosingEventSummary(BaseModel):
     is_financially_approved: bool
     event_notes: str | None = None
 
-    agreement_base_amount: float
-    planned_base_amount: float
-    collected_base_amount: float
-    remaining_customer_receivable_base_amount: float
+    agreement_base_amount: Money
+    planned_base_amount: Money
+    collected_base_amount: Money
+    remaining_customer_receivable_base_amount: Money
 
-    supplier_payable_base_amount: float
-    remaining_supplier_payable_base_amount: float
-    event_expense_base_amount: float
-    operational_profit_base_amount: float
+    supplier_payable_base_amount: Money
+    remaining_supplier_payable_base_amount: Money
+    event_expense_base_amount: Money
+    operational_profit_base_amount: Money
 
     carry_forward_labels: list[str]
     partner_profit_shares: list[PeriodClosingEventPartnerShare]
@@ -88,11 +89,11 @@ class PeriodClosingPartnerSummary(BaseModel):
     partner_name: str
     ownership_percent: float
 
-    profit_share_base_amount: float
-    partner_cash_on_hand_base_amount: float
-    company_payable_to_partner_base_amount: float
+    profit_share_base_amount: Money
+    partner_cash_on_hand_base_amount: Money
+    company_payable_to_partner_base_amount: Money
 
-    net_company_payable_to_partner_base_amount: float
+    net_company_payable_to_partner_base_amount: Money
     balance_direction: str
 
 
@@ -128,12 +129,12 @@ class PeriodCloseResponse(BaseModel):
     event_count: int
     open_event_count: int
 
-    total_revenue_base_amount: float
-    total_event_cost_base_amount: float
-    total_event_expense_base_amount: float
-    total_general_expense_base_amount: float
-    total_allocated_expense_base_amount: float
-    net_profit_base_amount: float
+    total_revenue_base_amount: Money
+    total_event_cost_base_amount: Money
+    total_event_expense_base_amount: Money
+    total_general_expense_base_amount: Money
+    total_allocated_expense_base_amount: Money
+    net_profit_base_amount: Money
 
     message: str
 
@@ -158,11 +159,11 @@ class CarryForwardItemRead(BaseModel):
     source_reference_type: str | None = None
     source_reference_id: int | None = None
 
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
-    remaining_base_amount: float
+    base_amount: Money
+    remaining_base_amount: Money
 
     carry_reason: str
     approval_note: str | None = None
