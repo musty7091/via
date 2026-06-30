@@ -40,25 +40,30 @@ def apply_migrations() -> None:
         # Alembic kurulu değilse sessizce geç (yerel hızlı başlatma)
         return
 
-    backend_root = Path(__file__).resolve().parents[2]
-    ini_path = backend_root / "alembic.ini"
-    if not ini_path.exists():
-        return
+    try:
+        backend_root = Path(__file__).resolve().parents[2]
+        ini_path = backend_root / "alembic.ini"
+        if not ini_path.exists():
+            return
 
-    cfg = Config(str(ini_path))
-    cfg.set_main_option("script_location", str(backend_root / "alembic"))
+        cfg = Config(str(ini_path))
+        cfg.set_main_option("script_location", str(backend_root / "alembic"))
 
-    with engine.connect() as conn:
-        current = MigrationContext.configure(conn).get_current_revision()
+        with engine.connect() as conn:
+            current = MigrationContext.configure(conn).get_current_revision()
 
-    if current is None:
-        # Şema create_all ile kurulu; Alembic'i başa sabitle (migration'ları çalıştırma)
-        command.stamp(cfg, "head")
-        print("[bootstrap] Alembic mevcut şemaya sabitlendi (stamp head).")
-    else:
-        # Bekleyen migration'ları uygula
-        command.upgrade(cfg, "head")
-        print("[bootstrap] Alembic migration'ları uygulandı (upgrade head).")
+        if current is None:
+            # Şema create_all ile kurulu; Alembic'i başa sabitle (migration çalıştırma)
+            command.stamp(cfg, "head")
+            print("[bootstrap] Alembic mevcut şemaya sabitlendi (stamp head).")
+        else:
+            # Bekleyen migration'ları uygula
+            command.upgrade(cfg, "head")
+            print("[bootstrap] Alembic migration'ları uygulandı (upgrade head).")
+    except Exception as exc:
+        # ÖNEMLİ: Migration adımı başlatmayı ASLA engellemez. Şema zaten
+        # create_all ile kuruludur; hata yalnızca loglanır.
+        print(f"[bootstrap] Alembic adımı atlandı (hata): {exc}")
 
 
 # Performans index'leri.
@@ -108,13 +113,16 @@ def ensure_performance_indexes() -> None:
 
 
 def bootstrap() -> None:
-    # Tabloları SİLMEDEN oluştur (varsa atlar) — taban şema / hızlı başlangıç
-    Base.metadata.create_all(bind=engine)
-
-    # Alembic migration'larını uygula/benimse (versiyonlu şema yönetimi)
+    # 1) Alembic migration'larını ÖNCE uygula/benimse.
+    #    Böylece yeni tabloları (henüz yokken) migration oluşturur; ardından
+    #    create_all yalnızca eksik kalanı tamamlar (var olanı atlar). Bu sıra,
+    #    "tablo zaten var" çakışmasını önler.
     apply_migrations()
 
-    # Performans index'lerini garanti et (mevcut DB'ye de uygulanır)
+    # 2) Tabloları SİLMEDEN oluştur (varsa atlar) — taban şema / güvenlik ağı
+    Base.metadata.create_all(bind=engine)
+
+    # 3) Performans index'lerini garanti et (mevcut DB'ye de uygulanır)
     ensure_performance_indexes()
 
     db = SessionLocal()
