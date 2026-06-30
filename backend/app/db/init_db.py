@@ -36,6 +36,7 @@ from app.models import (  # noqa: F401
     PartnerAccountMovement,
     PaymentPlan,
     ServiceItem,
+    ShowcaseArtist,
     ServicePackage,
     ServicePackageItem,
     SystemSetting,

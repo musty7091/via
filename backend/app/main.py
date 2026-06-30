@@ -9,6 +9,8 @@ from starlette.requests import Request
 from app.api.api_router import api_router
 from app.core.config import settings
 from app.modules.partners.router import router as partners_router
+from app.modules.showcase.router import admin_router as showcase_admin_router
+from app.modules.showcase.router import public_router as showcase_public_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -41,6 +43,9 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(partners_router, prefix="/api/v1")
+# Vitrin: public (giriş yok) + admin (super_admin) — bağımsız alan
+app.include_router(showcase_public_router, prefix="/api/v1")
+app.include_router(showcase_admin_router, prefix="/api/v1")
 
 
 # --- Derlenmiş frontend'i (React) servis et ----------------------------------

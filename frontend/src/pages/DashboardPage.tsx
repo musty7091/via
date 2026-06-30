@@ -14,6 +14,7 @@ type DashboardPageProps = {
   onOpenPartners: () => void;
   onOpenFinanceCenter: () => void;
   onOpenUsers: () => void;
+  onOpenShowcaseAdmin?: () => void;
   canAccessFinance: boolean;
   canManageUsers: boolean;
   onOpenExpenses?: () => void;
@@ -93,6 +94,7 @@ export function DashboardPage({
   onOpenRiderControl,
   onOpenFinanceCenter,
   onOpenUsers,
+  onOpenShowcaseAdmin,
   canAccessFinance,
   canManageUsers,
 }: DashboardPageProps) {
@@ -254,6 +256,26 @@ export function DashboardPage({
                   </p>
                   <p className="mt-auto pt-5 text-sm font-bold text-slate-700">
                     Kullanıcıları yönet →
+                  </p>
+                </button>
+              ) : null}
+
+              {canManageUsers ? (
+                <button
+                  onClick={onOpenShowcaseAdmin}
+                  className="group flex flex-col rounded-3xl border border-slate-200 bg-slate-50 p-6 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-500 text-sm font-bold text-white">
+                    ✦
+                  </span>
+                  <h4 className="mt-4 text-lg font-bold text-slate-900">
+                    Vitrin Yönetimi
+                  </h4>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Halka açık vitrinde gösterilen sanatçıları ekle ve düzenle.
+                  </p>
+                  <p className="mt-auto pt-5 text-sm font-bold text-slate-700">
+                    Vitrini yönet →
                   </p>
                 </button>
               ) : null}

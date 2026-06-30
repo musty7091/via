@@ -14,6 +14,7 @@ from app.models.service_package import ServicePackage, ServicePackageItem
 from app.models.system import AuditLog, CurrencyRate, Document, SystemSetting
 from app.models.user import User, UserRole
 from app.models.venue import Venue
+from app.models.showcase import ShowcaseArtist
 
 __all__ = [
     "Artist",
@@ -54,4 +55,5 @@ __all__ = [
     "User",
     "UserRole",
     "Venue",
+    "ShowcaseArtist",
 ]

@@ -10,6 +10,8 @@ import { PartnersPage } from "./features/partners/pages/PartnersPage";
 import { FinanceCenterPage } from "./features/financeCenter/pages/FinanceCenterPage";
 import { ExpensesPage } from "./features/expenses/pages/ExpensesPage";
 import { RiderControlPage } from "./features/riderControl/pages/RiderControlPage";
+import ShowcasePage from "./features/showcase/ShowcasePage";
+import ShowcaseAdminPage from "./features/showcase/ShowcaseAdminPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import {
   canAccessFinance,
@@ -33,7 +35,9 @@ type AppScreen =
   | "finance"
   | "expenses"
   | "rider"
-  | "users";
+  | "users"
+  | "showcase"
+  | "showcaseAdmin";
 
 const protectedScreens = new Set<AppScreen>([
   "dashboard",
@@ -47,6 +51,7 @@ const protectedScreens = new Set<AppScreen>([
   "expenses",
   "rider",
   "users",
+  "showcaseAdmin",
 ]);
 
 function isAppScreen(value: unknown): value is AppScreen {
@@ -63,7 +68,9 @@ function isAppScreen(value: unknown): value is AppScreen {
     value === "finance" ||
     value === "expenses" ||
     value === "rider" ||
-    value === "users"
+    value === "users" ||
+    value === "showcase" ||
+    value === "showcaseAdmin"
   );
 }
 
@@ -184,6 +191,10 @@ function App() {
     );
   }
 
+  if (screen === "showcase") {
+    return <ShowcasePage onBack={() => navigate("landing")} />;
+  }
+
   if (screen === "dashboard" && currentUser) {
     return (
       <DashboardPage
@@ -199,6 +210,7 @@ function App() {
         onOpenFinanceCenter={() => navigate("finance")}
         onOpenExpenses={() => navigate("expenses")}
         onOpenUsers={() => navigate("users")}
+        onOpenShowcaseAdmin={() => navigate("showcaseAdmin")}
         canAccessFinance={canAccessFinance(currentUser.role)}
         canManageUsers={canManageUsers(currentUser.role)}
       />
@@ -315,6 +327,20 @@ function App() {
     );
   }
 
+  if (screen === "showcaseAdmin" && currentUser) {
+    if (!canManageUsers(currentUser.role)) {
+      return (
+        <AccessDeniedScreen
+          message="Vitrin yönetimine erişim yetkiniz yok."
+          onBack={() => navigate("dashboard")}
+        />
+      );
+    }
+    return (
+      <ShowcaseAdminPage onBackToDashboard={() => navigate("dashboard")} />
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="relative min-h-screen overflow-hidden">
@@ -358,6 +384,7 @@ function App() {
                   icon="✦"
                   tone="light"
                   actionLabel="Etkinlikleri keşfet"
+                  onClick={() => navigate("showcase")}
                 />
 
                 <LandingCenterCard
