@@ -216,6 +216,7 @@ function App() {
       />
     );
   }
+  
 
   const operationsReadOnly = currentUser
     ? isOperationsReadOnly(currentUser.role)
