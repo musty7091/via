@@ -296,52 +296,30 @@ function DetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/85 p-4 backdrop-blur-sm sm:p-8"
       onClick={onClose}
     >
       <div
-        className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden overflow-y-auto rounded-3xl border border-white/10 bg-slate-900 shadow-2xl"
+        className="relative my-auto w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg text-white backdrop-blur transition hover:bg-black/70"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lg text-white backdrop-blur transition hover:bg-black/80"
           aria-label="Kapat"
         >
           ✕
         </button>
 
-        {/* Medya */}
-        <div className="relative aspect-video w-full bg-slate-950">
-          {artist.video_url ? (
-            <video
-              src={artist.video_url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="h-full w-full object-cover"
-            />
-          ) : artist.image_url ? (
-            <img
-              src={artist.image_url}
-              alt={artist.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-br from-slate-800 to-slate-900" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
-        </div>
-
-        <div className="p-6 sm:p-8">
+        {/* Detay metni — EN ÜSTTE */}
+        <div className="p-6 pr-14 sm:p-8 sm:pr-16">
           <h2 className="text-3xl font-black">{artist.name}</h2>
           {artist.tagline && (
             <p className="mt-2 text-lg text-teal-200">{artist.tagline}</p>
           )}
           {artist.description && (
-            <p className="mt-5 whitespace-pre-line leading-7 text-slate-300">
+            <p className="mt-4 whitespace-pre-line leading-7 text-slate-300">
               {artist.description}
             </p>
           )}
@@ -349,7 +327,7 @@ function DetailsModal({
           {(artist.instagram_url ||
             artist.youtube_url ||
             artist.spotify_url) && (
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               {artist.instagram_url && (
                 <SocialLink href={artist.instagram_url} label="Instagram" />
               )}
@@ -362,6 +340,29 @@ function DetailsModal({
             </div>
           )}
         </div>
+
+        {/* Medya — kırpılmadan, kendi oranında (dikey video tam görünür) */}
+        {(artist.video_url || artist.image_url) && (
+          <div className="flex justify-center bg-black">
+            {artist.video_url ? (
+              <video
+                src={artist.video_url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                className="max-h-[65vh] w-auto max-w-full object-contain"
+              />
+            ) : (
+              <img
+                src={artist.image_url ?? ""}
+                alt={artist.name}
+                className="max-h-[65vh] w-auto max-w-full object-contain"
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
