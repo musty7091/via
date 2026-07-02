@@ -2,15 +2,15 @@
 
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
-
-# Uygulamanın veritabanı adresi (postgres:// -> postgresql:// normalize edilmiş)
-from app.db.database import DATABASE_URL, Base
 
 # Tüm modelleri Base.metadata'ya kaydetmek için init_db'yi import et.
 # (init_db modül seviyesinde tüm model sınıflarını import eder.)
 import app.db.init_db  # noqa: F401
+from alembic import context
+
+# Uygulamanın veritabanı adresi (postgres:// -> postgresql:// normalize edilmiş)
+from app.db.database import DATABASE_URL, Base
 
 config = context.config
 

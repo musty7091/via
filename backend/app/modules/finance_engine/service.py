@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -76,10 +77,10 @@ def create_financial_movement(
     movement_type: str,
     account_area: str,
     direction: str,
-    amount: float,
+    amount: Decimal,
     currency: str,
-    exchange_rate: float,
-    base_amount: float,
+    exchange_rate: Decimal,
+    base_amount: Decimal,
     title: str,
     event_id: int | None = None,
     customer_id: int | None = None,

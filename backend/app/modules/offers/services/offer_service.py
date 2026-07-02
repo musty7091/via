@@ -72,7 +72,7 @@ def _validate_offer_refs(
         )
 
 
-def _line_amount(quantity: float, unit_price: float) -> float:
+def _line_amount(quantity: float, unit_price: Decimal) -> Decimal:
     return money(D(quantity) * D(unit_price))
 
 
