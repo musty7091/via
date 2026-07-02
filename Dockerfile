@@ -37,4 +37,4 @@ COPY --from=frontend /frontend/dist ./app/static
 EXPOSE 8000
 
 # Açılışta veritabanını (silmeden) hazırla, sonra sunucuyu başlat.
-CMD ["sh", "-c", "python -m app.db.bootstrap && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

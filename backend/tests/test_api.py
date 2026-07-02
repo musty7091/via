@@ -108,3 +108,55 @@ def test_sequential_agreements_have_unique_event_codes(client, admin_headers):
     codes = [e["event_code"] for e in events if e.get("event_code")]
     # Hiçbir event_code tekrar etmemeli
     assert len(codes) == len(set(codes)), f"Çakışan event_code'lar: {codes}"
+
+
+def test_closed_period_blocks_new_movements(client):
+    """P0/P1: kapatılmış döneme yeni finansal hareket eklenemez."""
+    from datetime import date
+
+    from fastapi import HTTPException
+
+    from app.db.database import SessionLocal
+    from app.models.period import MonthlyPeriod
+    from app.modules.finance_engine.service import assert_period_open
+
+    db = SessionLocal()
+    try:
+        db.add(MonthlyPeriod(period_month="2026-05", status="closed", is_locked=True))
+        db.commit()
+
+        # Kapalı döneme işlem -> 409
+        blocked = False
+        try:
+            assert_period_open(db, date(2026, 5, 15))
+        except HTTPException as exc:
+            blocked = exc.status_code == 409
+        assert blocked, "Kapalı dönem engellenmedi"
+
+        # Açık ay -> sorun yok (istisna fırlatmamalı)
+        assert_period_open(db, date(2026, 7, 15))
+    finally:
+        db.close()
+
+
+def test_audit_log_records_mutations(client, admin_headers):
+    """P1: değiştirici istekler audit_logs'a yazılır."""
+    from app.db.database import SessionLocal
+    from app.models.system import AuditLog
+
+    client.post(
+        "/api/v1/partners",
+        headers=admin_headers,
+        json={"full_name": "Denetim Testi", "ownership_percent": 5},
+    )
+
+    db = SessionLocal()
+    try:
+        count = (
+            db.query(AuditLog)
+            .filter(AuditLog.action == "POST", AuditLog.table_name == "partners")
+            .count()
+        )
+        assert count >= 1, "Denetim kaydı yazılmadı"
+    finally:
+        db.close()

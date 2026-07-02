@@ -1,14 +1,12 @@
 from datetime import date
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.finance import EventSupplierPayable, EventSupplierPayment, FinancialMovement
 from app.models.payment import CashTransfer, Collection
+from app.models.period import MonthlyPeriod
 from app.utils.money import D, money, rate as rate_q
-
-
-def _to_decimal(value):
-    return D(value)
 
 
 def _period_month(value: date | None) -> str | None:
@@ -16,6 +14,36 @@ def _period_month(value: date | None) -> str | None:
         return None
 
     return value.strftime("%Y-%m")
+
+
+def assert_period_open(db: Session, movement_date: date | None) -> None:
+    """Kapatılmış bir döneme işlem eklenmesini/değiştirilmesini engeller.
+
+    Dönem `status == "closed"` veya `is_locked` ise, o aya tarihli her yeni
+    finansal hareket reddedilir (409). Bu, kapanmış dönemin muhasebe
+    bütünlüğünü korur.
+    """
+    period_month = _period_month(movement_date)
+    if not period_month:
+        return
+
+    period = (
+        db.query(MonthlyPeriod)
+        .filter(MonthlyPeriod.period_month == period_month)
+        .first()
+    )
+    if period is not None and (period.is_locked or period.status == "closed"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"{period_month} dönemi kapatılmıştır; bu döneme yeni işlem "
+                "eklenemez veya mevcut işlemler değiştirilemez."
+            ),
+        )
+
+
+def _to_decimal(value):
+    return D(value)
 
 
 def _movement_exists(
@@ -71,6 +99,9 @@ def create_financial_movement(
     created_by_user_id: int | None = None,
     approved_by_user_id: int | None = None,
 ) -> FinancialMovement:
+    # Kapatılmış döneme işlem eklenmesini engelle (muhasebe kilidi)
+    assert_period_open(db, movement_date)
+
     movement = FinancialMovement(
         movement_date=movement_date,
         period_month=_period_month(movement_date),

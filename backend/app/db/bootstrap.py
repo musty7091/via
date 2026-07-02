@@ -24,46 +24,49 @@ from app.db.init_db import (
 
 
 def apply_migrations() -> None:
-    """Alembic migration'larını güvenli şekilde uygular (auto-adopt).
+    """Şemayı Alembic ile yönetir (fail-fast).
 
-    - Veritabanında henüz Alembic sürümü yoksa: şema zaten create_all ile
-      kurulduğu için Alembic'i mevcut başa (head) SABİTLER (stamp). Böylece
-      create_all ile kurulu mevcut/yeni veritabanları bozulmadan benimsenir.
-    - Sürüm varsa: bekleyen migration'ları UYGULAR (upgrade head). Yani
-      sonradan eklenen sütun/tablo değişiklikleri otomatik işlenir.
+    Mantık:
+      1. Veritabanı BOŞ ise (tablo yok)        -> alembic upgrade head
+      2. Tablolar var ama alembic_version yok   -> mevcut şemayı benimse (stamp head)
+      3. alembic_version varsa                  -> alembic upgrade head (bekleyenleri uygula)
+    Herhangi bir migration hatası YÜKSELTİLİR; uygulama başlamaz (bilinçli).
     """
-    try:
-        from alembic import command
-        from alembic.config import Config
-        from alembic.runtime.migration import MigrationContext
-    except Exception:
-        # Alembic kurulu değilse sessizce geç (yerel hızlı başlatma)
-        return
+    from alembic import command
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from sqlalchemy import inspect
 
-    try:
-        backend_root = Path(__file__).resolve().parents[2]
-        ini_path = backend_root / "alembic.ini"
-        if not ini_path.exists():
-            return
+    backend_root = Path(__file__).resolve().parents[2]
+    ini_path = backend_root / "alembic.ini"
+    if not ini_path.exists():
+        raise RuntimeError(f"alembic.ini bulunamadı: {ini_path}")
 
-        cfg = Config(str(ini_path))
-        cfg.set_main_option("script_location", str(backend_root / "alembic"))
+    cfg = Config(str(ini_path))
+    cfg.set_main_option("script_location", str(backend_root / "alembic"))
 
-        with engine.connect() as conn:
-            current = MigrationContext.configure(conn).get_current_revision()
+    with engine.connect() as conn:
+        current = MigrationContext.configure(conn).get_current_revision()
 
-        if current is None:
-            # Şema create_all ile kurulu; Alembic'i başa sabitle (migration çalıştırma)
-            command.stamp(cfg, "head")
-            print("[bootstrap] Alembic mevcut şemaya sabitlendi (stamp head).")
-        else:
-            # Bekleyen migration'ları uygula
-            command.upgrade(cfg, "head")
-            print("[bootstrap] Alembic migration'ları uygulandı (upgrade head).")
-    except Exception as exc:
-        # ÖNEMLİ: Migration adımı başlatmayı ASLA engellemez. Şema zaten
-        # create_all ile kuruludur; hata yalnızca loglanır.
-        print(f"[bootstrap] Alembic adımı atlandı (hata): {exc}")
+    existing_tables = [
+        t for t in inspect(engine).get_table_names() if t != "alembic_version"
+    ]
+
+    if current is not None:
+        # 3) Sürüm var -> bekleyen migration'ları uygula
+        command.upgrade(cfg, "head")
+        print("[bootstrap] Alembic: upgrade head uygulandı.")
+    elif not existing_tables:
+        # 1) Boş veritabanı -> migration'larla kur
+        command.upgrade(cfg, "head")
+        print("[bootstrap] Alembic: boş veritabanı, upgrade head ile kuruldu.")
+    else:
+        # 2) Mevcut şema (create_all mirası) ama sürüm yok -> benimse
+        command.stamp(cfg, "head")
+        print(
+            "[bootstrap] UYARI: Mevcut şema Alembic'e benimsetildi (stamp head). "
+            "Bundan sonra şema değişiklikleri migration ile yapılmalıdır."
+        )
 
 
 # Performans index'leri.
@@ -113,16 +116,11 @@ def ensure_performance_indexes() -> None:
 
 
 def bootstrap() -> None:
-    # 1) Alembic migration'larını ÖNCE uygula/benimse.
-    #    Böylece yeni tabloları (henüz yokken) migration oluşturur; ardından
-    #    create_all yalnızca eksik kalanı tamamlar (var olanı atlar). Bu sıra,
-    #    "tablo zaten var" çakışmasını önler.
+    # 1) Şemayı Alembic yönetir (boş DB'yi kurar, mevcut DB'yi benimser/yükseltir).
+    #    Migration hatası olursa YÜKSELTİLİR -> uygulama başlamaz (fail-fast).
     apply_migrations()
 
-    # 2) Tabloları SİLMEDEN oluştur (varsa atlar) — taban şema / güvenlik ağı
-    Base.metadata.create_all(bind=engine)
-
-    # 3) Performans index'lerini garanti et (mevcut DB'ye de uygulanır)
+    # 2) Performans index'lerini garanti et (idempotent)
     ensure_performance_indexes()
 
     db = SessionLocal()

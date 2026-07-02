@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -7,27 +8,32 @@ from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 
 from app.api.api_router import api_router
-from app.core.config import settings
+from app.core.config import check_production_security, settings
 from app.modules.partners.router import router as partners_router
 from app.modules.showcase.router import admin_router as showcase_admin_router
 from app.modules.showcase.router import public_router as showcase_public_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Açılışta bir KEZ çalışır: güvenlik kontrolü + şema/temel veri.
+
+    Hata olursa YÜKSELTİLİR; uygulama başlamaz (fail-fast). Bu, hatalı bir
+    migration veya güvensiz production yapılandırmasıyla servise çıkmayı önler.
+    """
+    check_production_security()
+    from app.db.bootstrap import bootstrap
+
+    bootstrap()
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
     version="0.3.0",
     description="VIA EVENTS backend API",
+    lifespan=lifespan,
 )
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    """Uygulama açılışında tabloları (silmeden) hazırla ve temel verileri ekle."""
-    try:
-        from app.db.bootstrap import bootstrap
-
-        bootstrap()
-    except Exception as exc:  # pragma: no cover - açılışta DB hazır değilse engelleme
-        print(f"[startup] bootstrap atlandı: {exc}")
 
 
 # CORS: aynı adresten servis edildiğinde gerek yok; yerel geliştirme ve
@@ -40,6 +46,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Denetim günlüğü: değiştirici istekleri audit_logs'a yazar (isteği bozmaz)
+from app.core.audit import AuditLogMiddleware  # noqa: E402
+
+app.add_middleware(AuditLogMiddleware)
 
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(partners_router, prefix="/api/v1")
