@@ -1,31 +1,31 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.event import Event
 from app.models.partner import Partner
 from app.models.payment import CashAccount, CashTransfer, Collection, PaymentPlan
 from app.models.user import User
-from app.modules.finance_engine.service import (
-    record_collection_cancelled,
-    record_collection_created,
-    record_collection_transferred_to_company,
-)
 from app.modules.event_payments.schemas import (
     CashTransferCreate,
     CashTransferRead,
     CollectionCancel,
     CollectionCreate,
     CollectionRead,
-    EventPaymentSummary,
     EventPaymentsDetail,
+    EventPaymentSummary,
     PaymentPlanCreate,
     PaymentPlanRead,
     PaymentPlanUpdate,
 )
+from app.modules.finance_engine.service import (
+    record_collection_cancelled,
+    record_collection_created,
+    record_collection_transferred_to_company,
+)
+from app.utils.money import D, money
 
 
 def _to_float(value) -> float:
@@ -439,7 +439,7 @@ def transfer_collection_to_company(
 
     collection.current_location = "company"
     collection.is_transferred_to_company = True
-    collection.transferred_at = datetime.now(timezone.utc)
+    collection.transferred_at = datetime.now(UTC)
 
     record_collection_transferred_to_company(
         db=db,

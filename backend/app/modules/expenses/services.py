@@ -4,7 +4,6 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.expense import Expense, ExpenseAllocation
 from app.models.user import User
 from app.modules.expenses.schemas import (
@@ -15,6 +14,7 @@ from app.modules.expenses.schemas import (
     ExpenseWithAllocationsRead,
     PeriodExpenseSummary,
 )
+from app.utils.money import D, money
 
 
 def _to_float(value) -> float:

@@ -19,8 +19,9 @@ kadar Decimal ile doğru hesaplandığı için float gösterimi kuruşuna kadar 
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
-from typing import Annotated, Iterable, Optional
+from typing import Annotated
 
 from pydantic import BeforeValidator, PlainSerializer
 
@@ -121,7 +122,7 @@ Money = Annotated[
 ]
 
 OptMoney = Annotated[
-    Optional[Decimal],
+    Decimal | None,
     BeforeValidator(_coerce_money),
-    PlainSerializer(_money_to_number, return_type=Optional[float], when_used="json"),
+    PlainSerializer(_money_to_number, return_type=float | None, when_used="json"),
 ]

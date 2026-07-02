@@ -7,6 +7,7 @@ from app.models import (  # noqa: F401
     Artist,
     ArtistRiderTemplateItem,
     AuditLog,
+    CarryForwardItem,
     CashAccount,
     CashTransfer,
     Collection,
@@ -16,16 +17,15 @@ from app.models import (  # noqa: F401
     CustomerContact,
     Document,
     Event,
+    EventFinancialClosure,
     EventItem,
     EventProfitSnapshot,
-    FinancialMovement,
-    EventSupplierPayment,
-    EventSupplierPayable,
-    EventFinancialClosure,
-    CarryForwardItem,
     EventRiderCheck,
+    EventSupplierPayable,
+    EventSupplierPayment,
     Expense,
     ExpenseAllocation,
+    FinancialMovement,
     MonthlyPartnerSummary,
     MonthlyPeriod,
     Offer,
@@ -36,20 +36,15 @@ from app.models import (  # noqa: F401
     PartnerAccountMovement,
     PaymentPlan,
     ServiceItem,
-    ShowcaseArtist,
     ServicePackage,
     ServicePackageItem,
+    ShowcaseArtist,
     SystemSetting,
     User,
     UserRole,
     Venue,
 )
-from app.models.partner import Partner
-from app.models.payment import CashAccount
-from app.models.system import SystemSetting
-from app.models.user import UserRole
 from app.services.user_service import create_user, get_user_by_email
-
 
 DEFAULT_PARTNERS = [
     "Ortak 1",

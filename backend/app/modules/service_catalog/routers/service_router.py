@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models.user import User
-from app.modules.service_catalog.schemas.service import ServiceItemCreate, ServiceItemRead, ServiceItemUpdate
+from app.modules.service_catalog.schemas.service import (
+    ServiceItemCreate,
+    ServiceItemRead,
+    ServiceItemUpdate,
+)
 from app.modules.service_catalog.services import service_service
 
 router = APIRouter(prefix="/service-catalog/services", tags=["Service Catalog - Technical Services"])

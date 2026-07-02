@@ -1,28 +1,27 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.event import Event
 from app.models.expense import Expense
 from app.models.finance import (
     EventFinancialClosure,
     EventSupplierPayable,
-    EventSupplierPayment,
     FinancialMovement,
 )
 from app.models.payment import Collection, PaymentPlan
 from app.models.user import User
 from app.modules.event_financial_closure.schemas import (
-    EventFinancialClosureChecklistResponse,
-    EventFinancialClosureRead,
-    EventFinancialClosurePrepareRequest,
     EventFinancialClosureApproveRequest,
+    EventFinancialClosureChecklistResponse,
+    EventFinancialClosurePrepareRequest,
+    EventFinancialClosureRead,
     EventFinancialClosureReopenRequest,
     FinancialClosureChecklistItem,
 )
+from app.utils.money import D, money
 
 
 def _to_float(value) -> float:
@@ -497,7 +496,7 @@ def prepare_event_financial_closure(
         closure_version=_next_closure_version(db=db, event_id=event.id),
         status="prepared",
         prepared_by_user_id=current_user.id,
-        prepared_at=datetime.now(timezone.utc),
+        prepared_at=datetime.now(UTC),
         closing_note=payload.closing_note.strip() if payload.closing_note else None,
         notes=None,
     )
@@ -546,7 +545,7 @@ def approve_event_financial_closure(
             closure_version=_next_closure_version(db=db, event_id=event_id),
             status="prepared",
             prepared_by_user_id=current_user.id,
-            prepared_at=datetime.now(timezone.utc),
+            prepared_at=datetime.now(UTC),
         )
         db.add(closure)
         db.flush()
@@ -555,7 +554,7 @@ def approve_event_financial_closure(
 
     closure.status = "approved"
     closure.approved_by_user_id = current_user.id
-    closure.approved_at = datetime.now(timezone.utc)
+    closure.approved_at = datetime.now(UTC)
     closure.notes = payload.approval_note.strip() if payload.approval_note else closure.notes
 
     db.commit()
@@ -589,7 +588,7 @@ def reopen_event_financial_closure(
 
     closure.status = "reopened"
     closure.reopened_by_user_id = current_user.id
-    closure.reopened_at = datetime.now(timezone.utc)
+    closure.reopened_at = datetime.now(UTC)
     closure.reopen_reason = payload.reopen_reason.strip()
 
     db.commit()

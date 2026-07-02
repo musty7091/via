@@ -1,10 +1,8 @@
-from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.artist import Artist, ServiceItem
 from app.models.event import Event
 from app.models.finance import EventSupplierPayable, EventSupplierPayment
@@ -25,6 +23,7 @@ from app.modules.supplier_payables.schemas import (
     SupplierPaymentCreate,
     SupplierPaymentRead,
 )
+from app.utils.money import D, money
 
 
 def _to_float(value) -> float:

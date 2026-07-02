@@ -3,7 +3,6 @@ from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money, money2, rate
 from app.models.event import Event
 from app.models.finance import FinancialMovement
 from app.models.partner import Partner
@@ -15,6 +14,7 @@ from app.modules.partner_accounts.schemas import (
     PartnerAccountStatementResponse,
     PartnerAccountStatementSummary,
 )
+from app.utils.money import D, money, rate
 
 RECEIVABLE_INCREASE = "company_receivable_from_partner_increase"
 RECEIVABLE_DECREASE = "company_receivable_from_partner_decrease"

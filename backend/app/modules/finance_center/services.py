@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.finance import FinancialMovement
 from app.models.payment import CashAccount
+from app.utils.money import D, money
 
 
 def _to_float(value) -> float:

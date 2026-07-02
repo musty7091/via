@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
@@ -271,7 +271,7 @@ def update_check(
         check.status = payload.status
 
         if payload.status == "done":
-            check.checked_at = datetime.now(timezone.utc)
+            check.checked_at = datetime.now(UTC)
             check.checked_by_user_id = current_user.id
         elif payload.status == "pending":
             # Geri alındıysa kontrol izlerini temizle

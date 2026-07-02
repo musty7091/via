@@ -9,13 +9,13 @@ mevcut veriler korunur.
 Canlı ortamda (Render vb.) uygulama başlarken otomatik çağrılır.
 """
 
+from datetime import UTC
 from pathlib import Path
 
 from sqlalchemy import text
 
 from app.db.database import SessionLocal, engine
 from app.db.init_db import (
-    Base,
     seed_admin_user,
     seed_default_cash_accounts,
     seed_default_partners,
@@ -32,10 +32,11 @@ def apply_migrations() -> None:
       3. alembic_version varsa                  -> alembic upgrade head (bekleyenleri uygula)
     Herhangi bir migration hatası YÜKSELTİLİR; uygulama başlamaz (bilinçli).
     """
-    from alembic import command
     from alembic.config import Config
     from alembic.runtime.migration import MigrationContext
     from sqlalchemy import inspect
+
+    from alembic import command
 
     backend_root = Path(__file__).resolve().parents[2]
     ini_path = backend_root / "alembic.ini"
@@ -100,6 +101,8 @@ PERFORMANCE_INDEXES = [
     ("ix_perf_events_date_status", "events", "(event_date, status)"),
     # Tahsilatlar: müşteriye + tarihe göre
     ("ix_perf_collection_customer_date", "collections", "(customer_id, collection_date)"),
+    # Denetim günlüğü: tarihe göre (budama ve sorgu için)
+    ("ix_perf_audit_created", "audit_logs", "(created_at)"),
 ]
 
 
@@ -115,6 +118,39 @@ def ensure_performance_indexes() -> None:
                 print(f"[bootstrap] index atlandı: {name} ({exc})")
 
 
+def prune_audit_logs() -> None:
+    """Denetim günlüğünü belirlenen günden eskileri silerek sınırlar (şişme önlemi).
+
+    `AUDIT_RETENTION_DAYS = 0` ise budama yapılmaz (sınırsız saklama).
+    Her açılışta çalışır; ucuz ve idempotenttir.
+    """
+    from datetime import datetime, timedelta
+
+    from app.core.config import settings
+    from app.models.system import AuditLog
+
+    keep_days = getattr(settings, "audit_retention_days", 0) or 0
+    if keep_days <= 0:
+        return
+
+    cutoff = datetime.now(UTC) - timedelta(days=keep_days)
+    db = SessionLocal()
+    try:
+        deleted = (
+            db.query(AuditLog)
+            .filter(AuditLog.created_at < cutoff)
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+        if deleted:
+            print(f"[bootstrap] Denetim günlüğü budandı: {deleted} eski kayıt silindi.")
+    except Exception as exc:  # budama isteğe bağlı; açılışı engellemesin
+        db.rollback()
+        print(f"[bootstrap] Denetim günlüğü budama atlandı: {exc}")
+    finally:
+        db.close()
+
+
 def bootstrap() -> None:
     # 1) Şemayı Alembic yönetir (boş DB'yi kurar, mevcut DB'yi benimser/yükseltir).
     #    Migration hatası olursa YÜKSELTİLİR -> uygulama başlamaz (fail-fast).
@@ -122,6 +158,9 @@ def bootstrap() -> None:
 
     # 2) Performans index'lerini garanti et (idempotent)
     ensure_performance_indexes()
+
+    # 3) Denetim günlüğünü sınırla (şişme önlemi)
+    prune_audit_logs()
 
     db = SessionLocal()
     try:

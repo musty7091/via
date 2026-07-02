@@ -1,7 +1,8 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field, model_validator
-from app.utils.money import Money, OptMoney
+
+from app.utils.money import Money
 
 
 class SupplierPayableCreate(BaseModel):

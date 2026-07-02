@@ -4,7 +4,6 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = BASE_DIR / ".env"
 
@@ -26,6 +25,8 @@ class Settings(BaseSettings):
     admin_email: str = Field(default="admin@viaevents.com", alias="ADMIN_EMAIL")
     admin_password: str = Field(default=DEFAULT_ADMIN_PASSWORD, alias="ADMIN_PASSWORD")
     admin_full_name: str = Field(default="VIA Admin", alias="ADMIN_FULL_NAME")
+    # Denetim günlüğü kaç gün saklansın (0 = sınırsız / budama kapalı)
+    audit_retention_days: int = Field(default=365, alias="AUDIT_RETENTION_DAYS")
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

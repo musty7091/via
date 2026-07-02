@@ -2,8 +2,6 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from app.utils.money import D, money, percent_of
-
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -31,6 +29,7 @@ from app.modules.offers.schemas import (
     OfferSummary,
     OfferUpdate,
 )
+from app.utils.money import D, money
 
 
 def _dec(value) -> Decimal:

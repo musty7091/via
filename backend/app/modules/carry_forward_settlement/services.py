@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money, money2, rate
 from app.models.finance import CarryForwardItem, EventSupplierPayable, EventSupplierPayment
 from app.models.payment import CashAccount
 from app.models.user import User
@@ -16,6 +15,7 @@ from app.modules.finance_engine.service import (
     create_financial_movement,
     record_supplier_payment_created,
 )
+from app.utils.money import D, money2
 
 
 def _to_float(value) -> float:
@@ -121,7 +121,7 @@ def _apply_remaining_update(
         item.remaining_base_amount = 0
         item.status = "closed"
         item.closed_by_user_id = current_user.id
-        item.closed_at = datetime.now(timezone.utc)
+        item.closed_at = datetime.now(UTC)
         item.closure_note = note
     else:
         item.status = "partial"

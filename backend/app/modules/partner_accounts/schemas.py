@@ -1,7 +1,8 @@
 from datetime import date
 
 from pydantic import BaseModel
-from app.utils.money import Money, OptMoney
+
+from app.utils.money import Money
 
 
 class PartnerAccountStatementLine(BaseModel):

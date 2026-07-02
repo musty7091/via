@@ -1,7 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.artist import Artist, ServiceItem
 from app.models.service_package import ServicePackage
 from app.modules.service_catalog import constants
@@ -15,6 +14,7 @@ from app.modules.service_catalog.schemas.package import (
     ServicePackageSummary,
     ServicePackageUpdate,
 )
+from app.utils.money import D, money
 
 
 def _validate_choice(field_name: str, value: str | None, allowed_values: list[str]) -> None:

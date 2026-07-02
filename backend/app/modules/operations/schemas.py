@@ -2,7 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # İzin verilen durumlar: bekliyor / tamam / sorunlu
 RIDER_CHECK_STATUSES = ("pending", "done", "problem")
 

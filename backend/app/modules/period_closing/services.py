@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
@@ -7,13 +7,17 @@ from sqlalchemy.orm import Session
 from app.models.customer import Customer
 from app.models.event import Event
 from app.models.expense import Expense, ExpenseAllocation
-from app.models.finance import CarryForwardItem, EventFinancialClosure, EventSupplierPayable, FinancialMovement
-from app.models.payment import Collection, PaymentPlan
+from app.models.finance import (
+    CarryForwardItem,
+    EventFinancialClosure,
+    EventSupplierPayable,
+    FinancialMovement,
+)
 from app.models.partner import Partner
+from app.models.payment import Collection, PaymentPlan
 from app.models.period import MonthlyPeriod
 from app.models.user import User
 from app.modules.finance_engine.service import create_financial_movement
-from app.utils.money import D, money
 from app.modules.period_closing.schemas import (
     CarryForwardItemRead,
     PeriodCloseRequest,
@@ -26,6 +30,7 @@ from app.modules.period_closing.schemas import (
     PeriodClosingPreviewResponse,
     PeriodClosingPreviewSummary,
 )
+from app.utils.money import D, money
 
 
 def _dec(value):
@@ -664,7 +669,7 @@ def close_period(
         )
 
     created_count = 0
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     closing_movement_date = _parse_period_month(period_month)[1] - timedelta(days=1)
 
     for partner_summary in preview.partner_summaries:

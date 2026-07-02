@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.models.finance import EventSupplierPayable, EventSupplierPayment, FinancialMovement
 from app.models.payment import CashTransfer, Collection
 from app.models.period import MonthlyPeriod
-from app.utils.money import D, money, rate as rate_q
+from app.utils.money import D, money
+from app.utils.money import rate as rate_q
 
 
 def _period_month(value: date | None) -> str | None:

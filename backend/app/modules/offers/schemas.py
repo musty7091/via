@@ -1,7 +1,8 @@
 from datetime import date, datetime, time
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
-from decimal import Decimal
+
 from app.utils.money import Money, OptMoney
 
 

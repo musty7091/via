@@ -7,7 +7,6 @@ from app.db.database import get_db
 from app.models.user import User, UserRole
 from app.services.user_service import get_user_by_id
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 

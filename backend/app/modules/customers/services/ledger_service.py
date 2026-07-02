@@ -3,7 +3,6 @@ from datetime import date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.money import D, money
 from app.models.partner import Partner
 from app.modules.customers import constants
 from app.modules.customers.repositories import ledger_repository
@@ -13,6 +12,7 @@ from app.modules.customers.schemas.ledger import (
     CustomerLedgerSummary,
 )
 from app.modules.customers.services.customer_service import get_customer_or_404
+from app.utils.money import D, money
 
 
 def _validate_choice(field_name: str, value: str | None, allowed_values: list[str]) -> None:
