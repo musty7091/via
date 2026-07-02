@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ from app.modules.supplier_accounts.schemas import (
 from app.utils.money import D, money, rate
 
 
-def _to_float(value) -> float:
+def _to_decimal(value) -> Decimal:
     if value is None:
         return D(0)
 
@@ -178,11 +179,11 @@ def get_supplier_account_statement(
                 "transaction_type": "payable_created",
                 "title": "Borç oluştu",
                 "description": payable.title,
-                "debit_base_amount": _to_float(payable.base_amount),
+                "debit_base_amount": _to_decimal(payable.base_amount),
                 "credit_base_amount": D(0),
-                "source_amount": _to_float(payable.amount),
+                "source_amount": _to_decimal(payable.amount),
                 "source_currency": payable.currency,
-                "exchange_rate": _to_float(payable.exchange_rate),
+                "exchange_rate": _to_decimal(payable.exchange_rate),
                 "payment_source": None,
                 "payment_method": None,
                 "document_no": None,
@@ -212,10 +213,10 @@ def get_supplier_account_statement(
                 "title": "Ödeme yapıldı" if not payment.is_cancelled else "Ödeme yapıldı (sonradan iptal edildi)",
                 "description": payable.title,
                 "debit_base_amount": D(0),
-                "credit_base_amount": _to_float(payment.base_amount),
-                "source_amount": _to_float(payment.amount),
+                "credit_base_amount": _to_decimal(payment.base_amount),
+                "source_amount": _to_decimal(payment.amount),
                 "source_currency": payment.currency,
-                "exchange_rate": _to_float(payment.exchange_rate),
+                "exchange_rate": _to_decimal(payment.exchange_rate),
                 "payment_source": _payment_source(payment),
                 "payment_method": payment.payment_method,
                 "document_no": payment.document_no,
@@ -239,11 +240,11 @@ def get_supplier_account_statement(
                     "transaction_type": "payment_cancelled",
                     "title": "Ödeme iptal edildi",
                     "description": payable.title,
-                    "debit_base_amount": _to_float(payment.base_amount),
+                    "debit_base_amount": _to_decimal(payment.base_amount),
                     "credit_base_amount": D(0),
-                    "source_amount": _to_float(payment.amount),
+                    "source_amount": _to_decimal(payment.amount),
                     "source_currency": payment.currency,
-                    "exchange_rate": _to_float(payment.exchange_rate),
+                    "exchange_rate": _to_decimal(payment.exchange_rate),
                     "payment_source": _payment_source(payment),
                     "payment_method": payment.payment_method,
                     "document_no": payment.document_no,
@@ -272,8 +273,8 @@ def get_supplier_account_statement(
     items: list[SupplierAccountStatementLine] = []
 
     for index, item in enumerate(raw_lines, start=1):
-        debit = money(_to_float(item["debit_base_amount"]))
-        credit = money(_to_float(item["credit_base_amount"]))
+        debit = money(_to_decimal(item["debit_base_amount"]))
+        credit = money(_to_decimal(item["credit_base_amount"]))
 
         total_debit += debit
         total_credit += credit
@@ -296,7 +297,7 @@ def get_supplier_account_statement(
                 debit_base_amount=debit,
                 credit_base_amount=credit,
                 balance_base_amount=balance,
-                source_amount=money(_to_float(item["source_amount"])),
+                source_amount=money(_to_decimal(item["source_amount"])),
                 source_currency=item["source_currency"],
                 exchange_rate=rate(item["exchange_rate"]),
                 payment_source=item["payment_source"],
@@ -431,8 +432,8 @@ def get_supplier_account_balances(
             include_cancelled=False,
         )
 
-        total_debit = money(sum(_to_float(item.base_amount) for item in payables))
-        total_credit = money(sum(_to_float(item.base_amount) for item in payments))
+        total_debit = money(sum(_to_decimal(item.base_amount) for item in payables))
+        total_credit = money(sum(_to_decimal(item.base_amount) for item in payments))
         balance = money(total_debit - total_credit)
 
         if only_with_balance and abs(balance) <= 0.0001:

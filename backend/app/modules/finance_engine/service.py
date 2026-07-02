@@ -44,6 +44,22 @@ def assert_period_open(db: Session, movement_date: date | None) -> None:
         )
 
 
+def assert_event_period_open(event) -> None:
+    """Etkinlik kapatılmış bir döneme aitse ilgili işlemleri engeller (409).
+
+    Etkinliğin `is_period_closed` bayrağı kapanış sırasında True yapılır; bu
+    etkinliğin durum/plan/kapanış gibi mutasyonları kilitlenir.
+    """
+    if getattr(event, "is_period_closed", False):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Bu etkinlik kapatılmış bir döneme ait; durum/plan/kapanış "
+                "değişikliği yapılamaz."
+            ),
+        )
+
+
 def _to_decimal(value):
     return D(value)
 

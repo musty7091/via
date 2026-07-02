@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
@@ -21,6 +22,8 @@ from app.modules.event_payments.schemas import (
     PaymentPlanUpdate,
 )
 from app.modules.finance_engine.service import (
+    assert_event_period_open,
+    assert_period_open,
     record_collection_cancelled,
     record_collection_created,
     record_collection_transferred_to_company,
@@ -28,7 +31,7 @@ from app.modules.finance_engine.service import (
 from app.utils.money import D, money
 
 
-def _to_float(value) -> float:
+def _to_decimal(value) -> Decimal:
     if value is None:
         return D(0)
 
@@ -129,8 +132,8 @@ def _update_plan_paid_status(db: Session, plan: PaymentPlan) -> None:
         .scalar()
     )
 
-    paid = _to_float(paid_base_amount)
-    total = _to_float(plan.base_amount)
+    paid = _to_decimal(paid_base_amount)
+    total = _to_decimal(plan.base_amount)
 
     plan.paid_base_amount = paid
 
@@ -174,15 +177,15 @@ def _build_detail(db: Session, event: Event) -> EventPaymentsDetail:
     plans = _list_payment_plans(db=db, event_id=event.id)
     collections = _list_collections(db=db, event_id=event.id)
 
-    planned_base_amount = sum(_to_float(plan.base_amount) for plan in plans)
+    planned_base_amount = sum(_to_decimal(plan.base_amount) for plan in plans)
     collected_base_amount = sum(
-        _to_float(collection.base_amount)
+        _to_decimal(collection.base_amount)
         for collection in collections
         if not collection.is_cancelled
     )
 
-    event_total_amount = _to_float(event.total_customer_amount)
-    event_base_total_amount = _to_float(event.total_customer_amount) * _to_float(event.exchange_rate or 1)
+    event_total_amount = _to_decimal(event.total_customer_amount)
+    event_base_total_amount = _to_decimal(event.total_customer_amount) * _to_decimal(event.exchange_rate or 1)
 
     summary = EventPaymentSummary(
         event_id=event.id,
@@ -216,6 +219,7 @@ def create_payment_plan(
     payload: PaymentPlanCreate,
 ) -> PaymentPlan:
     event = _get_event_or_404(db=db, event_id=event_id)
+    assert_event_period_open(event)
 
     currency = _clean_currency(payload.currency, event.agreement_currency)
     exchange_rate = D(payload.exchange_rate or event.exchange_rate or 1)
@@ -247,6 +251,7 @@ def update_payment_plan(
     payload: PaymentPlanUpdate,
 ) -> PaymentPlan:
     plan = _get_plan_or_404(db=db, event_id=event_id, payment_plan_id=payment_plan_id)
+    assert_event_period_open(_get_event_or_404(db=db, event_id=event_id))
     data = payload.model_dump(exclude_unset=True)
 
     if "title" in data and data["title"] is not None:
@@ -348,6 +353,7 @@ def cancel_collection(
         event_id=event_id,
         collection_id=collection_id,
     )
+    assert_period_open(db, collection.collection_date)
 
     if collection.is_cancelled:
         raise HTTPException(

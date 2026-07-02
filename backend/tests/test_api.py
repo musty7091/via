@@ -122,8 +122,10 @@ def test_closed_period_blocks_new_movements(client):
 
     db = SessionLocal()
     try:
-        db.add(MonthlyPeriod(period_month="2026-05", status="closed", is_locked=True))
-        db.commit()
+        existing = db.query(MonthlyPeriod).filter(MonthlyPeriod.period_month == "2026-05").first()
+        if existing is None:
+            db.add(MonthlyPeriod(period_month="2026-05", status="closed", is_locked=True))
+            db.commit()
 
         # Kapalı döneme işlem -> 409
         blocked = False

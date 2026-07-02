@@ -570,7 +570,11 @@ def reopen_event_financial_closure(
     payload: EventFinancialClosureReopenRequest,
     current_user: User,
 ) -> EventFinancialClosureRead:
-    _get_event_or_404(db=db, event_id=event_id)
+    event = _get_event_or_404(db=db, event_id=event_id)
+
+    from app.modules.finance_engine.service import assert_event_period_open
+
+    assert_event_period_open(event)
 
     closure = _latest_closure(db=db, event_id=event_id)
 

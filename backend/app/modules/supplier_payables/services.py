@@ -10,6 +10,7 @@ from app.models.partner import Partner
 from app.models.payment import CashAccount
 from app.models.user import User
 from app.modules.finance_engine.service import (
+    assert_period_open,
     record_supplier_payable_created,
     record_supplier_payment_cancelled,
     record_supplier_payment_created,
@@ -383,6 +384,8 @@ def cancel_supplier_payment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bu ödeme zaten iptal edilmiş.",
         )
+
+    assert_period_open(db, payment.payment_date)
 
     payment.is_cancelled = True
     payment.cancellation_reason = payload.cancellation_reason.strip()

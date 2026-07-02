@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
@@ -14,17 +15,17 @@ from app.modules.expenses.schemas import (
     ExpenseWithAllocationsRead,
     PeriodExpenseSummary,
 )
+from app.modules.finance_engine.service import assert_period_open
 from app.utils.money import D, money
 
 
-def _to_float(value) -> float:
+def _to_decimal(value) -> Decimal:
     if value is None:
         return D(0)
-
     return D(value)
 
 
-def _round_money(value) -> float:
+def _round_money(value) -> Decimal:
     return money(value)
 
 
@@ -79,7 +80,7 @@ def _default_allocation_end_month(expense_date: date) -> str:
     return f"{expense_date.year}-12"
 
 
-def _build_allocation_amounts(base_amount: float, month_count: int) -> list[float]:
+def _build_allocation_amounts(base_amount, month_count: int) -> list[Decimal]:
     if month_count <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -137,7 +138,7 @@ def create_expense(
         allocation_end_month = payload.allocation_end_month or _default_allocation_end_month(payload.expense_date)
         _parse_period_month(allocation_end_month)
 
-    base_amount = _round_money(payload.amount * payload.exchange_rate)
+    base_amount = _round_money(D(payload.amount) * D(payload.exchange_rate))
 
     expense_type = payload.expense_type.strip().lower() if payload.expense_type else "general"
 
@@ -206,6 +207,7 @@ def get_expense(
     expense_id: int,
 ) -> ExpenseWithAllocationsRead:
     expense = db.get(Expense, expense_id)
+
 
     if expense is None:
         raise HTTPException(
@@ -354,7 +356,7 @@ def get_period_expense_summary(
         period_month=period_month,
         direct_general_expense_base_amount=_round_money(direct_general_value),
         allocated_expense_base_amount=allocated_value,
-        total_period_expense_base_amount=_round_money(_to_float(direct_general_value) + allocated_value),
+        total_period_expense_base_amount=_round_money(_to_decimal(direct_general_value) + allocated_value),
         allocation_count=len(allocation_rows),
         direct_expense_count=direct_count,
     )
@@ -379,6 +381,8 @@ def cancel_expense(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bu gider zaten iptal edilmiş.",
         )
+
+    assert_period_open(db, expense.expense_date)
 
     expense.is_cancelled = True
     expense.status = "cancelled"

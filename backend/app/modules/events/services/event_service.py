@@ -63,6 +63,11 @@ def update_event_status(db: Session, event_id: int, new_status: str) -> EventRea
         )
 
     event = get_event_or_404(db=db, event_id=event_id)
+
+    from app.modules.finance_engine.service import assert_event_period_open
+
+    assert_event_period_open(event)
+
     event.status = new_status
     db.commit()
     db.refresh(event)
