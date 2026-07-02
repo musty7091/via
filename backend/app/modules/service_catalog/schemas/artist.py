@@ -1,15 +1,18 @@
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
+
+from app.utils.money import Money, OptMoney
 
 
 class ArtistBase(BaseModel):
     artist_type: str = "solo_artist"
     name: str
     manager_partner_id: int | None = None
-    default_cost_amount: float = Field(default=0, ge=0)
+    default_cost_amount: Money = Field(default=Decimal("0"), ge=0)
     default_cost_currency: str = "TRY"
-    default_sale_amount: float = Field(default=0, ge=0)
+    default_sale_amount: Money = Field(default=Decimal("0"), ge=0)
     default_sale_currency: str = "TRY"
     notes: str | None = None
     is_active: bool = True
@@ -23,9 +26,9 @@ class ArtistUpdate(BaseModel):
     artist_type: str | None = None
     name: str | None = None
     manager_partner_id: int | None = None
-    default_cost_amount: float | None = Field(default=None, ge=0)
+    default_cost_amount: OptMoney = Field(default=None, ge=0)
     default_cost_currency: str | None = None
-    default_sale_amount: float | None = Field(default=None, ge=0)
+    default_sale_amount: OptMoney = Field(default=None, ge=0)
     default_sale_currency: str | None = None
     notes: str | None = None
     is_active: bool | None = None

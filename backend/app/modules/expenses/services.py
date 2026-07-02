@@ -122,6 +122,9 @@ def create_expense(
     payload: ExpenseCreate,
     current_user: User,
 ) -> ExpenseWithAllocationsRead:
+    # Kapatılmış döneme yeni gider eklenemez (muhasebe kilidi)
+    assert_period_open(db, payload.expense_date)
+
     expense_scope = payload.expense_scope.strip().lower()
 
     if expense_scope not in ("period", "season"):

@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
+from app.utils.money import Money, OptMoney
+
 
 class CustomerLedgerMovementCreate(BaseModel):
     movement_date: date
@@ -10,10 +12,10 @@ class CustomerLedgerMovementCreate(BaseModel):
     title: str
     description: str | None = None
     detail_note: str | None = None
-    amount: float = Field(gt=0)
+    amount: Money = Field(gt=0)
     currency: str = "TRY"
     exchange_rate: float = Field(default=1, gt=0)
-    base_amount: float | None = None
+    base_amount: OptMoney = None
     payment_method: str | None = None
     collected_by_partner_id: int | None = None
     document_no: str | None = None
@@ -35,13 +37,13 @@ class CustomerLedgerMovementRead(BaseModel):
     title: str
     description: str | None = None
     detail_note: str | None = None
-    amount: float
+    amount: Money
     currency: str
     exchange_rate: float
-    base_amount: float
-    debit_base_amount: float
-    credit_base_amount: float
-    running_balance_base_amount: float
+    base_amount: Money
+    debit_base_amount: Money
+    credit_base_amount: Money
+    running_balance_base_amount: Money
     payment_method: str | None = None
     collected_by_partner_id: int | None = None
     collected_by_partner_name: str | None = None
@@ -58,8 +60,8 @@ class CustomerLedgerMovementRead(BaseModel):
 
 class CustomerLedgerSummary(BaseModel):
     customer_id: int
-    total_debit_base_amount: float
-    total_credit_base_amount: float
-    balance_base_amount: float
+    total_debit_base_amount: Money
+    total_credit_base_amount: Money
+    balance_base_amount: Money
     movement_count: int
     last_movement_date: date | None = None

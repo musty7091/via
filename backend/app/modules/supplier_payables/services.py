@@ -10,6 +10,7 @@ from app.models.partner import Partner
 from app.models.payment import CashAccount
 from app.models.user import User
 from app.modules.finance_engine.service import (
+    assert_event_period_open,
     assert_period_open,
     record_supplier_payable_created,
     record_supplier_payment_cancelled,
@@ -254,7 +255,8 @@ def create_supplier_payable(
     payload: SupplierPayableCreate,
     current_user: User,
 ) -> EventSupplierPayable:
-    _get_event_or_404(db=db, event_id=event_id)
+    event = _get_event_or_404(db=db, event_id=event_id)
+    assert_event_period_open(event)
     _get_artist_or_404(db=db, artist_id=payload.artist_id)
     _get_service_item_or_404(db=db, service_item_id=payload.service_item_id)
 
@@ -307,6 +309,7 @@ def create_supplier_payment(
     current_user: User,
 ) -> EventSupplierPayment:
     payable = _get_payable_or_404(db=db, event_id=event_id, payable_id=payable_id)
+    assert_event_period_open(_get_event_or_404(db=db, event_id=event_id))
 
     if payable.status == "paid":
         raise HTTPException(
@@ -386,6 +389,7 @@ def cancel_supplier_payment(
         )
 
     assert_period_open(db, payment.payment_date)
+    assert_event_period_open(_get_event_or_404(db=db, event_id=event_id))
 
     payment.is_cancelled = True
     payment.cancellation_reason = payload.cancellation_reason.strip()

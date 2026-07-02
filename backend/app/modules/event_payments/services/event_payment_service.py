@@ -288,6 +288,7 @@ def create_collection(
     current_user: User,
 ) -> Collection:
     event = _get_event_or_404(db=db, event_id=event_id)
+    assert_event_period_open(event)
 
     plan: PaymentPlan | None = None
     if payload.payment_plan_id is not None:
@@ -354,6 +355,7 @@ def cancel_collection(
         collection_id=collection_id,
     )
     assert_period_open(db, collection.collection_date)
+    assert_event_period_open(_get_event_or_404(db=db, event_id=event_id))
 
     if collection.is_cancelled:
         raise HTTPException(

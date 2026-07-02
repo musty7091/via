@@ -1,13 +1,16 @@
 from datetime import datetime, time
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
+
+from app.utils.money import Money, OptMoney
 
 
 class ServicePackageBase(BaseModel):
     package_type: str = "program"
     name: str
     description: str | None = None
-    default_sale_amount: float = Field(default=0, ge=0)
+    default_sale_amount: Money = Field(default=Decimal("0"), ge=0)
     default_sale_currency: str = "TRY"
     notes: str | None = None
     is_active: bool = True
@@ -21,7 +24,7 @@ class ServicePackageUpdate(BaseModel):
     package_type: str | None = None
     name: str | None = None
     description: str | None = None
-    default_sale_amount: float | None = Field(default=None, ge=0)
+    default_sale_amount: OptMoney = Field(default=None, ge=0)
     default_sale_currency: str | None = None
     notes: str | None = None
     is_active: bool | None = None
@@ -47,9 +50,9 @@ class ServicePackageItemCreate(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     quantity: float = Field(default=1, gt=0)
-    unit_cost_amount: float = Field(default=0, ge=0)
+    unit_cost_amount: Money = Field(default=Decimal("0"), ge=0)
     unit_cost_currency: str = "TRY"
-    unit_sale_amount: float = Field(default=0, ge=0)
+    unit_sale_amount: Money = Field(default=Decimal("0"), ge=0)
     unit_sale_currency: str = "TRY"
     is_optional: bool = False
     is_visible_on_offer: bool = True
@@ -71,13 +74,13 @@ class ServicePackageItemRead(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     quantity: float
-    unit_cost_amount: float
+    unit_cost_amount: Money
     unit_cost_currency: str
-    unit_sale_amount: float
+    unit_sale_amount: Money
     unit_sale_currency: str
-    total_cost_amount: float
-    total_sale_amount: float
-    gross_profit_amount: float
+    total_cost_amount: Money
+    total_sale_amount: Money
+    gross_profit_amount: Money
     is_optional: bool
     is_visible_on_offer: bool
     is_active: bool
@@ -89,9 +92,9 @@ class ServicePackageItemRead(BaseModel):
 class ServicePackageSummary(BaseModel):
     package_id: int
     item_count: int
-    total_cost_amount: float
-    total_sale_amount: float
-    gross_profit_amount: float
+    total_cost_amount: Money
+    total_sale_amount: Money
+    gross_profit_amount: Money
 
 
 class ServicePackageDetail(BaseModel):
