@@ -20,12 +20,22 @@ if [ "${BACKUP_DRY_RUN:-0}" = "1" ]; then
   exit 0
 fi
 
-token="$(wget -qO- --header 'Metadata-Flavor: Google' \
+# busybox wget --post-file ikili dosyayı ilk sıfır baytta keser; yükleme curl ile yapılır.
+apk add --no-cache --quiet curl
+
+token="$(curl -fsS -H 'Metadata-Flavor: Google' \
   http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token \
   | sed -E 's/.*"access_token":"([^"]+)".*/\1/')"
-wget -qO /dev/null \
-  --header "Authorization: Bearer $token" \
-  --header 'Content-Type: application/gzip' \
-  --post-file "$file" \
-  "https://storage.googleapis.com/upload/storage/v1/b/${BACKUP_BUCKET}/o?uploadType=media&name=${name}"
+response="$(curl -fsS -X POST \
+  -H "Authorization: Bearer $token" \
+  -H 'Content-Type: application/gzip' \
+  --data-binary "@$file" \
+  "https://storage.googleapis.com/upload/storage/v1/b/${BACKUP_BUCKET}/o?uploadType=media&name=${name}")"
+
+# Yüklenen boyut yereldekiyle aynı değilse yedek bozuktur; iş başarısız sayılır.
+uploaded="$(printf '%s' "$response" | sed -nE 's/.*"size": *"([0-9]+)".*/\1/p' | head -n1)"
+if [ "$uploaded" != "$size" ]; then
+  echo "Yüklenen boyut ($uploaded) yerel dosyayla ($size) uyuşmuyor." >&2
+  exit 1
+fi
 echo "Yedek yüklendi: gs://${BACKUP_BUCKET}/${name} ($size bayt)"
