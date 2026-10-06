@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: via-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: via
+      POSTGRES_PASSWORD: via_dev_password
+      POSTGRES_DB: via
+      TZ: Europe/Istanbul
+    ports:
+      - "5433:5432"
+    volumes:
+      - via_pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U via -d via"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  via_pgdata:

@@ -1,0 +1,3 @@
+# Kabuk betikleri Linux konteynerlerde de çalışır; satır sonu her zaman LF.
+*.sh text eol=lf
+Dockerfile text eol=lf

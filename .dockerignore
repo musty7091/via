@@ -1,0 +1,13 @@
+# Sadece apps/ imaja girer.
+*
+!apps/api/pyproject.toml
+!apps/api/alembic.ini
+!apps/api/alembic/
+!apps/api/app/
+!apps/web/
+apps/web/node_modules/
+apps/web/dist/
+**/__pycache__/
+**/*.pyc
+**/.env
+**/*.tsbuildinfo
