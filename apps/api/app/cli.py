@@ -122,8 +122,31 @@ def seed_demo(password: str, reset: bool) -> None:
         print(f"  {email:<28} {role.value:<12} {name}")
 
 
+RESET_PHRASE = "SIFIRLA"
+
+
+def reset_data_command(keep: list[str], confirm: str | None) -> None:
+    from app.maintenance.reset import GROUP_LABELS, reset_data  # noqa: PLC0415
+
+    if confirm != RESET_PHRASE:
+        sys.exit(f"Onay eksik. Gerçekten silmek için --confirm {RESET_PHRASE} ekleyin.")
+    with SessionLocal() as db:
+        result = reset_data(db, keep)
+    print("Deneme verisi silindi.")
+    print(
+        "Korunanlar: süper admin, firma ayarları, kur geçmişi"
+        + "".join(f", {label}" for label in result.kept)
+    )
+    removed = [GROUP_LABELS[g] for g in GROUP_LABELS if g not in keep]
+    if removed:
+        print("Ayrıca silinenler: " + ", ".join(removed))
+    if result.deleted_users:
+        print(f"Silinen kullanıcı: {result.deleted_users}")
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -139,11 +162,32 @@ def main() -> None:
     demo.add_argument("--password", required=True)
     demo.add_argument("--reset", action="store_true", help="Önce tüm tabloları boşaltır")
 
+    reset = commands.add_parser(
+        "reset-data", help="Deneme verisini siler (teklif, etkinlik, finans, kapanış...)"
+    )
+    reset.add_argument("--keep-catalog", action="store_true", help="Katalog korunur")
+    reset.add_argument("--keep-customers", action="store_true", help="Müşteri/mekânlar korunur")
+    reset.add_argument("--keep-cash-accounts", action="store_true", help="Kasa/banka tanımları")
+    reset.add_argument("--keep-people", action="store_true", help="Ortaklar ve kullanıcılar")
+    reset.add_argument("--confirm", help=f"Silmek için '{RESET_PHRASE}' yazılmalıdır")
+
     args = parser.parse_args()
     if args.command == "create-admin":
         create_admin(args.name, args.email, args.password)
     elif args.command == "seed-demo":
         seed_demo(args.password, args.reset)
+    elif args.command == "reset-data":
+        keep = [
+            group
+            for group, flag in (
+                ("catalog", args.keep_catalog),
+                ("customers", args.keep_customers),
+                ("cash_accounts", args.keep_cash_accounts),
+                ("people", args.keep_people),
+            )
+            if flag
+        ]
+        reset_data_command(keep, args.confirm)
 
 
 if __name__ == "__main__":

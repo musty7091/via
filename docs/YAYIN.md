@@ -85,6 +85,29 @@ Faturalandırma → Bütçeler ve uyarılar → Bütçe oluştur:
 - Uyarılar: %50, %90, %100.
 - Bildirim: e-posta.
 
+## Deneme verisini silme (temiz başlangıç)
+
+Müşteri sistemi denedikten sonra gerçek kullanıma geçerken:
+
+```bash
+bash infra/gcp/reset.sh
+```
+
+Betik sırasıyla:
+1. Korunacakları tek tek sorar: katalog, müşteriler/mekânlar, kasa/banka hesap tanımları,
+   ortaklar ve diğer kullanıcılar (Enter = korunsun).
+2. Proje kimliğinin elle yazılmasını ister; yanlış yazılırsa hiçbir şey yapmadan çıkar.
+3. Yedek alır ve yedeğin dolu olduğunu doğrular; doğrulanamazsa hiçbir şey silmez.
+4. Silme işini canlıdaki uygulama sürümüyle çalıştırır (tek transaction: ya hepsi ya hiçbiri).
+
+Her zaman silinir: teklif, etkinlik, tahsilat, gider, ödeme, ortak hareketleri, dönem ve
+etkinlik kapanışları, işlem geçmişi. Belge numaraları baştan başlar (VIA-E-2026-0001...).
+Her zaman kalır: süper admin hesapları, firma ayarları, kur geçmişi. Kasa hesapları korunsa
+bile bakiyeleri sıfırlanır (bakiye hareketlerden hesaplanır).
+
+Hangi tablonun hangi gruba ait olduğu `apps/api/app/maintenance/reset.py` dosyasındadır;
+yeni bir tablo eklenince oraya da eklenmelidir (test bunu zorunlu kılar).
+
 ## Yedekten geri dönme
 
 Yedekler `gs://<proje-kimliği>-via-backups/` kovasındadır (30 gün).
