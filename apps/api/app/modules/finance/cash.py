@@ -5,7 +5,6 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
 from app.core.money import BASE_CURRENCY, format_money, money
@@ -185,12 +184,11 @@ def cancel_transfer(
         raise DomainError("Bu transfer zaten iptal edilmiş.")
     if not reason:
         raise DomainError("İptal sebebini yazın.")
-    common.assert_cash_available(db, tx.to_account, tx.to_amount)
+    # Giren hesaptan para geri çıkar; yeterlilik ters kayıtta (ledger.reverse) denetlenir.
     entry = db.get(JournalEntry, tx.entry_id)
     ledger.reverse(
         db,
         entry,
-        entry_date=clock.today(),
         description=f"Transfer iptali. Sebep: {reason}",
         actor=actor,
     )  # type: ignore[arg-type]

@@ -49,7 +49,7 @@ function PeriodReport({ p }: { p: PeriodPreview }) {
         <Card>
           <CardHeader title="Ayın Sonucu (TL)" description="Ortaklara yazılan kâr ve zarar" />
           <CardBody className="space-y-2">
-            <Row label="Bu ay kapanan etkinliklerin kârı">
+            <Row label="Bu ayın etkinliklerinin kârı">
               <Money amount={p.closed_events_profit} signed />
             </Row>
             <Row label="Genel giderler">

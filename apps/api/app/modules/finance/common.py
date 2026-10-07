@@ -72,21 +72,17 @@ def implied_rate(base: Decimal, amount: Decimal) -> Decimal:
 def assert_cash_available(
     db: Session, account: CashAccount, amount: Decimal, on_date: date | None = None
 ) -> None:
-    """Kasa ve banka asla eksiye düşemez. Geriye tarihli çıkışta hem o tarihteki hem
-    bugünkü bakiye yetmelidir (geçmiş bir ayın raporunda eksi bakiye oluşmasın)."""
+    """Kasa ve banka asla eksiye düşemez. Geriye tarihli çıkışta o tarihten bugüne kadar
+    her gün sonu bakiyesi yetmelidir (geçmiş bir ayın raporunda eksi bakiye oluşmasın)."""
+    if on_date is not None and on_date < clock.today():
+        ledger.assert_cash_never_negative(db, account.id, amount, on_date)
+        return
     held = ledger.amount_balance(db, Account.CASH, cash_account_id=account.id).get(
         account.currency, ZERO
     )
-    as_of_text = ""
-    if on_date is not None and on_date < clock.today():
-        held_then = ledger.amount_balance(
-            db, Account.CASH, as_of=on_date, cash_account_id=account.id
-        ).get(account.currency, ZERO)
-        if held_then < held:
-            held, as_of_text = held_then, f" {on_date:%d.%m.%Y} tarihinde"
     if amount > held:
         raise DomainError(
-            f"{account.name} hesabında{as_of_text} yeterli bakiye yok "
+            f"{account.name} hesabında yeterli bakiye yok "
             f"(bakiye {format_money(held, account.currency)}, "
             f"gereken {format_money(amount, account.currency)})."
         )

@@ -468,15 +468,11 @@ def test_company_expense_cannot_overdraw_cash(client, kasa, admin):
 # --- Etkinlik iptali ---
 
 
-def test_event_cancel_requires_no_active_money_and_reverses_agreement(client, make_event, kasa):
+def test_event_cancel_reverses_agreement(client, make_event, kasa):
+    """Parası alınmamış etkinliğin iptali: anlaşma ve borçlar tamamen geri alınır.
+    (Kaporalı iptal: test_cancel_and_dates.py)"""
     event_id = make_event()
-    collection = collect(client, event_id, "10000", cash_account_id=kasa.id).json()
     url = f"/api/v1/events/{event_id}/status"
-
-    blocked = client.post(url, json={"action": "cancel", "note": "Müşteri vazgeçti"})
-    assert blocked.status_code == 400
-
-    client.post(f"{API}/collections/{collection['id']}/cancel", json={"reason": "İade edildi"})
     assert (
         client.post(url, json={"action": "cancel", "note": "Müşteri vazgeçti"}).status_code == 200
     )

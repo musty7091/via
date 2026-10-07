@@ -6,7 +6,6 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
 from app.core.money import Currency, format_money, money
@@ -230,7 +229,6 @@ def cancel_expense(
     ledger.reverse(
         db,
         entry,  # type: ignore[arg-type]
-        entry_date=clock.today(),
         description=f"Gider iptali: {expense.expense_no}. Sebep: {reason}",
         actor=actor,
     )

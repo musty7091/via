@@ -13,3 +13,8 @@ def now() -> datetime:
 
 def today() -> date:
     return now().date()
+
+
+def local_date(moment: datetime) -> date:
+    """Veritabanından gelen (UTC) zaman damgasının şirket saatine göre günü."""
+    return moment.astimezone(ZoneInfo(get_settings().timezone)).date()

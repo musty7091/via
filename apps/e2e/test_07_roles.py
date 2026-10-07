@@ -8,6 +8,7 @@ import re
 
 from playwright.sync_api import Page, expect
 
+from conftest import FORCED_HEADING, personal_password
 from test_01_setup import ACCOUNTING_PASSWORD, OPERATION_PASSWORD, PARTNER_PASSWORD
 from test_05_operations import open_event
 
@@ -24,8 +25,44 @@ def _post(page: Page, path: str, data: dict | None = None) -> int:
     return page.request.post(f"{API}{path}", data=data or {}, headers=HEADERS).status
 
 
+def test_first_login_requires_own_password(browser) -> None:  # noqa: ANN001
+    """Yöneticinin açtığı hesap: geçici şifreyle girilir, kendi şifresi belirlenmeden hiçbir
+    ekran açılmaz ve sunucu da diğer istekleri reddeder."""
+    context = browser.new_context(base_url="http://127.0.0.1:8001", locale="tr-TR")
+    page = context.new_page()
+    page.goto("/giris")
+    page.get_by_label("E-posta").fill("alper@viaevents-e2e.com")
+    page.get_by_label("Şifre").fill(PARTNER_PASSWORD)
+    page.get_by_role("button", name="Giriş").click()
+    expect(page.get_by_role("heading", name=FORCED_HEADING)).to_be_visible()
+    expect(page.get_by_role("navigation", name="Ana menü")).to_have_count(0)
+    blocked = page.request.get(f"{API}/customers")
+    assert blocked.status == 403 and blocked.json()["error"]["code"] == "password_change_required"
+
+    page.get_by_label("Geçici şifre").fill(PARTNER_PASSWORD)
+    page.get_by_label("Yeni şifre", exact=True).fill(PARTNER_PASSWORD)
+    page.get_by_label("Yeni şifre (tekrar)").fill(PARTNER_PASSWORD)
+    page.get_by_role("button", name="Şifremi Kaydet").click()
+    expect(page.get_by_text("Yeni şifre mevcut şifreden farklı olmalı.")).to_be_visible()
+
+    new = personal_password(PARTNER_PASSWORD)
+    page.get_by_label("Yeni şifre", exact=True).fill(new)
+    page.get_by_label("Yeni şifre (tekrar)").fill(new)
+    page.get_by_role("button", name="Şifremi Kaydet").click()
+    expect(page.get_by_role("navigation", name="Ana menü")).to_be_visible()
+    assert page.request.get(f"{API}/customers").status == 200
+    context.close()
+
+
+def test_users_list_shows_temporary_passwords(page: Page) -> None:
+    page.goto("/kullanicilar")
+    rows = page.get_by_role("row")
+    expect(rows.filter(has_text="alper@")).to_contain_text("Aktif")
+    expect(rows.filter(has_text="volkan@")).to_contain_text("Geçici şifre")
+
+
 def test_partner(new_user_page) -> None:  # noqa: ANN001
-    page: Page = new_user_page("alper@viaevents-e2e.com", PARTNER_PASSWORD)
+    page: Page = new_user_page("alper@viaevents-e2e.com", personal_password(PARTNER_PASSWORD))
     menu = _menu(page)
     for allowed in ("Teklifler", "Etkinlikler", "Finans Merkezi", "Raporlar"):
         assert any(allowed in m for m in menu), (allowed, menu)
@@ -52,7 +89,7 @@ def test_partner(new_user_page) -> None:  # noqa: ANN001
 
 
 def test_accounting(new_user_page) -> None:  # noqa: ANN001
-    page: Page = new_user_page("muhasebe@viaevents-e2e.com", ACCOUNTING_PASSWORD)
+    page: Page = new_user_page("muhasebe@viaevents-e2e.com", ACCOUNTING_PASSWORD, forced=True)
     page.goto("/finans")
     expect(page.get_by_role("button", name="Tahsilat Gir").first).to_be_visible()
     expect(page.get_by_role("button", name="Gider Gir").first).to_be_visible()
@@ -70,7 +107,7 @@ def test_accounting(new_user_page) -> None:  # noqa: ANN001
 
 
 def test_operation(new_user_page) -> None:  # noqa: ANN001
-    page: Page = new_user_page("operasyon@viaevents-e2e.com", OPERATION_PASSWORD)
+    page: Page = new_user_page("operasyon@viaevents-e2e.com", OPERATION_PASSWORD, forced=True)
     menu = _menu(page)
     for hidden in ("Finans Merkezi", "Teklifler", "Raporlar", "Ortaklar"):
         assert not any(hidden in m for m in menu), (hidden, menu)
@@ -99,7 +136,7 @@ def test_wrong_password_and_logout(browser) -> None:  # noqa: ANN001
 
 
 def test_logout(new_user_page) -> None:  # noqa: ANN001
-    page: Page = new_user_page("ibrahim@viaevents-e2e.com", PARTNER_PASSWORD)
+    page: Page = new_user_page("ibrahim@viaevents-e2e.com", PARTNER_PASSWORD, forced=True)
     page.get_by_role("button", name="İbrahim Kaya").or_(
         page.get_by_role("button", name="Hesap menüsü")
     ).first.click()

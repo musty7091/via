@@ -8,7 +8,7 @@
 """
 
 from calendar import monthrange
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select, true
@@ -21,6 +21,7 @@ from app.core.money import ZERO, format_money, money, split_evenly
 from app.core.schemas import ApiModel
 from app.modules.audit import service as audit
 from app.modules.closing.distribution import post_distribution, preview_shares
+from app.modules.closing.events import needs_closure, profit_date
 from app.modules.closing.models import AccountingPeriod, ClosureStatus, EventClosure, PeriodStatus
 from app.modules.closing.service import month_label
 from app.modules.events.models import Event, EventStatus
@@ -258,9 +259,33 @@ def _period(db: Session, month: str) -> AccountingPeriod | None:
     return db.scalar(select(AccountingPeriod).where(AccountingPeriod.month == month))
 
 
+def _month_events(db: Session, start: date, end: date) -> list[Event]:
+    """Sonucu bu aya yazılan etkinlikler: etkinlik günü bu ayda olanlar; iptal edilenler
+    için iptal edildiği ay."""
+    candidates = db.scalars(
+        select(Event)
+        .where(
+            Event.event_date.between(start, end)
+            # Saat dilimi farkı için bir gün geniş aranır; kesin ay profit_date ile seçilir.
+            | func.date(Event.cancelled_at).between(
+                start - timedelta(days=1), end + timedelta(days=1)
+            )
+        )
+        .order_by(Event.event_date)
+    )
+    return [e for e in candidates if start <= profit_date(e) <= end]
+
+
 def _blockers(db: Session, month: str) -> list[str]:
     start, end = parse_month(month)
     blockers = []
+    pending = [e for e in _month_events(db, start, end) if needs_closure(db, e)]
+    if pending:
+        blockers.append(
+            "Bu ayın etkinliklerinin finans kapanışı yapılmalı (kâr etkinlik ayına yazılır): "
+            + ", ".join(e.event_no for e in pending)
+            + "."
+        )
     period = _period(db, month)
     if period and period.status == PeriodStatus.CLOSED:
         blockers.append("Bu dönem zaten kapalı.")
@@ -324,8 +349,11 @@ def preview(db: Session, month: str) -> PeriodPreview:
         select(EventClosure).where(EventClosure.status == ClosureStatus.CLOSED)
     ).all()
     closed_by_event = {c.event_id: c for c in closures}
-    closed_in_month = [c for c in closures if start <= c.closed_at.date() <= end]
-    closed_profit = sum((c.profit for c in closed_in_month), ZERO)
+    month_events = _month_events(db, start, end)
+    # Kâr, etkinliğin yapıldığı aya yazılır (kapanışın yapıldığı güne değil).
+    closed_profit = sum(
+        (closed_by_event[e.id].profit for e in month_events if e.id in closed_by_event), ZERO
+    )
 
     general = general_result(db, month)
 
@@ -352,11 +380,11 @@ def preview(db: Session, month: str) -> PeriodPreview:
         for p in db.scalars(select(Partner).order_by(Partner.sort_order, Partner.id))
     ]
 
-    events = db.scalars(
-        select(Event)
-        .where(Event.event_date.between(start, end), Event.status != EventStatus.CANCELLED)
-        .order_by(Event.event_date)
-    ).all()
+    events = [
+        e
+        for e in month_events
+        if e.status != EventStatus.CANCELLED or e.id in closed_by_event or needs_closure(db, e)
+    ]
     event_lines = [
         EventLine(
             event_id=e.id,
@@ -371,12 +399,6 @@ def preview(db: Session, month: str) -> PeriodPreview:
     ]
 
     warnings = []
-    unclosed = [e for e in event_lines if not e.closed]
-    if unclosed:
-        warnings.append(
-            f"{len(unclosed)} etkinliğin finans kapanışı yapılmadı; "
-            "kârları kapanış yapıldığında dağıtılacak."
-        )
     held = sum((p.held_base for p in partners), ZERO)
     if held > 0:
         warnings.append(

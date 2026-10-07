@@ -153,3 +153,19 @@ Son çalışma 8 Haziran 2026 (2–8 Haziran arası 80 commit).
    - **Operasyon:** Etkinlik operasyonu; maliyet ve finans görmez.
    - **İzleyici:** Sadece görüntüler.
    Rol tablosu: `apps/api/app/core/permissions.py`, kilitleyen testler: `apps/api/tests/test_permissions.py`.
+
+## 9. Sahibin Onayladığı Kararlar (7 Ekim 2026)
+
+1. **Kâr ayı:** Etkinlik kârı/zararı etkinliğin yapıldığı aya yazılır (kapanışın yapıldığı güne değil).
+   Bu yüzden bir ayın dönemi, o ayın etkinliklerinin finans kapanışı yapılmadan kapatılamaz.
+   Etkinlik günü gelmeden finans kapanışı yapılamaz.
+2. **Kapora:** İptal edilen etkinlikte alınan para geri verilmez; şirkette kalır ve etkinlik geliri
+   olur. İstisnai durumda iptal sırasında bir kısmı veya tamamı müşteriye iade edilir (finans kayıt
+   yetkisi gerekir). Sanatçı/tedarikçiye yapılmış ödemeler maliyet olarak kalır, ödenmemiş kısımlar
+   düşülür. İptal edilen etkinliğin sonucu iptal edildiği aya yazılır ve finans kapanışıyla
+   ortaklara dağıtılır (sonuç sıfırsa kapanış gerekmez).
+3. **İptal ters kaydı:** Orijinal kaydın dönemi açıksa ters kayıt orijinal tarihe yazılır (kayıt hiç
+   olmamış gibi); dönem kapalıysa bugüne. Kasadan para çıkaran geriye tarihli işlemde kasa o tarihten
+   bugüne hiçbir gün eksiye düşemez.
+4. **Şifre:** Yöneticinin oluşturduğu veya şifresini sıfırladığı kullanıcı ilk girişte kendi şifresini
+   belirler; belirlemeden hiçbir ekran ve API kullanılamaz.

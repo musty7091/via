@@ -9,6 +9,7 @@ from app.core import clock
 from app.core.money import ZERO, money
 from app.modules.events.models import Event, EventStatus
 from app.modules.finance import cash, ledger, partners
+from app.modules.finance.agreements import cancel_settlement
 from app.modules.finance.collections import collected_amount, remaining_amount, written_off_amount
 from app.modules.finance.expenses import expense_payable
 from app.modules.finance.models import (
@@ -272,6 +273,7 @@ def event_finance(db: Session, event: Event) -> EventFinance:
     expense = event_balance(Account.EXPENSE)
     fx = -event_balance(Account.FX_DIFFERENCE)
     payable_reads = [payable_read(db, p) for p in payables]
+    kept, refunded = cancel_settlement(db, event.id)
     return EventFinance(
         event_id=event.id,
         currency=event.currency,
@@ -297,6 +299,8 @@ def event_finance(db: Session, event: Event) -> EventFinance:
         payables_remaining_base=sum(
             (p.remaining_base for p in payable_reads if p.status == DocStatus.ACTIVE), ZERO
         ),
+        cancel_kept_amount=kept,
+        cancel_refunded_amount=refunded,
     )
 
 

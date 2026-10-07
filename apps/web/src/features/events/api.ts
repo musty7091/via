@@ -58,11 +58,18 @@ export function useUpdateEvent(id: number) {
   });
 }
 
+export type EventActionBody = Schema<"EventAction">;
+
 export function useEventAction(id: number) {
   const update = useEventCache();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { action: EventAction; note?: string | null }) =>
-      api<EventDetail>(`/events/${id}/status`, { method: "POST", body }),
-    onSuccess: update,
+    mutationFn: (body: EventActionBody) => api<EventDetail>(`/events/${id}/status`, { method: "POST", body }),
+    onSuccess: async (event) => {
+      await update(event);
+      // İptal/yeniden açma finans kayıtlarını değiştirir.
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: ["closing"] });
+    },
   });
 }

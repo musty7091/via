@@ -133,7 +133,9 @@ def update_payable(
     new_amount = changes.get("amount", payable.amount)
     new_rate = changes.get("rate", payable.rate)
     if new_amount < paid:
-        raise DomainError(f"Borç tutarı ödenmiş tutardan ({paid} {payable.currency}) az olamaz.")
+        raise DomainError(
+            f"Borç tutarı ödenmiş tutardan ({format_money(paid, payable.currency)}) az olamaz."
+        )
     if new_rate != payable.rate and paid > 0:
         raise DomainError("Ödeme yapılmış borcun kuru değiştirilemez.")
     if payable.currency == "TRY":
@@ -358,6 +360,11 @@ def cancel_payment(
 ) -> PayablePayment:
     if payment.status != DocStatus.ACTIVE:
         raise DomainError("Bu ödeme zaten iptal edilmiş.")
+    event = payment.payable.event
+    if event is not None and event.status == EventStatus.CANCELLED:
+        raise DomainError(
+            "İptal edilmiş etkinliğin ödemesi iptal edilemez; önce etkinliği yeniden açın."
+        )
     ensure_event_open(db, payment.payable.event_id)
     if not reason:
         raise DomainError("İptal sebebini yazın.")
@@ -372,7 +379,6 @@ def cancel_payment(
     ledger.reverse(
         db,
         entry,  # type: ignore[arg-type]
-        entry_date=clock.today(),
         description=f"Ödeme iptali: {payment.payment_no}. Sebep: {reason}",
         actor=actor,
     )

@@ -104,6 +104,11 @@ class EventUpdate(ApiModel):
 class EventAction(ApiModel):
     action: Literal["complete", "cancel", "reopen"]
     note: LongText | None = None
+    # İptalde istisnai iade (verilmezse alınan paranın tamamı şirkette kalır)
+    refund_amount: Annotated[Decimal, Field(gt=0, max_digits=16, decimal_places=2)] | None = None
+    refund_cash_account_id: int | None = None
+    refund_date: date | None = None
+    refund_rate: Annotated[Decimal, Field(gt=0, max_digits=18, decimal_places=6)] | None = None
 
 
 TRANSITIONS: dict[str, tuple[set[EventStatus], EventStatus]] = {
@@ -288,6 +293,7 @@ def change_status(
     *,
     actor: User,
     context: RequestContext,
+    refund: "finance_agreements.CancelRefund | None" = None,
 ) -> Event:
     sources, target = TRANSITIONS[action]
     if event.status not in sources:
@@ -297,8 +303,11 @@ def change_status(
     if action == "cancel":
         if not note:
             raise DomainError("İptal sebebini yazın.")
-        # Anlaşma kaydı ve açık borçlar ters kayıtla iptal edilir.
-        finance_agreements.on_event_cancel(db, event, note, actor)
+        if refund is not None and Permission.FINANCE_RECORD not in permissions_for(actor.role):
+            raise DomainError("Müşteriye iade kaydı için finans kayıt yetkisi gerekir.")
+        # Anlaşma kaydı ve açık borçlar ters kayıtla iptal edilir; alınan para şirkette kalır
+        # (istisnai iade hariç).
+        finance_agreements.on_event_cancel(db, event, note, actor, refund)
         event.cancelled_at = clock.now()
         event.cancel_reason = note
     if action == "reopen":

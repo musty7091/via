@@ -36,6 +36,7 @@ import {
 function StatusBadge({ user }: { user: User }) {
   if (!user.is_active) return <Badge tone="neutral">Pasif</Badge>;
   if (user.is_locked) return <Badge tone="danger">Kilitli</Badge>;
+  if (user.must_change_password) return <Badge tone="warning">Geçici şifre</Badge>;
   return <Badge tone="success">Aktif</Badge>;
 }
 

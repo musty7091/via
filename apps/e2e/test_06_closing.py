@@ -1,9 +1,9 @@
 """Senaryo 6 — Kapanış: etkinlik finans kapanışı, Eylül dönem kapanışı, kapalı ay kilidi.
 
-Etkinlik kârı 45.000 → her ortağa 15.000. Kâr, kapanışın yapıldığı ayın (Ekim) sonucuna girer.
-Eylül genel giderleri: kira 6.000 + iptal edilen 500 (ters kaydı Ekim'e düşer) = 6.500
-  → Eylül zararı ortaklara −2.166,67 / −2.166,67 / −2.166,66 (artan kuruş kuruş sırasına göre).
-Ekim (açık): etkinlik kârı 45.000 + iptal ters kaydı 500 = 45.500.
+Etkinlik kârı 45.000 → her ortağa 15.000; kâr etkinliğin yapıldığı aya (Eylül) yazılır.
+Eylül genel gideri: kira 6.000 (iptal edilen 500'ün ters kaydı Eylül açıkken orijinal tarihe
+düştüğü için sıfırlanır) → Eylül sonucu 45.000 − 6.000 = 39.000, ortak başına 13.000.
+Eylül, etkinliğinin finans kapanışı yapılmadan kapatılamaz.
 """
 
 import re
@@ -20,6 +20,14 @@ def test_event_completed(page: Page) -> None:
     page.get_by_role("button", name="Gerçekleşti").click()
     dialog(page).get_by_role("button", name="Gerçekleşti İşaretle").click()
     expect(page.get_by_role("heading", level=1)).to_contain_text("Gerçekleşti")
+
+
+def test_september_blocked_until_event_closed(page: Page) -> None:
+    _select_period(page, "Eylül 2026")
+    main = page.locator("main")
+    expect(main).to_contain_text("finans kapanışı yapılmalı")
+    expect(main).to_contain_text("VIA-E-2026-0001")
+    expect(main.get_by_role("button", name="Dönemi Kapat")).to_be_disabled()
 
 
 def test_event_financial_closure(page: Page) -> None:
@@ -57,9 +65,9 @@ def _select_period(page: Page, label: str) -> None:
 def test_close_september(page: Page) -> None:
     _select_period(page, "Eylül 2026")
     main = page.locator("main")
-    assert amount_after(main, "Bu ay kapanan etkinliklerin kârı") == Decimal("0.00")
-    assert amount_after(main, "Genel giderler") == Decimal("-6500.00")
-    assert amount_after(main, "Ay sonucu") == Decimal("-6500.00")
+    assert amount_after(main, "Bu ayın etkinliklerinin kârı") == Decimal("45000.00")
+    assert amount_after(main, "Genel giderler") == Decimal("-6000.00")
+    assert amount_after(main, "Ay sonucu") == Decimal("39000.00")
     main.get_by_role("button", name="Dönemi Kapat").click()
     dialog(page).get_by_role("button", name="Dönemi Kapat").click()
     expect(page.get_by_role("button", name=re.compile(r"^Eylül 2026 Kapalı"))).to_be_visible()
@@ -86,29 +94,30 @@ def test_september_shares(page: Page) -> None:
         name: money(rows.filter(has_text=name).get_by_role("cell").nth(1).inner_text())
         for name in ("Alper Aslan", "Volkan Demir", "İbrahim Kaya")
     }
+    # Ay içinde yazılan pay: etkinlik payı 15.000 + genel gider payı −2.000
     assert shares == {
-        "Alper Aslan": Decimal("-2166.67"),
-        "Volkan Demir": Decimal("-2166.67"),
-        "İbrahim Kaya": Decimal("-2166.66"),
+        "Alper Aslan": Decimal("13000.00"),
+        "Volkan Demir": Decimal("13000.00"),
+        "İbrahim Kaya": Decimal("13000.00"),
     }, shares
 
 
 def test_october_preview(page: Page) -> None:
     _select_period(page, "Ekim 2026")
     main = page.locator("main")
-    assert amount_after(main, "Bu ay kapanan etkinliklerin kârı") == Decimal("45000.00")
-    assert amount_after(main, "Ay sonucu") == Decimal("45500.00")
+    assert amount_after(main, "Bu ayın etkinliklerinin kârı") == Decimal("0.00")
+    assert amount_after(main, "Ay sonucu") == Decimal("0.00")
     expect(main.get_by_role("button", name="Dönemi Kapat")).to_be_disabled()  # ay bitmedi
 
 
 def test_partner_accounts(page: Page) -> None:
-    """Ortak hesapları: etkinlik payı 15.000 − Eylül zarar payı; Volkan'a ayrıca 12.000 borç."""
+    """Ortak hesapları: Eylül payı 13.000; Volkan'a ayrıca cebinden ödediği 12.000."""
     goto(page, "/ortaklar", "Ortaklar")
     text = page.locator("main").inner_text()
     for name, owed in (
-        ("Alper Aslan", "12.833,33"),
-        ("Volkan Demir", "24.833,33"),
-        ("İbrahim Kaya", "12.833,34"),
+        ("Alper Aslan", "13.000,00"),
+        ("Volkan Demir", "25.000,00"),
+        ("İbrahim Kaya", "13.000,00"),
     ):
         item = page.get_by_role("listitem").filter(has_text=name).last
         expect(item).to_contain_text(owed), text

@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
 
 import { CurrentUserContext, meQueryKey, useCan, useMe, type Permission } from "@/features/auth/auth";
+import { ForcePasswordChange } from "@/features/auth/ForcePasswordChange";
 import { UNAUTHENTICATED_EVENT } from "@/shared/api/client";
 import { Card, EmptyState, LogoMark } from "@/shared/ui";
 
@@ -32,6 +33,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     const next = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/giris?next=${next}`} replace />;
   }
+  if (me.data.must_change_password) return <ForcePasswordChange me={me.data} />;
   return <CurrentUserContext value={me.data}>{children}</CurrentUserContext>;
 }
 

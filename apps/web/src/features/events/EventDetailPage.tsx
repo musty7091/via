@@ -4,6 +4,8 @@ import { Link, useParams, useSearchParams } from "react-router";
 
 import { useCan } from "@/features/auth/auth";
 import { useEvent, useEventAction, type EventAction, type EventDetail } from "@/features/events/api";
+import { CancelSettlement } from "@/features/events/CancelSettlement";
+import { decimalText, emptyRefund, type RefundState } from "@/features/events/refund";
 import { EventEditDialog } from "@/features/events/EventEditDialog";
 import { EventClosureTab } from "@/features/closing/EventClosureTab";
 import { EventFinanceTab } from "@/features/finance/EventFinanceTab";
@@ -46,25 +48,36 @@ function Row({ label, children, strong }: { label: string; children: ReactNode; 
 
 const ACTION_COPY: Record<EventAction, { title: string; description: string; confirm: string; danger?: boolean; needsNote?: boolean }> = {
   complete: { title: "Etkinlik Gerçekleşti", description: "Etkinliğin yapıldığı kaydedilir. Finans kapanışı bu adımdan sonra yapılır.", confirm: "Gerçekleşti İşaretle" },
-  cancel: { title: "Etkinlik İptal Edilecek", description: "Etkinlik iptal edilir; anlaşma kayıtları ve açık borçlar ters kayıtla kapatılır. Tahsilat veya sanatçı/tedarikçi ödemesi varsa önce onlar iptal edilmelidir.", confirm: "Etkinliği İptal Et", danger: true, needsNote: true },
+  cancel: { title: "Etkinlik İptal Edilecek", description: "Etkinlik iptal edilir; anlaşma kaydı ters kayıtla kapatılır.", confirm: "Etkinliği İptal Et", danger: true, needsNote: true },
   reopen: { title: "Etkinlik Yeniden Açılacak", description: "Etkinlik tekrar 'Planlandı' durumuna alınır.", confirm: "Yeniden Aç" },
 };
 
 function ActionDialog({ event, action, onClose }: { event: EventDetail; action: EventAction | null; onClose: () => void }) {
   const mutation = useEventAction(event.id);
   const [note, setNote] = useState("");
+  const [refund, setRefund] = useState<RefundState>(emptyRefund);
   const copy = action ? ACTION_COPY[action] : null;
   const close = () => {
     setNote("");
+    setRefund(emptyRefund());
     mutation.reset();
     onClose();
   };
+  const refundBody =
+    action === "cancel" && refund.enabled
+      ? {
+          refund_amount: decimalText(refund.amount) || null,
+          refund_cash_account_id: refund.accountId ? Number(refund.accountId) : null,
+          refund_date: refund.date || null,
+          refund_rate: refund.rate ? decimalText(refund.rate) : null,
+        }
+      : {};
   return (
     <Dialog
       open={action !== null}
       onOpenChange={(open) => !open && close()}
       title={copy?.title ?? ""}
-      size="sm"
+      size={action === "cancel" ? "md" : "sm"}
       footer={
         <>
           <Button variant="secondary" onClick={close}>
@@ -76,7 +89,7 @@ function ActionDialog({ event, action, onClose }: { event: EventDetail; action: 
             onClick={() =>
               action &&
               mutation.mutate(
-                { action, note: note.trim() || null },
+                { action, note: note.trim() || null, ...refundBody },
                 {
                   onSuccess: () => {
                     toast.success("Etkinlik durumu güncellendi.");
@@ -98,6 +111,7 @@ function ActionDialog({ event, action, onClose }: { event: EventDetail; action: 
             {(p) => <Textarea {...p} value={note} onChange={(e) => setNote(e.target.value)} />}
           </Field>
         )}
+        {action === "cancel" && <CancelSettlement event={event} refund={refund} onChange={setRefund} />}
         {mutation.isError && <p className="text-sm text-danger-600">{errorMessage(mutation.error)}</p>}
       </div>
     </Dialog>

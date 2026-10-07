@@ -13,9 +13,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.errors import DomainError
-from app.core.money import BASE_CURRENCY, ZERO, Currency, money
+from app.core.money import BASE_CURRENCY, ZERO, Currency, format_money, money
 from app.core.sequences import next_number
-from app.modules.finance.models import Account, EntryKind, JournalEntry, JournalLine
+from app.modules.finance.models import Account, CashAccount, EntryKind, JournalEntry, JournalLine
 from app.modules.users.models import User
 
 
@@ -91,7 +91,7 @@ def balancing_fx_leg(legs: list[Leg], **parties: object) -> Leg | None:
 
 
 def ensure_period_open(db: Session, entry_date: date) -> None:
-    """Kapanmış döneme kayıt yapılmasını engeller (dönem kapanışı Aşama 5'te bağlanır)."""
+    """Kapanmış döneme kayıt yapılmasını engeller."""
     from app.modules.closing.service import assert_period_open  # noqa: PLC0415
 
     assert_period_open(db, entry_date)
@@ -150,11 +150,25 @@ def post(
 
 
 def reverse(
-    db: Session, entry: JournalEntry, *, entry_date: date, description: str, actor: User | None
+    db: Session,
+    entry: JournalEntry,
+    *,
+    description: str,
+    actor: User | None,
+    entry_date: date | None = None,
 ) -> JournalEntry:
-    """Fişi ters kayıtla iptal eder; orijinal fiş olduğu gibi kalır."""
+    """Fişi ters kayıtla iptal eder; orijinal fiş olduğu gibi kalır.
+
+    Tarih verilmezse orijinal kaydın dönemi açıksa orijinal tarihe (kayıt hiç olmamış gibi),
+    kapalıysa bugüne yazılır. Ters kayıt kasadan para çıkarıyorsa, o tarihten bugüne kadar
+    hiçbir gün kasa eksiye düşmemelidir.
+    """
+    from app.modules.closing.service import reversal_date  # noqa: PLC0415
+
     if db.scalar(select(JournalEntry.id).where(JournalEntry.reverses_id == entry.id)):
         raise DomainError("Bu kayıt zaten iptal edilmiş.")
+    if entry_date is None:
+        entry_date = reversal_date(db, entry.entry_date)
     legs = [
         Leg(
             account=Account(line.account),
@@ -171,6 +185,9 @@ def reverse(
         )
         for line in entry.lines
     ]
+    for item in legs:
+        if item.account == Account.CASH and item.amount < 0 and item.cash_account_id:
+            assert_cash_never_negative(db, item.cash_account_id, -item.amount, entry_date)
     return post(
         db,
         kind=EntryKind.REVERSAL,
@@ -217,3 +234,43 @@ def amount_balance(
         for currency, total in db.execute(_apply(query, filters, as_of))
         if total != 0
     }
+
+
+def lowest_cash_balance(db: Session, cash_account_id: int, currency: str, since: date) -> Decimal:
+    """Kasa/banka hesabının `since` gününden bugüne kadar gün sonu bakiyelerinin en düşüğü."""
+    running = amount_balance(db, Account.CASH, as_of=since, cash_account_id=cash_account_id).get(
+        currency, ZERO
+    )
+    lowest = running
+    daily = db.execute(
+        select(JournalEntry.entry_date, func.sum(JournalLine.amount))
+        .join(JournalEntry, JournalEntry.id == JournalLine.entry_id)
+        .where(
+            JournalLine.account == Account.CASH,
+            JournalLine.cash_account_id == cash_account_id,
+            JournalLine.currency == currency,
+            JournalEntry.entry_date > since,
+        )
+        .group_by(JournalEntry.entry_date)
+        .order_by(JournalEntry.entry_date)
+    )
+    for _, total in daily:
+        running += total
+        lowest = min(lowest, running)
+    return money(lowest)
+
+
+def assert_cash_never_negative(
+    db: Session, cash_account_id: int, amount: Decimal, on_date: date
+) -> None:
+    """`on_date` tarihli bir çıkıştan sonra hesap o günden bugüne hiçbir gün eksiye düşmemeli."""
+    account = db.get(CashAccount, cash_account_id)
+    if account is None:
+        raise DomainError("Kasa/banka hesabı bulunamadı.")
+    lowest = lowest_cash_balance(db, cash_account_id, account.currency, on_date)
+    if amount > lowest:
+        raise DomainError(
+            f"{account.name} hesabında {on_date:%d.%m.%Y} tarihinden bu yana yeterli bakiye "
+            f"olmayan günler var (en düşük {format_money(lowest, account.currency)}, "
+            f"gereken {format_money(amount, account.currency)})."
+        )

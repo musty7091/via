@@ -48,6 +48,19 @@ export function EventFinanceTab({ eventId, cancelled }: { eventId: number; cance
         />
       </div>
 
+      {(Number(f.cancel_kept_amount) > 0 || Number(f.cancel_refunded_amount) > 0) && (
+        <div className="rounded-lg border border-line bg-surface-muted px-4 py-3 text-sm" role="status">
+          <strong className="font-medium">Etkinlik iptal edildi.</strong> Şirkette kalan kapora:{" "}
+          <Money amount={f.cancel_kept_amount} currency={c} />
+          {Number(f.cancel_refunded_amount) > 0 && (
+            <>
+              {" "}
+              · Müşteriye iade: <Money amount={f.cancel_refunded_amount} currency={c} />
+            </>
+          )}
+        </div>
+      )}
+
       {canRecord && (
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setDialog("collection")} disabled={Number(f.remaining_amount) <= 0}>

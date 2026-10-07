@@ -2,10 +2,11 @@
 
 Kural (sahibin kararı): kâr, etkinlik gerçekleşip müşteri alacağı tamamen kapandığında
 (tahsil edildiğinde veya gerekçeyle silindiğinde) dağıtılabilir. Gerçekleşen kâr/zarar
-aktif ortaklara eşit bölünür.
+aktif ortaklara eşit bölünür ve etkinliğin yapıldığı aya yazılır; bu yüzden o ayın dönemi
+etkinlikleri kapanmadan kapatılamaz.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -14,12 +15,12 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import format_money, money
+from app.core.money import ZERO, format_money, money
 from app.core.schemas import ApiModel, columns
 from app.modules.audit import service as audit
 from app.modules.closing.distribution import post_distribution, preview_shares
 from app.modules.closing.models import ClosureStatus, EventClosure
-from app.modules.closing.service import ensure_event_open
+from app.modules.closing.service import ensure_event_open, is_period_closed, month_label
 from app.modules.events.models import Event, EventStatus
 from app.modules.finance import ledger
 from app.modules.finance.collections import remaining_amount
@@ -108,8 +109,37 @@ def closure_read(closure: EventClosure) -> ClosureRead:
     )
 
 
+def profit_date(event: Event) -> date:
+    """Kâr dağıtımının tarihi: etkinlik günü (etkinlik günü gelmeden kapanış yapılamaz).
+    İptal edilen etkinlik hiç yapılmadığı için sonucu iptal edildiği aya yazılır."""
+    if event.status == EventStatus.CANCELLED and event.cancelled_at is not None:
+        return clock.local_date(event.cancelled_at)
+    return event.event_date
+
+
+def needs_closure(db: Session, event: Event) -> bool:
+    """Dönem kapanışından önce finans kapanışı gereken etkinlik mi?
+    İptal edilip parası tamamen iade edilmiş, maliyeti de kalmamış etkinlik gerekmez."""
+    if active_closure(db, event.id):
+        return False
+    if event.status != EventStatus.CANCELLED:
+        return True
+    result = _result(db, event.id)
+    return any(result[key] != 0 for key in ("revenue", "cost", "expense", "fx"))
+
+
+def _assert_month_open(db: Session, event: Event) -> None:
+    day = profit_date(event)
+    if is_period_closed(db, day):
+        raise DomainError(
+            f"Etkinliğin ayı ({month_label(day)}) kapalı. "
+            "Önce Dönem Kapanışları ekranından o dönemi yeniden açın."
+        )
+
+
 def checks(db: Session, event: Event) -> list[CheckItem]:
-    remaining = remaining_amount(db, event)
+    cancelled = event.status == EventStatus.CANCELLED
+    remaining = remaining_amount(db, event) if not cancelled else ZERO
     open_payables = [
         p
         for p in db.scalars(
@@ -121,10 +151,12 @@ def checks(db: Session, event: Event) -> list[CheckItem]:
     return [
         CheckItem(
             key="completed",
-            label="Etkinlik gerçekleşti olarak işaretlendi",
-            ok=event.status == EventStatus.COMPLETED,
+            label="Etkinlik iptal edildi"
+            if cancelled
+            else "Etkinlik gerçekleşti olarak işaretlendi",
+            ok=event.status in {EventStatus.COMPLETED, EventStatus.CANCELLED},
             detail=None
-            if event.status == EventStatus.COMPLETED
+            if event.status in {EventStatus.COMPLETED, EventStatus.CANCELLED}
             else "Önce etkinliği 'Gerçekleşti' yapın.",
         ),
         CheckItem(
@@ -153,9 +185,9 @@ def checks(db: Session, event: Event) -> list[CheckItem]:
         CheckItem(
             key="operation_report",
             label="Operasyon raporu teslim edildi",
-            ok=report == ReportStatus.SUBMITTED,
+            ok=cancelled or report == ReportStatus.SUBMITTED,
             detail=None
-            if report == ReportStatus.SUBMITTED
+            if cancelled or report == ReportStatus.SUBMITTED
             else "Operasyon ekibi etkinlik raporunu henüz teslim etmedi.",
             blocking=False,
         ),
@@ -255,6 +287,9 @@ def close_event(
 ) -> EventClosure:
     if active_closure(db, event.id):
         raise DomainError("Bu etkinliğin finans kapanışı zaten yapılmış.")
+    _assert_month_open(db, event)
+    if event.status != EventStatus.CANCELLED and event.event_date > clock.today():
+        raise DomainError("Etkinlik günü gelmeden finans kapanışı yapılamaz.")
     failing = [i for i in checks(db, event) if i.blocking and not i.ok]
     if failing:
         raise DomainError("Kapanış yapılamaz: " + " ".join(i.detail or i.label for i in failing))
@@ -265,7 +300,7 @@ def close_event(
         db,
         amount=profit,
         kind=EntryKind.EVENT_CLOSE,
-        entry_date=clock.today(),
+        entry_date=profit_date(event),
         description=f"{event.event_no} finans kapanışı: {kind_label} dağıtımı",
         actor=actor,
         event_id=event.id,
@@ -307,12 +342,12 @@ def reopen(
         raise NotFoundError("Aktif finans kapanışı yok.")
     if not reason or len(reason.strip()) < 3:
         raise DomainError("Gerekçe yazın.")
+    _assert_month_open(db, event)
     if closure.entry_id:
         entry = db.get(JournalEntry, closure.entry_id)
         ledger.reverse(
             db,
             entry,  # type: ignore[arg-type]
-            entry_date=clock.today(),
             description=f"{event.event_no} finans kapanışı geri alındı. Gerekçe: {reason}",
             actor=actor,
         )

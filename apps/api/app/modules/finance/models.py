@@ -56,6 +56,10 @@ class EntryKind(StrEnum):
     EVENT_CLOSE = "event_close"
     PERIOD_CLOSE = "period_close"
     REVERSAL = "reversal"
+    # Etkinlik iptali: müşteriye iade, şirkette kalan kapora, ödenmemiş borcun düşülmesi
+    CANCEL_REFUND = "cancel_refund"
+    CANCEL_KEPT = "cancel_kept"
+    CANCEL_RELEASE = "cancel_release"
 
 
 class DocStatus(StrEnum):

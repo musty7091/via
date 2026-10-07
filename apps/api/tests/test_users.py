@@ -127,3 +127,63 @@ def test_deactivated_user_session_stops_working(client, make_user, login):
     client.cookies.clear()
     client.cookies.set("via_session", target_cookie)
     assert client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_new_user_must_change_password_before_anything_else(client, make_user, login, db):
+    login(make_user())
+    created = client.post("/api/v1/users", json=NEW_USER).json()
+    assert created["must_change_password"] is True
+    client.post("/api/v1/auth/logout")
+
+    me = client.post(
+        "/api/v1/auth/login", json={"email": NEW_USER["email"], "password": NEW_USER["password"]}
+    ).json()
+    assert me["must_change_password"] is True
+    blocked = client.get("/api/v1/customers")
+    assert blocked.status_code == 403
+    assert blocked.json()["error"]["code"] == "password_change_required"
+
+    same = client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": NEW_USER["password"], "new_password": NEW_USER["password"]},
+    )
+    assert same.status_code == 400
+    changed = client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": NEW_USER["password"], "new_password": "Kendi-Sifrem-2026"},
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["must_change_password"] is False
+    assert client.get("/api/v1/customers").status_code == 200
+
+
+def test_admin_reset_requires_change_again(client, make_user, login, db):
+    admin = make_user()
+    target = make_user(Role.ACCOUNTING)
+    assert target.must_change_password is False
+    login(admin)
+
+    client.post(
+        f"/api/v1/users/{target.id}/reset-password", json={"new_password": "Yeni-Sifre-2026"}
+    )
+
+    db.refresh(target)
+    assert target.must_change_password is True
+
+
+def test_cli_admin_does_not_need_password_change(db):
+    from app.modules.users import service
+    from app.modules.users.schemas import UserCreate
+
+    user = service.create_user(
+        db,
+        UserCreate(
+            full_name="Kurulum Yöneticisi",
+            email="kurulum@test.com",
+            role=Role.SUPER_ADMIN,
+            password="Kurulum-Sifre-2026",
+        ),
+        actor=None,
+        context=None,
+    )
+    assert user.must_change_password is False

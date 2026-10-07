@@ -25,6 +25,7 @@ def to_read(db: Session, user: User) -> UserRead:
         role_label=ROLE_LABELS[Role(user.role)],
         is_active=user.is_active,
         is_locked=bool(user.locked_until and user.locked_until > datetime.now(UTC)),
+        must_change_password=user.must_change_password,
         partner_id=partner.id if partner else None,
         partner_name=partner.full_name if partner else None,
         last_login_at=user.last_login_at,
@@ -82,6 +83,9 @@ def create_user(
         role=data.role,
         is_active=data.is_active,
         password_hash=hash_password(data.password),
+        # Şifreyi başka biri (yönetici) belirlediyse kullanıcı ilk girişte değiştirir;
+        # komut satırı kurulumu ve demo verisi (actor yok) hariç.
+        must_change_password=actor is not None,
     )
     db.add(user)
     db.flush()
@@ -145,6 +149,7 @@ def reset_password(
     db: Session, user: User, new_password: str, *, actor: User, context: RequestContext
 ) -> None:
     user.password_hash = hash_password(new_password)
+    user.must_change_password = True
     user.token_version += 1
     user.failed_login_count = 0
     user.locked_until = None

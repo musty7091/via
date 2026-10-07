@@ -140,7 +140,10 @@ def change_password(
 ) -> Me:
     if not verify_password(data.current_password, user.password_hash):
         raise DomainError("Mevcut şifre hatalı.", code="invalid_password")
+    if data.new_password == data.current_password:
+        raise DomainError("Yeni şifre mevcut şifreden farklı olmalı.")
     user.password_hash = hash_password(data.new_password)
+    user.must_change_password = False
     user.token_version += 1
     audit.record(
         db,

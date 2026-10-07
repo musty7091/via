@@ -2413,6 +2413,14 @@ export interface components {
             action: "complete" | "cancel" | "reopen";
             /** Note */
             note?: string | null;
+            /** Refund Amount */
+            refund_amount?: number | string | null;
+            /** Refund Cash Account Id */
+            refund_cash_account_id?: number | null;
+            /** Refund Date */
+            refund_date?: string | null;
+            /** Refund Rate */
+            refund_rate?: number | string | null;
         };
         /** EventDetail */
         EventDetail: {
@@ -2524,6 +2532,16 @@ export interface components {
             profit_base: string;
             /** Payables Remaining Base */
             payables_remaining_base: string;
+            /**
+             * Cancel Kept Amount
+             * @default 0
+             */
+            cancel_kept_amount: string;
+            /**
+             * Cancel Refunded Amount
+             * @default 0
+             */
+            cancel_refunded_amount: string;
         };
         /** EventListItem */
         EventListItem: {
@@ -2877,6 +2895,8 @@ export interface components {
             is_active: boolean;
             /** Is Locked */
             is_locked: boolean;
+            /** Must Change Password */
+            must_change_password: boolean;
             /** Partner Id */
             partner_id: number | null;
             /** Partner Name */
@@ -4732,6 +4752,8 @@ export interface components {
             is_active: boolean;
             /** Is Locked */
             is_locked: boolean;
+            /** Must Change Password */
+            must_change_password: boolean;
             /** Partner Id */
             partner_id: number | null;
             /** Partner Name */

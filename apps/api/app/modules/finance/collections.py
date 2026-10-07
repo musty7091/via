@@ -6,7 +6,6 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
 from app.core.money import Currency, format_money, money
@@ -184,13 +183,16 @@ def cancel_collection(
 ) -> Collection:
     if collection.status != DocStatus.ACTIVE:
         raise DomainError("Bu tahsilat zaten iptal edilmiş.")
+    if collection.event and collection.event.status == EventStatus.CANCELLED:
+        raise DomainError(
+            "İptal edilmiş etkinliğin tahsilatı iptal edilemez; önce etkinliği yeniden açın."
+        )
     ensure_event_open(db, collection.event_id)
     if not reason:
         raise DomainError("İptal sebebini yazın.")
     # Para kasadan/ortaktan geri çıkacağı için bakiye yetmeli (eski sistemdeki eksi bakiye hatası).
-    if collection.cash_account_id is not None:
-        common.assert_cash_available(db, collection.cash_account, collection.amount)  # type: ignore[arg-type]
-    else:
+    # Kasa tarafı ters kayıtta (ledger.reverse) iptal tarihinden bugüne her gün için denetlenir.
+    if collection.cash_account_id is None:
         held, _ = common.carrying(
             db, Account.PARTNER_CASH, collection.currency, partner_id=collection.partner_id
         )
@@ -204,7 +206,6 @@ def cancel_collection(
     ledger.reverse(
         db,
         entry,  # type: ignore[arg-type]
-        entry_date=clock.today(),
         description=f"Tahsilat iptali: {collection.collection_no}. Sebep: {reason}",
         actor=actor,
     )

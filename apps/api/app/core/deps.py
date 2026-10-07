@@ -62,6 +62,12 @@ def get_request_context(request: Request) -> RequestContext:
 Context = Annotated[RequestContext, Depends(get_request_context)]
 
 
+# Şifresini değiştirmesi gereken kullanıcı sadece bunlara erişebilir.
+PASSWORD_CHANGE_ALLOWED = frozenset(
+    {"/api/v1/auth/me", "/api/v1/auth/change-password", "/api/v1/auth/logout"}
+)
+
+
 def get_current_user(request: Request, db: DbSession) -> User:
     token = request.cookies.get(SESSION_COOKIE)
     decoded = decode_access_token(token) if token else None
@@ -73,6 +79,10 @@ def get_current_user(request: Request, db: DbSession) -> User:
         raise UnauthenticatedError()
     if user.locked_until and user.locked_until > datetime.now(UTC):
         raise UnauthenticatedError()
+    if user.must_change_password and request.url.path not in PASSWORD_CHANGE_ALLOWED:
+        raise PermissionDeniedError(
+            "Devam etmeden önce şifrenizi değiştirin.", code="password_change_required"
+        )
     return user
 
 

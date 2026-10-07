@@ -23,6 +23,7 @@ class UserRead(ApiModel):
     role_label: str
     is_active: bool
     is_locked: bool
+    must_change_password: bool
     partner_id: int | None
     partner_name: str | None
     last_login_at: datetime | None

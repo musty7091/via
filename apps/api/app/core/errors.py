@@ -23,8 +23,10 @@ class NotFoundError(DomainError):
 class PermissionDeniedError(DomainError):
     status_code = 403
 
-    def __init__(self, message: str = "Bu işlem için yetkiniz yok.") -> None:
-        super().__init__(message, code="permission_denied")
+    def __init__(
+        self, message: str = "Bu işlem için yetkiniz yok.", code: str = "permission_denied"
+    ) -> None:
+        super().__init__(message, code=code)
 
 
 class TooManyRequestsError(DomainError):

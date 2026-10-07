@@ -352,6 +352,9 @@ class EventFinance(ApiModel):
     fx_base: Decimal
     profit_base: Decimal
     payables_remaining_base: Decimal
+    # İptal edilen etkinlikte şirkette kalan / müşteriye iade edilen (etkinlik dövizinde)
+    cancel_kept_amount: Decimal = Decimal("0")
+    cancel_refunded_amount: Decimal = Decimal("0")
 
 
 class OverviewTotals(ApiModel):

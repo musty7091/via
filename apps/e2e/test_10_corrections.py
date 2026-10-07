@@ -9,7 +9,7 @@ from decimal import Decimal
 from playwright.sync_api import Page, expect
 
 from test_05_operations import open_event
-from ui import amount_after, dialog, field, fill, goto, money
+from ui import amount_after, dialog, field, fill, form_error, goto, money
 
 
 def _partner_owed(page: Page) -> dict[str, str]:
@@ -21,39 +21,44 @@ def _partner_owed(page: Page) -> dict[str, str]:
     }
 
 
-def test_event_closure_undo_redo(page: Page) -> None:
-    before = _partner_owed(page)
+def _undo_closure(page: Page) -> None:
     open_event(page, "Kapanış")
-    panel = page.get_by_role("tabpanel")
-    panel.get_by_role("button", name="Kapanışı Geri Al").or_(
-        panel.get_by_role("button", name="Geri Al")
-    ).first.click()
+    page.get_by_role("tabpanel").get_by_role("button", name="Kapanışı geri al").click()
+    d = dialog(page)
+    field(d, "Sebep").fill("Kontrol için geri alındı")
+    d.get_by_role("button", name="Geri Al").click()
+
+
+def _set_september(page: Page, action: str) -> None:
+    goto(page, "/kapanislar", "Dönem Kapanışları")
+    page.get_by_role("button", name=re.compile(r"^Eylül 2026")).click()
+    page.locator("main").get_by_role("button", name=action).click()
     d = dialog(page)
     if field(d, "Sebep").count():
-        field(d, "Sebep").fill("Kontrol için geri alındı")
-    d.get_by_role("button", name="Geri Al").click()
+        field(d, "Sebep").fill("Kontrol")
+    d.get_by_role("button", name=action).click()
+    state = "Açık" if action == "Dönemi Aç" else "Kapalı"
+    expect(page.get_by_role("button", name=re.compile(rf"^Eylül 2026 {state}"))).to_be_visible()
+
+
+def test_closure_of_closed_month_needs_period_reopen(page: Page) -> None:
+    """Kâr Eylül'e yazıldı ve Eylül kapalı: kapanış geri alınamaz, önce dönem açılmalı."""
+    _undo_closure(page)
+    d = dialog(page)
+    expect(form_error(d)).to_contain_text("yeniden açın")
+    d.get_by_role("button", name="Vazgeç").click()
+
+
+def test_reopen_period_undo_and_redo_closure(page: Page) -> None:
+    before = _partner_owed(page)
+    _set_september(page, "Dönemi Aç")
+    _undo_closure(page)
+    panel = page.get_by_role("tabpanel")
     expect(panel.get_by_role("button", name="Finans Kapanışı Yap")).to_be_enabled()
     panel.get_by_role("button", name="Finans Kapanışı Yap").click()
     dialog(page).get_by_role("button", name="Kapanışı Yap").click()
     expect(panel).to_contain_text("Dağıtılan Sonuç")
-    assert _partner_owed(page) == before
-
-
-def test_period_reopen_and_close_again(page: Page) -> None:
-    before = _partner_owed(page)
-    goto(page, "/kapanislar", "Dönem Kapanışları")
-    page.get_by_role("button", name=re.compile(r"^Eylül 2026")).click()
-    page.get_by_role("button", name="Dönemi Aç").or_(
-        page.get_by_role("button", name="Yeniden Aç")
-    ).first.click()
-    d = dialog(page)
-    if field(d, "Sebep").count():
-        field(d, "Sebep").fill("Kontrol")
-    d.get_by_role("button", name="Dönemi Aç").click()
-    expect(page.get_by_role("button", name=re.compile(r"^Eylül 2026 Açık"))).to_be_visible()
-    page.locator("main").get_by_role("button", name="Dönemi Kapat").click()
-    dialog(page).get_by_role("button", name="Dönemi Kapat").click()
-    expect(page.get_by_role("button", name=re.compile(r"^Eylül 2026 Kapalı"))).to_be_visible()
+    _set_september(page, "Dönemi Kapat")
     assert _partner_owed(page) == before
 
 
@@ -65,7 +70,7 @@ def test_admin_resets_password(page: Page, new_user_page) -> None:  # noqa: ANN0
     fill(d, {"Yeni şifre": "Volkan-Yeni-2026!"})
     d.locator("button[type=submit]").click()
     expect(d).to_be_hidden()
-    other: Page = new_user_page("volkan@viaevents-e2e.com", "Volkan-Yeni-2026!")
+    other: Page = new_user_page("volkan@viaevents-e2e.com", "Volkan-Yeni-2026!", forced=True)
     expect(other.get_by_role("navigation", name="Ana menü")).to_be_visible()
 
 
@@ -104,16 +109,3 @@ def test_cash_unchanged_after_corrections(page: Page) -> None:
 
     assert balance("İş Bankası TL") == Decimal("24000.00")
     assert balance("Merkez Kasa TL") == Decimal("46200.00")
-
-
-def test_cancel_event_with_deposit_is_blocked(page: Page) -> None:
-    """Tahsilatı olan etkinlik iptal edilemez; mesaj ne yapılacağını söyler.
-    Not: kapora iadesi / yanan kapora için ayrı bir akış henüz yok."""
-    open_event(page, title="Kaya Ailesi Nişanı")
-    page.get_by_role("button", name="İptal Et").click()
-    d = dialog(page)
-    fill(d, {"İptal sebebi": "Müşteri vazgeçti"})
-    d.get_by_role("button", name="Etkinliği İptal Et").click()
-    expect(d).to_contain_text("aktif tahsilat")
-    d.get_by_role("button", name="Vazgeç").click()
-    expect(page.get_by_role("heading", level=1)).to_contain_text("Planlandı")

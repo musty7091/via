@@ -32,7 +32,7 @@ export function PeriodPrintPage() {
           <div className="grid grid-cols-2 gap-8">
             <PrintSection title="Ay özeti (TL)">
               <PrintTable head={[{ label: "Kalem" }, { label: "Tutar", align: "right" }]}>
-                <Row label="Kapanan etkinliklerin kârı" value={formatMoney(p.closed_events_profit)} />
+                <Row label="Ayın etkinliklerinin kârı" value={formatMoney(p.closed_events_profit)} />
                 <Row label="Genel giderler" value={formatMoney(-Number(p.general.direct_expenses))} />
                 {Number(p.general.spread_expenses) > 0 && (
                   <Row label="Aylara bölünen giderlerin payı" value={formatMoney(-Number(p.general.spread_expenses))} />

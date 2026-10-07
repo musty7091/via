@@ -21,12 +21,28 @@ ARTIFACTS = Path(__file__).parent / "artifacts"
 expect.set_options(timeout=10_000)
 
 
-def login(page: Page, email: str, password: str) -> None:
+FORCED_HEADING = "Kendi şifrenizi belirleyin"
+
+
+def personal_password(temporary: str) -> str:
+    """Kullanıcının ilk girişte belirlediği kendi şifresi (testlerde geçici şifreden türetilir)."""
+    return f"{temporary}-Kendi"
+
+
+def login(page: Page, email: str, password: str, *, forced: bool = False) -> None:
+    """Giriş yapar. `forced`: yöneticinin verdiği geçici şifreyle ilk giriş; şifre değiştirme
+    ekranı beklenir ve kişisel şifre belirlenir."""
     page.goto(f"{BASE_URL}/giris")
     page.get_by_label("E-posta").fill(email)
     page.get_by_label("Şifre").fill(password)
     page.get_by_role("button", name="Giriş").click()
     expect(page).not_to_have_url(re.compile(r"/giris"))
+    if forced:
+        expect(page.get_by_role("heading", name=FORCED_HEADING)).to_be_visible()
+        page.get_by_label("Geçici şifre").fill(password)
+        page.get_by_label("Yeni şifre", exact=True).fill(personal_password(password))
+        page.get_by_label("Yeni şifre (tekrar)").fill(personal_password(password))
+        page.get_by_role("button", name="Şifremi Kaydet").click()
     expect(page.get_by_role("navigation").first).to_be_visible()
 
 
@@ -81,13 +97,13 @@ def new_user_page(browser: Browser) -> Iterator:
     """Başka bir kullanıcıyla giriş yapmak için temiz sayfa üretir."""
     contexts: list[BrowserContext] = []
 
-    def make(email: str, password: str) -> Page:
+    def make(email: str, password: str, *, forced: bool = False) -> Page:
         context = browser.new_context(
             base_url=BASE_URL, viewport={"width": 1440, "height": 900}, locale="tr-TR"
         )
         contexts.append(context)
         page = context.new_page()
-        login(page, email, password)
+        login(page, email, password, forced=forced)
         return page
 
     yield make

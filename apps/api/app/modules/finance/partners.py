@@ -11,7 +11,6 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
 from app.core.money import ZERO, Currency, format_money, money
@@ -195,13 +194,10 @@ def cancel_transaction(
         raise DomainError("Bu işlem zaten iptal edilmiş.")
     if not reason:
         raise DomainError("İptal sebebini yazın.")
-    if tx.kind == PartnerTxKind.HANDOVER:
-        common.assert_cash_available(db, tx.cash_account, tx.amount)  # type: ignore[arg-type]
     entry = db.get(JournalEntry, tx.entry_id)
     ledger.reverse(
         db,
         entry,  # type: ignore[arg-type]
-        entry_date=clock.today(),
         description=f"İptal: {KIND_LABELS[PartnerTxKind(tx.kind)]}. Sebep: {reason}",
         actor=actor,
     )
