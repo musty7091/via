@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import ZERO, money, split_evenly
+from app.core.money import ZERO, format_money, money, split_evenly
 from app.core.schemas import ApiModel
 from app.modules.audit import service as audit
 from app.modules.closing.distribution import post_distribution, preview_shares
@@ -447,7 +447,7 @@ def close_period(
         entity_id=None,
         summary=(
             f"{month_label(end)} dönemi kapatıldı. "
-            f"Genel sonuç {general.total} TL ortaklara yansıtıldı."
+            f"Genel sonuç {format_money(general.total)} ortaklara yansıtıldı."
         ),
         context=context,
     )

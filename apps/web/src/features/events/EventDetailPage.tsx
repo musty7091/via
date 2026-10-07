@@ -11,7 +11,7 @@ import { LineRow } from "@/features/offers/LineRow";
 import { OperationsTab } from "@/features/operations/OperationsTab";
 import { EventStatusBadge } from "@/features/offers/OfferStatusBadge";
 import { errorMessage } from "@/shared/api/client";
-import { formatDate, formatDateTime, formatNumber } from "@/shared/lib/format";
+import { formatDate, formatDateTime, formatNumber, negate } from "@/shared/lib/format";
 import { INVOICE_LABELS } from "@/shared/lib/labels";
 import {
   Button,
@@ -46,7 +46,7 @@ function Row({ label, children, strong }: { label: string; children: ReactNode; 
 
 const ACTION_COPY: Record<EventAction, { title: string; description: string; confirm: string; danger?: boolean; needsNote?: boolean }> = {
   complete: { title: "Etkinlik Gerçekleşti", description: "Etkinliğin yapıldığı kaydedilir. Finans kapanışı bu adımdan sonra yapılır.", confirm: "Gerçekleşti İşaretle" },
-  cancel: { title: "Etkinlik İptal Edilecek", description: "Etkinlik iptal edilir. Finans aşamasında kapora iadesi ayrıca işlenir.", confirm: "Etkinliği İptal Et", danger: true, needsNote: true },
+  cancel: { title: "Etkinlik İptal Edilecek", description: "Etkinlik iptal edilir; anlaşma kayıtları ve açık borçlar ters kayıtla kapatılır. Tahsilat veya sanatçı/tedarikçi ödemesi varsa önce onlar iptal edilmelidir.", confirm: "Etkinliği İptal Et", danger: true, needsNote: true },
   reopen: { title: "Etkinlik Yeniden Açılacak", description: "Etkinlik tekrar 'Planlandı' durumuna alınır.", confirm: "Yeniden Aç" },
 };
 
@@ -238,13 +238,13 @@ export function EventDetailPage() {
                 </Card>
                 {e.profitability && (
                   <Card>
-                    <CardHeader title="Planlanan Kârlılık (TL)" description="Gerçekleşen maliyetler finans aşamasında işlenecek." />
+                    <CardHeader title="Planlanan Kârlılık (TL)" description="Anlaşmadaki tahmin; gerçekleşen rakamlar Ödemeler sekmesinde." />
                     <CardBody className="space-y-2">
                       <Row label="Gelir (KDV hariç)">
                         <Money amount={e.profitability.revenue_base} />
                       </Row>
                       <Row label="Planlanan maliyet">
-                        <Money amount={`-${e.profitability.cost_base}`} />
+                        <Money amount={negate(e.profitability.cost_base)} />
                       </Row>
                       <div className="border-t border-line pt-2">
                         <Row label="Tahmini kâr" strong>

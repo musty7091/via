@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import BASE_CURRENCY, money
+from app.core.money import BASE_CURRENCY, format_money, money
 from app.modules.audit import service as audit
 from app.modules.finance import common, ledger
 from app.modules.finance.ledger import Leg
@@ -168,8 +168,8 @@ def transfer(
         entity_type="cash_account",
         entity_id=source.id,
         summary=(
-            f"Transfer: {from_amount} {source.currency} {source.name} → "
-            f"{to_amount} {target.currency} {target.name}."
+            f"Transfer: {format_money(from_amount, source.currency)} {source.name} → "
+            f"{format_money(to_amount, target.currency)} {target.name}."
         ),
         context=context,
     )

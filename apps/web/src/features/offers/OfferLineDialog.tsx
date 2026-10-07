@@ -117,7 +117,8 @@ export function OfferLineDialog({ offer, open, onOpenChange, line }: Props) {
         ? {
             ...(v.unit_cost !== null ? { unit_cost: v.unit_cost } : {}),
             ...(v.cost_currency ? { cost_currency: v.cost_currency } : {}),
-            ...(v.cost_rate ? { cost_rate: v.cost_rate } : {}),
+            // Kur sadece alan görünürken gönderilir; teklif dövizindeki maliyet teklif kurunu izler.
+            ...(needsCostRate && v.cost_rate ? { cost_rate: v.cost_rate } : {}),
           }
         : {}),
     };

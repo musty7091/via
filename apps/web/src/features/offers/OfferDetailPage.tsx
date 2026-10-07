@@ -33,7 +33,7 @@ import { OfferLineDialog } from "@/features/offers/OfferLineDialog";
 import { OfferStatusBadge } from "@/features/offers/OfferStatusBadge";
 import { PackageImportDialog } from "@/features/offers/PackageImportDialog";
 import { errorMessage } from "@/shared/api/client";
-import { formatDate, formatMoney, formatNumber } from "@/shared/lib/format";
+import { formatDate, formatMoney, formatNumber, negate } from "@/shared/lib/format";
 import { INVOICE_LABELS } from "@/shared/lib/labels";
 import {
   Button,
@@ -170,7 +170,7 @@ function TotalsCard({ offer }: { offer: Offer }) {
         </Row>
         {hasDiscount && (
           <Row label="İndirim">
-            <Money amount={`-${offer.discount_amount}`} currency={c} />
+            <Money amount={negate(offer.discount_amount)} currency={c} />
           </Row>
         )}
         {(hasDiscount || hasVat) && (
@@ -219,7 +219,7 @@ function ProfitCard({ offer }: { offer: Offer }) {
           <Money amount={p.revenue_base} />
         </Row>
         <Row label="Maliyet">
-          <Money amount={`-${p.cost_base}`} />
+          <Money amount={negate(p.cost_base)} />
         </Row>
         <div className="border-t border-line pt-2">
           <Row label="Tahmini kâr" strong>

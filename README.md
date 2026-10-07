@@ -59,6 +59,22 @@ cd C:\via\apps\api;  .venv\Scripts\python -m pytest;  .venv\Scripts\ruff check .
 cd C:\via\apps\web;  npm run typecheck;  npm run lint
 ```
 
+### Uçtan uca testler (gerçek tarayıcı)
+
+`apps/e2e`, boş bir `via_e2e` veritabanında ve derlenmiş uygulama üzerinde 10 iş senaryosunu
+sırayla çalıştırır: kurulum → katalog → teklif → finans → operasyon → kapanış → roller →
+tüm ekranların taraması → döviz → düzeltmeler. Geliştirme veritabanına dokunmaz.
+
+```bash
+# bir kez (Git Bash)
+cd /c/via/apps/e2e && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt \
+  && .venv/Scripts/python -m playwright install chromium
+# her seferinde (PostgreSQL açıkken)
+bash /c/via/apps/e2e/run.sh            # ya da: bash run.sh -k finance -x
+```
+
+Başarısız testlerin ekran görüntüsü ve ekran yapısı `apps/e2e/artifacts/` klasörüne yazılır.
+
 ### Backend değişince
 
 ```powershell

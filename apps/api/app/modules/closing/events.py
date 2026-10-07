@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import money
+from app.core.money import format_money, money
 from app.core.schemas import ApiModel, columns
 from app.modules.audit import service as audit
 from app.modules.closing.distribution import post_distribution, preview_shares
@@ -134,7 +134,8 @@ def checks(db: Session, event: Event) -> list[CheckItem]:
             detail=None
             if remaining == 0
             else (
-                f"Kalan {remaining} {event.currency}. Tahsil edin veya tahsil edilemeyecekse silin."
+                f"Kalan {format_money(remaining, event.currency)}. "
+                "Tahsil edin veya tahsil edilemeyecekse silin."
             ),
         ),
         CheckItem(
@@ -238,7 +239,10 @@ def write_off(
         action="event.write_off",
         entity_type="event",
         entity_id=event.id,
-        summary=f"{event.event_no}: {remaining} {event.currency} alacak silindi. Gerekçe: {reason}",
+        summary=(
+            f"{event.event_no}: {format_money(remaining, event.currency)} alacak silindi. "
+            f"Gerekçe: {reason}"
+        ),
         context=context,
     )
     db.commit()
@@ -278,14 +282,16 @@ def close_event(
     )
     db.add(closure)
     db.flush()
-    share_text = ", ".join(f"{s['name']} {s['share']}" for s in shares)
+    share_text = ", ".join(f"{s['name']} {format_money(s['share'])}" for s in shares)
     audit.record(
         db,
         actor=actor,
         action="event.close",
         entity_type="event",
         entity_id=event.id,
-        summary=f"{event.event_no} finans kapanışı: {kind_label} {profit} TL ({share_text}).",
+        summary=(
+            f"{event.event_no} finans kapanışı: {kind_label} {format_money(profit)} ({share_text})."
+        ),
         context=context,
     )
     db.commit()

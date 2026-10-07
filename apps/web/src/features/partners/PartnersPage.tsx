@@ -114,7 +114,7 @@ export function PartnersPage() {
       <PageHeader
         eyebrow="Finans"
         title="Ortaklar"
-        description="Şirket ortakları. Ortak hesap hareketleri ve bakiyeler finans aşamasında eklenecek."
+        description="Şirket ortakları, ortak üzerindeki şirket parası ve şirketin ortaklara borcu."
         actions={
           canManage && (
             <Button onClick={() => setFormPartner(null)}>
@@ -127,7 +127,7 @@ export function PartnersPage() {
       <div className="mb-6 flex items-start gap-3 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-800">
         <Scale className="mt-0.5 size-4 shrink-0" aria-hidden />
         <p>
-          Kâr ve zarar <strong className="font-medium">{activeCount || "aktif"} aktif ortak</strong> arasında
+          Kâr ve zarar <strong className="font-medium">{activeCount ? `${activeCount} aktif ortak` : "aktif ortaklar"}</strong> arasında
           eşit bölünür. Tam bölünmeyen kuruşlar kuruş sırasına göre dağıtılır; hiçbir kuruş kaybolmaz.
         </p>
       </div>

@@ -2,7 +2,15 @@ from decimal import Decimal
 
 import pytest
 
-from app.core.money import Currency, money, rate, split_evenly, to_base, vat_amount
+from app.core.money import (
+    Currency,
+    format_money,
+    money,
+    rate,
+    split_evenly,
+    to_base,
+    vat_amount,
+)
 
 
 def test_money_rounds_half_up_to_kurus():
@@ -43,3 +51,11 @@ def test_rate_must_be_positive():
 
 def test_vat_amount_uses_kktc_rate():
     assert vat_amount(Decimal("300000.00"), Decimal("16")) == Decimal("48000.00")
+
+
+def test_format_money_turkish():
+    assert format_money(Decimal("139200")) == "₺139.200,00"
+    assert format_money(Decimal("-6500.5"), "TRY") == "-₺6.500,50"
+    assert format_money(Decimal("5000"), Currency.EUR) == "€5.000,00"
+    assert format_money(Decimal("0.004"), "GBP") == "£0,00"
+    assert format_money(Decimal("1234567.891"), "USD") == "$1.234.567,89"

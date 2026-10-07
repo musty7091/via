@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 
 import { useCan } from "@/features/auth/auth";
 import { useCloseEvent, useEventClosure, useReopenEvent, useWriteOff } from "@/features/closing/api";
-import { formatDateTime, formatMoney } from "@/shared/lib/format";
+import { formatDateTime, formatMoney, negate } from "@/shared/lib/format";
 import {
   Badge,
   Button,
@@ -120,10 +120,10 @@ export function EventClosureTab({ eventId }: { eventId: number }) {
               <Money amount={active?.revenue ?? p.revenue} />
             </Row>
             <Row label="Sanatçı / hizmet maliyeti">
-              <Money amount={`-${active?.cost ?? p.cost}`} />
+              <Money amount={negate(active?.cost ?? p.cost)} />
             </Row>
             <Row label="Giderler">
-              <Money amount={`-${active?.expense ?? p.expense}`} />
+              <Money amount={negate(active?.expense ?? p.expense)} />
             </Row>
             {Number(active?.fx ?? p.fx) !== 0 && (
               <Row label="Kur farkı">

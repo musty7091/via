@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import BASE_CURRENCY, ZERO, Currency, money, vat_amount
+from app.core.money import BASE_CURRENCY, ZERO, Currency, format_money, money, vat_amount
 from app.core.permissions import Permission, permissions_for
 from app.core.schemas import columns
 from app.core.sequences import next_number
@@ -962,7 +962,7 @@ def convert_to_event(
         entity_id=event.id,
         summary=(
             f"{event.event_no} etkinliği {offer.offer_no} teklifinden oluşturuldu: "
-            f"{event.title} ({customer.name}), {event.total_amount} {event.currency}."
+            f"{event.title} ({customer.name}), {format_money(event.total_amount, event.currency)}."
         ),
         context=context,
     )

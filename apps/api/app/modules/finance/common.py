@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.errors import DomainError
-from app.core.money import BASE_CURRENCY, ZERO, Currency, money
+from app.core.money import BASE_CURRENCY, ZERO, Currency, format_money, money
 from app.modules.finance import ledger
 from app.modules.finance.models import Account, CashAccount
 from app.modules.partners.models import Partner
@@ -77,13 +77,16 @@ def assert_cash_available(
     held = ledger.amount_balance(db, Account.CASH, cash_account_id=account.id).get(
         account.currency, ZERO
     )
+    as_of_text = ""
     if on_date is not None and on_date < clock.today():
         held_then = ledger.amount_balance(
             db, Account.CASH, as_of=on_date, cash_account_id=account.id
         ).get(account.currency, ZERO)
-        held = min(held, held_then)
+        if held_then < held:
+            held, as_of_text = held_then, f" {on_date:%d.%m.%Y} tarihinde"
     if amount > held:
         raise DomainError(
-            f"{account.name} hesabında yeterli bakiye yok "
-            f"(mevcut {held} {account.currency}, gereken {amount} {account.currency})."
+            f"{account.name} hesabında{as_of_text} yeterli bakiye yok "
+            f"(bakiye {format_money(held, account.currency)}, "
+            f"gereken {format_money(amount, account.currency)})."
         )

@@ -35,6 +35,14 @@ export function formatMoney(amount: string | number, currency: Currency = "TRY")
   return moneyFormatter(currency).format(Number(amount));
 }
 
+/** Tutarın işaretini çevirir (gider/maliyet satırlarında eksi göstermek için).
+ * Metin olarak çalışır: "-500.00" → "500.00", "0.00" → "0.00" (eksi sıfır olmaz). */
+export function negate(amount: string | number): string {
+  const text = String(amount).trim();
+  if (Number(text) === 0) return text.replace(/^-/, "");
+  return text.startsWith("-") ? text.slice(1) : `-${text}`;
+}
+
 const numberFormatter = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 6 });
 
 export function formatNumber(value: string | number) {

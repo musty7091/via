@@ -9,7 +9,7 @@ import { CollectionsTable, ExpensesTable, PayablesTable } from "@/features/finan
 import { PayableDialog } from "@/features/finance/PayableDialog";
 import { PlanDialog } from "@/features/finance/PlanDialog";
 import { errorMessage } from "@/shared/api/client";
-import { formatDate, type Currency } from "@/shared/lib/format";
+import { formatDate, negate, type Currency } from "@/shared/lib/format";
 import { PLAN_STATE } from "@/shared/lib/labels";
 import { Badge, Button, Card, CardBody, CardHeader, ErrorState, LoadingState, Money, StatCard, toast } from "@/shared/ui";
 
@@ -150,10 +150,10 @@ export function EventFinanceTab({ eventId, cancelled }: { eventId: number; cance
                 <Money amount={f.revenue_base} />
               </Row>
               <Row label="Sanatçı / hizmet maliyeti">
-                <Money amount={`-${f.cost_base}`} />
+                <Money amount={negate(f.cost_base)} />
               </Row>
               <Row label="Ek giderler">
-                <Money amount={`-${f.expense_base}`} />
+                <Money amount={negate(f.expense_base)} />
               </Row>
               {Number(f.fx_base) !== 0 && (
                 <Row label="Kur farkı">
@@ -174,7 +174,7 @@ export function EventFinanceTab({ eventId, cancelled }: { eventId: number; cance
                 </Row>
               </div>
               <p className="pt-2 text-xs text-ink-muted">
-                Kâr, tahsilat tamamlanıp etkinlik finans kapanışı yapıldığında ortaklara dağıtılabilir (Aşama 5).
+                Kâr, tahsilat tamamlanıp etkinlik finans kapanışı yapıldığında ortaklara dağıtılır (Kapanış sekmesi).
               </p>
             </CardBody>
           </Card>

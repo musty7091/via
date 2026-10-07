@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import ZERO, Currency, money
+from app.core.money import ZERO, Currency, format_money, money
 from app.modules.audit import service as audit
 from app.modules.finance import common, ledger
 from app.modules.finance.ledger import Leg
@@ -85,7 +85,8 @@ def create_transaction(
     if kind == PartnerTxKind.HANDOVER:
         if amount > held_amount:
             raise DomainError(
-                f"{partner.full_name} üzerinde {held_amount} {currency} şirket parası var; "
+                f"{partner.full_name} üzerinde {format_money(held_amount, currency)} "
+                "şirket parası var; "
                 "fazlası teslim alınamaz."
             )
         base = common.proportional_base(held_amount, held_base, amount)
@@ -98,7 +99,8 @@ def create_transaction(
     elif kind == PartnerTxKind.PAYOUT:
         if amount > owed_amount:
             raise DomainError(
-                f"Şirketin {partner.full_name}'a borcu {owed_amount} {currency}; fazlası ödenemez."
+                f"Şirketin {partner.full_name}'a borcu {format_money(owed_amount, currency)}; "
+                "fazlası ödenemez."
             )
         common.assert_cash_available(db, account, amount, tx_date)  # type: ignore[arg-type]
         base = common.proportional_base(owed_amount, owed_base, amount)
@@ -171,7 +173,7 @@ def create_transaction(
         action=f"partner.{kind}",
         entity_type="partner",
         entity_id=partner.id,
-        summary=f"{KIND_LABELS[kind]}: {description}, {amount} {currency}.",
+        summary=f"{KIND_LABELS[kind]}: {description}, {format_money(amount, currency)}.",
         context=context,
     )
     db.commit()

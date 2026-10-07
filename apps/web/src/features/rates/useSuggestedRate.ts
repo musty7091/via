@@ -22,7 +22,8 @@ interface Options {
 export function useSuggestedRate({ currency, day, current, apply, enabled = true }: Options) {
   const foreign = Boolean(currency && currency !== "TRY");
   const rates = useRates(day, enabled && foreign);
-  const rate = foreign ? rates.data?.find((r) => r.currency === currency) : undefined;
+  // Kapalıyken önbellekteki kur da önerilmez; yoksa gizli bir alana değer yazılıp gönderilir.
+  const rate = foreign && enabled ? rates.data?.find((r) => r.currency === currency) : undefined;
   const suggestion = rate ? String(Number(rate.rate)).replace(".", ",") : undefined;
 
   // Öneri, döviz veya tarih değiştiğinde çalışır:

@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { useCan } from "@/features/auth/auth";
 import { useClosePeriod, usePeriod, usePeriods, useReopenPeriod, type PeriodPreview } from "@/features/closing/api";
 import { PrintLink } from "@/features/print/PrintLink";
-import { formatDate, formatMoney, type Currency } from "@/shared/lib/format";
+import { formatDate, formatMoney, negate, type Currency } from "@/shared/lib/format";
 import {
   Badge,
   Button,
@@ -53,11 +53,11 @@ function PeriodReport({ p }: { p: PeriodPreview }) {
               <Money amount={p.closed_events_profit} signed />
             </Row>
             <Row label="Genel giderler">
-              <Money amount={`-${g.direct_expenses}`} />
+              <Money amount={negate(g.direct_expenses)} />
             </Row>
             {Number(g.spread_expenses) > 0 && (
               <Row label="Sezonluk gider payları">
-                <Money amount={`-${g.spread_expenses}`} />
+                <Money amount={negate(g.spread_expenses)} />
               </Row>
             )}
             {Number(g.fx) !== 0 && (

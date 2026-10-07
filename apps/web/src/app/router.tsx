@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 
 import { AppShell } from "@/app/AppShell";
-import { ComingSoonPage } from "@/app/ComingSoonPage";
+import { NotFoundPage } from "@/app/NotFoundPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { ArtistDetailPage } from "@/features/catalog/ArtistDetailPage";
 import { ArtistsTab } from "@/features/catalog/ArtistsTab";
@@ -249,7 +249,7 @@ export const router = createBrowserRouter([
           </RequirePermission>
         ),
       },
-      { path: "*", element: <ComingSoonPage /> },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);

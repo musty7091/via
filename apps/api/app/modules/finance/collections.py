@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import Currency, money
+from app.core.money import Currency, format_money, money
 from app.core.sequences import next_number
 from app.modules.audit import service as audit
 from app.modules.closing.service import ensure_event_open
@@ -101,7 +101,7 @@ def create_collection(
     remaining = remaining_amount(db, event)
     if applied > remaining:
         raise DomainError(
-            f"Müşterinin bu etkinlikten kalan borcu {remaining} {event.currency}; "
+            f"Müşterinin bu etkinlikten kalan borcu {format_money(remaining, event.currency)}; "
             "fazla tahsilat girilemez."
         )
 
@@ -171,7 +171,7 @@ def create_collection(
         action="collection.create",
         entity_type="event",
         entity_id=event.id,
-        summary=f"{collection.collection_no}: {amount} {currency} tahsilat → {where}.",
+        summary=f"{collection.collection_no}: {format_money(amount, currency)} tahsilat → {where}.",
         context=context,
     )
     db.commit()
@@ -197,7 +197,7 @@ def cancel_collection(
         if collection.amount > held:
             raise DomainError(
                 f"{collection.partner.full_name} bu parayı kasaya teslim etmiş görünüyor "  # type: ignore[union-attr]
-                f"(ortak üzerinde kalan {held} {collection.currency}). "
+                f"(ortak üzerinde kalan {format_money(held, collection.currency)}). "
                 "Önce teslim kaydını iptal edin."
             )
     entry = db.get(JournalEntry, collection.entry_id)

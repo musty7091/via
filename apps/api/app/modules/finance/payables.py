@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import Currency, money
+from app.core.money import Currency, format_money, money
 from app.core.sequences import next_number
 from app.modules.audit import service as audit
 from app.modules.catalog.models import Artist, Supplier
@@ -105,7 +105,7 @@ def create_payable(
         action="payable.create",
         entity_type="event",
         entity_id=event.id,
-        summary=f"{event.event_no} için borç eklendi: {title} {amount} {currency}.",
+        summary=f"{event.event_no} için borç eklendi: {title} {format_money(amount, currency)}.",
         context=context,
     )
     db.commit()
@@ -261,7 +261,9 @@ def pay(
     paid = paid_amount(db, payable.id)
     remaining = money(payable.amount - paid)
     if applied > remaining:
-        raise DomainError(f"Kalan borç {remaining} {payable.currency}; fazla ödeme yapılamaz.")
+        raise DomainError(
+            f"Kalan borç {format_money(remaining, payable.currency)}; fazla ödeme yapılamaz."
+        )
 
     if cash_account_id is not None:
         account = common.get_cash_account(db, cash_account_id, currency)
@@ -340,7 +342,10 @@ def pay(
         action="payment.create",
         entity_type="event" if payable.event_id else "payable",
         entity_id=payable.event_id or payable.id,
-        summary=f"{payment.payment_no}: {payable.title} için {amount} {currency} ödendi ({where}).",
+        summary=(
+            f"{payment.payment_no}: {payable.title} için "
+            f"{format_money(amount, currency)} ödendi ({where})."
+        ),
         context=context,
     )
     db.commit()

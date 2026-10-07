@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.deps import RequestContext
 from app.core.errors import DomainError, NotFoundError
-from app.core.money import Currency, money
+from app.core.money import Currency, format_money, money
 from app.core.sequences import next_number
 from app.modules.audit import service as audit
 from app.modules.catalog.models import Supplier
@@ -193,7 +193,7 @@ def create_expense(
         action="expense.create",
         entity_type="event" if event_id else "expense",
         entity_id=event_id or expense.id,
-        summary=f"{expense.expense_no}: {title} {amount} {currency} — {where}.",
+        summary=f"{expense.expense_no}: {title} {format_money(amount, currency)} — {where}.",
         context=context,
     )
     db.commit()

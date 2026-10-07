@@ -59,6 +59,22 @@ def vat_amount(net: Decimal, vat_rate_percent: Decimal) -> Decimal:
     return money(net * vat_rate_percent / Decimal(100))
 
 
+SYMBOLS = {Currency.TRY: "₺", Currency.EUR: "€", Currency.GBP: "£", Currency.USD: "$"}
+
+
+def format_money(
+    amount: Decimal | int | str | float, currency: Currency | str = BASE_CURRENCY
+) -> str:
+    """Kullanıcıya gösterilen mesajlar için Türkçe biçim.
+
+    Örnek: 139200 → "₺139.200,00", −6500 → "-₺6.500,00".
+    """
+    value = money(amount)
+    digits = f"{abs(value):,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+    symbol = SYMBOLS.get(currency, f"{currency} ")
+    return f"{'-' if value < 0 else ''}{symbol}{digits}"
+
+
 def split_evenly(total: Decimal, parts: int) -> list[Decimal]:
     """Tutarı eşit parçalara böler; toplam her zaman orijinal tutara eşittir.
 
